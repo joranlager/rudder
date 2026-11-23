@@ -7,7 +7,8 @@
 
 import { ShipScene } from './scene.js';
 import { buildShip } from './ship.js';
-import { searchShips, fetchShipFacts } from './wikidata.js';
+import { searchShips, fetchShipFacts, findByImo } from './wikidata.js';
+import { hullFromAis, typeName, navStatusText, draughtM, ageMinutes } from '../ais.js';
 import { shipImages } from './commons.js';
 import { extractPalette, loadImage, suggestLivery, NOT_A_PHOTO } from './livery.js';
 import { DEFAULT_LIVERY, KIND_PRESETS, defaultParams, liveryFromFacts, paramsFromFacts } from './presets.js';
@@ -49,7 +50,7 @@ const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const thumbFromP18 = (url, width = 120) => `${url.replace(/^http:/, 'https:')}?width=${width}`;
 const sourceTag = (src) =>
-  src ? `<span class="ships-src ${src}">${src === 'wikidata' ? 'Wikidata' : src === 'estimated' ? 'est.' : 'manual'}</span>` : '';
+  src ? `<span class="ships-src ${src}">${{ wikidata: 'Wikidata', ais: 'AIS', estimated: 'est.' }[src] ?? 'manual'}</span>` : '';
 
 let cssLoaded = false;
 function loadCss() {
@@ -229,24 +230,68 @@ export function createShipInspector(root, { onClose } = {}) {
     renderTab();
   }
 
-  async function loadShip(qid, label) {
+  /**
+   * AIS is the authority for size (length, beam, draught); Wikidata, when the IMO number finds the
+   * ship there, adds the type (AIS cannot tell a container ship from a bulk carrier), height and photos.
+   */
+  function withAis(fromFacts, ais) {
+    const a = hullFromAis(ais);
+    const generic = fromFacts.params.kind === 'cargo' && a.params.kind !== 'cargo';
+    const params = generic ? { ...a.params } : { ...fromFacts.params };
+    const sources = { ...fromFacts.sources };
+    if (generic && fromFacts.sources.airDraft === 'wikidata') params.airDraft = fromFacts.params.airDraft;
+    for (const k of ['length', 'beam', 'draft']) {
+      if (a.sources[k] === 'ais') {
+        params[k] = a.params[k];
+        sources[k] = 'ais';
+      }
+    }
+    params.depth = Math.max(params.depth, params.draft + 1);
+    return { params, sources };
+  }
+
+  /** Open a vessel tapped on the chart: build it from its AIS report, then look it up by IMO number. */
+  async function showAis(v) {
+    abort?.abort();
+    const { params, sources } = hullFromAis(v);
+    const name = (v.name || '').trim() || `MMSI ${v.mmsi}`;
+    Object.assign(st, {
+      tab: 'ship', ais: v, facts: null, params, sources, livery: { ...DEFAULT_LIVERY[params.kind] }, shipKey: `ais:${v.mmsi}`,
+      hits: [], images: [], palette: [], activeImage: null, uploadedUrl: null, error: null, sheetOpen: true,
+    });
+    st.text = { ...st.text, name: name.toUpperCase(), port: '', banner: '', imo: v.imoNumber ? String(v.imoNumber) : '' };
+    rebuild();
+    renderTab();
+    if (!v.imoNumber) return;
+    const ac = new AbortController();
+    abort = ac;
+    try {
+      const qid = await findByImo(v.imoNumber, ac.signal);
+      if (qid && !ac.signal.aborted && st.ais === v) await loadShip(qid, undefined, v);
+    } catch {
+      /* Wikidata is a bonus here: the AIS model stands on its own */
+    }
+  }
+
+  async function loadShip(qid, label, ais = null) {
     abort?.abort();
     const ac = new AbortController();
     abort = ac;
+    if (!ais) st.ais = null;
     Object.assign(st, { loadingFacts: true, error: null, images: [], palette: [], activeImage: null, uploadedUrl: null });
     renderTab();
     try {
       const f = await fetchShipFacts(qid, 'en', ac.signal);
       if (ac.signal.aborted) return;
-      const { params, sources } = paramsFromFacts(f);
+      const { params, sources } = ais ? withAis(paramsFromFacts(f), ais) : paramsFromFacts(f);
       const name = f.label.replace(/^(RMS|MS|MV|SS|HMS|USS|KNM|M\/S|M\/V|S\/S|HMY|SY|MY)\s+/i, '');
-      Object.assign(st, { facts: f, params, sources, livery: liveryFromFacts(params.kind, f), shipKey: qid, loadingFacts: false });
+      Object.assign(st, { facts: f, params, sources, livery: liveryFromFacts(params.kind, f), shipKey: ais ? st.shipKey : qid, loadingFacts: false });
       st.text = {
         ...st.text,
         name: name.toUpperCase(),
         port: (f.homePorts[0] ?? f.flags[0] ?? '').toUpperCase(),
         banner: BANNER_KINDS.includes(params.kind) ? (f.operators[0] ?? f.owners[0] ?? '').toUpperCase() : '',
-        imo: f.imo ?? '',
+        imo: f.imo ?? (ais?.imoNumber ? String(ais.imoNumber) : ''),
       };
       rebuild();
       st.loadingImages = true;
@@ -276,7 +321,7 @@ export function createShipInspector(root, { onClose } = {}) {
   // ---------- rendering ----------
 
   function renderHead() {
-    $('.ships-title').textContent = st.facts?.label ?? 'Custom vessel';
+    $('.ships-title').textContent = st.facts?.label ?? ((st.ais?.name || '').trim() || (st.ais ? `MMSI ${st.ais.mmsi}` : 'Custom vessel'));
     const p = st.params;
     $('.ships-sub').textContent =
       `${KIND_PRESETS[p.kind].label} · ${fmtLen(p.length, st.units)} × ${fmtLen(p.beam, st.units)} · draft ${fmtLen(p.draft, st.units)}` +
@@ -321,7 +366,35 @@ export function createShipInspector(root, { onClose } = {}) {
           ['In service', [f.serviceEntry, f.serviceRetirement].filter(Boolean).join(' – ')],
         ].filter(([, v]) => v)
       : [];
+    const v = st.ais;
+    const aisRows = v
+      ? [
+          ['MMSI', v.mmsi],
+          ['IMO', v.imoNumber],
+          ['Call sign', v.callSign],
+          ['Type', typeName(v.shipType)],
+          ['Status', navStatusText(v.navigationalStatus)],
+          ['Speed', v.speedOverGround != null ? `${v.speedOverGround.toFixed(1)} kn` : null],
+          ['Course', v.courseOverGround != null && v.courseOverGround < 360 ? `${Math.round(v.courseOverGround)}°` : null],
+          ['Heading', v.trueHeading != null && v.trueHeading < 360 ? `${v.trueHeading}°` : null],
+          ['Size', `${fmtLen(st.params.length, st.units)} × ${fmtLen(st.params.beam, st.units)}`],
+          ['Draught', draughtM(v) ? fmtLen(draughtM(v), st.units) : null],
+          ['Destination', v.destination?.trim()],
+          ['Last report', `${Math.max(0, Math.round(ageMinutes(v)))} min ago`],
+        ].filter(([, x]) => x != null && x !== '')
+      : [];
     return `
+      ${
+        v
+          ? `<h3 class="label">From AIS</h3>
+             <div class="group pad">
+               <dl class="ships-facts">${aisRows.map(([k, x]) => `<dt>${k}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
+               <p class="muted small">Length, beam and draught come from the ship's own AIS report; the rest of the model is estimated from its type${
+                 v.imoNumber ? ', and from Wikidata when its IMO number is found there' : ''
+               }.</p>
+             </div>`
+          : ''
+      }
       <form class="row ships-search">
         <input name="q" value="${esc(st.query)}" placeholder="Search Wikidata for a ship" aria-label="Ship name" autocomplete="off" enterkeyhint="search">
         <button type="submit" class="primary" ${st.searching ? 'disabled' : ''}>${st.searching ? 'Searching…' : 'Search'}</button>
@@ -703,6 +776,10 @@ export function createShipInspector(root, { onClose } = {}) {
   renderTab();
 
   return {
+    /** Build and show a vessel from its AIS report (see ../ais.js). */
+    showAisVessel(v) {
+      showAis(v);
+    },
     /** Start drawing again after the screen was hidden. */
     resume() {
       scene?.resume();

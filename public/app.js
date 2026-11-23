@@ -1,5 +1,7 @@
 import { BASEMAPS, OVERLAYS, buildStyle, mergeSettings } from './layers.js';
 import { formatPosition, compassPoint, msToKnots } from './nav.js';
+import { createAisLayer } from './aismap.js';
+import { typeName, navStatusText, draughtM, vesselSize, ageMinutes } from './ais.js';
 import {
   tideUrl, parseTide, tideSummary, oceanUrl, weatherUrl, nearestStep, depthUrl, parseDepth, formatDepth,
   placeUrl, parsePlaces,
@@ -36,6 +38,9 @@ map.addControl(new maplibregl.AttributionControl({
 }), 'bottom-right');
 map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true } }), 'top-left');
 
+// Ships from AIS (BarentsWatch), drawn over the chart when switched on in the layers panel.
+const ais = createAisLayer(map);
+
 // ---------- layer panel ----------
 function renderLayerPanel() {
   $('#basemaps').innerHTML = BASEMAPS.map((b) => `
@@ -53,7 +58,9 @@ function renderLayerPanel() {
     </div>`;
   }).join('')}</section>`).join('');
   updateZoomHints();
+  ais.renderPanel($('#ais-settings'));
 }
+for (const type of ['change', 'click', 'submit']) $('#ais-settings').addEventListener(type, (e) => ais.onPanelEvent(e));
 
 $('#basemaps').addEventListener('change', (e) => {
   settings.basemap = e.target.value;
@@ -226,7 +233,51 @@ function tideGraph(curve, now) {
     <text x="2" y="${H - 1}">${fmtTime(t0)}</text><text x="${W - 2}" y="${H - 1}" text-anchor="end">${fmtTime(t1)}</text></svg>`;
 }
 
-map.on('click', (e) => showPoint(e.lngLat));
+// A tap on a ship shows the ship; anywhere else, the sea at that point.
+map.on('click', (e) => {
+  const v = ais.vesselAt(e.point);
+  if (v) showVessel(v); else showPoint(e.lngLat);
+});
+
+// ---------- a ship from AIS ----------
+function showVessel(v) {
+  clearClick();
+  const { length, beam } = vesselSize(v);
+  const t = draughtM(v);
+  const age = Math.max(0, Math.round(ageMinutes(v)));
+  const rows = [
+    ['Type', typeName(v.shipType)],
+    ['Status', navStatusText(v.navigationalStatus)],
+    ['Speed', v.speedOverGround != null ? `${v.speedOverGround.toFixed(1)} kn` : null],
+    ['Course', v.courseOverGround != null && v.courseOverGround < 360 ? `${Math.round(v.courseOverGround)}°` : null],
+    ['Heading', v.trueHeading != null && v.trueHeading < 360 ? `${v.trueHeading}°` : null],
+    ['Size', length > 0 ? `${length} × ${beam} m` : null],
+    ['Draught', t ? `${t.toFixed(1)} m` : null],
+    ['Destination', v.destination?.trim() || null],
+    ['ETA', v.eta || null],
+    ['MMSI', v.mmsi],
+    ['IMO', v.imoNumber || null],
+    ['Call sign', v.callSign || null],
+    ['Last report', age < 1 ? 'just now' : `${age} min ago`],
+  ].filter(([, x]) => x != null && x !== '');
+  $('#info-title').textContent = (v.name || '').trim() || `MMSI ${v.mmsi}`;
+  $('#info-body').innerHTML = `<p class="pos">${formatPosition(v.latitude, v.longitude)}</p>
+    <dl class="rows">${rows.map(([k, x]) => `<dt>${k}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
+    <div class="info-actions">
+      <button type="button" class="info-btn primary" data-open3d="${v.mmsi}">Open 3D model</button>
+      <button type="button" class="info-btn" data-sea-here="${v.mmsi}">Sea and weather here</button>
+    </div>
+    <div class="src">AIS from Kystverket via BarentsWatch. Size and draught as the ship reports them.</div>`;
+  togglePanel('info', true);
+}
+$('#info-body').addEventListener('click', async (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere);
+  if (!v) return;
+  if (b.dataset.open3d) { await openShips(); ships?.showAisVessel(v); }
+  else showPoint({ lat: v.latitude, lng: v.longitude });
+});
 
 // ---------- place search ----------
 let searchTimer = 0, searchCtl = null, results = [], active = -1;
@@ -265,4 +316,4 @@ input.addEventListener('focus', () => { list.hidden = !results.length; });
 renderLayerPanel();
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
-window.rudder = { map, settings, showPoint, openShips, closeShips };
+window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais };

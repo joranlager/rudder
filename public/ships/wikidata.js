@@ -71,6 +71,14 @@ LIMIT 25`;
     length: num(r.length),
   }));
 }
+/** The Wikidata item with this IMO number (P458), or null. An exact match, unlike a name search. */
+export async function findByImo(imo, signal) {
+  const n = String(imo ?? '').replace(/\D/g, '');
+  if (n.length !== 7) return null;
+  const rows = await sparql(`SELECT ?item WHERE { ?item wdt:P458 "${n}" } LIMIT 1`, signal);
+  return rows[0] ? qidOf(rows[0].item.value) : null;
+}
+
 /** Fetch everything the inspector shows for a single item. */
 export async function fetchShipFacts(qid, lang = 'en', signal) {
   if (!/^Q\d+$/.test(qid)) throw new Error('Invalid Wikidata id');

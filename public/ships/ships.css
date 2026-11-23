@@ -195,6 +195,7 @@
 .ships-src.wikidata { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
 .ships-src.estimated { background: color-mix(in srgb, var(--orange) 18%, transparent); color: var(--orange); }
 .ships-src.manual { background: var(--tint-bg); color: var(--blue); }
+.ships-src.ais { background: color-mix(in srgb, #7b5cc4 18%, transparent); color: #7b5cc4; }
 
 .ships-photo { margin: 0 0 4px; border-radius: 10px; overflow: hidden; background: var(--fill); }
 .ships-photo img { width: 100%; max-height: 190px; object-fit: cover; display: block; }
@@ -228,3 +229,4 @@
 .ship-callout em.wikidata { color: #6ee7b7; }
 .ship-callout em.estimated { color: #fcd34d; }
 .ship-callout em.manual { color: #7dd3fc; }
+.ship-callout em.ais { color: #c4b5fd; }

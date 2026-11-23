@@ -8,7 +8,7 @@ It is plain static files with no backend, so it runs on GitHub Pages.
 
 ```bash
 npm start      # http://localhost:8080 (local static server)
-npm test       # parsers, URL builders, navigation maths, ship models
+npm test       # parsers, URL builders, navigation maths, AIS, ship models
 npm run vendor # rebuilds public/vendor/three.js from the pinned devDependencies (after npm ci)
 npm run build  # copies public/ to dist/ and stamps the build
 ```
@@ -50,6 +50,33 @@ Tapping a point shows, for that position:
 
 The search box finds places, lights, skerries and harbours in Kartverket's place-name register.
 
+## Ships on the chart (AIS)
+
+Under the layers button, **Ships (AIS)** shows live ship positions from Kystverket's AIS, served by
+BarentsWatch (Norwegian waters). Each ship is an arrow in its type's colour, turned to its heading
+(a dot when the heading is unknown); from zoom 13 it is drawn at its true size and heading, placed
+by where its GPS antenna sits. Reports older than 15 minutes are faded and those older than two
+hours dropped. Hover for the name; tap a ship for its card (type, status, speed, course, size,
+draught, destination, MMSI, IMO, call sign) and **Open 3D model**, which builds it in the ship
+inspector from its AIS report: length, beam and draught from AIS (marked *AIS*), the rest
+estimated from its type, and, when its IMO number is on Wikidata, its type, height and photos from
+there.
+
+**Access.** BarentsWatch's AIS API needs a token from a BarentsWatch "AIS client" (free; create one
+on [My Page](https://www.barentswatch.no/minside/)). Rudder has no server, so the client ID and
+secret are typed into the layers panel and kept **only in this browser** (`localStorage`,
+`rudder.ais.v1`), sent only to BarentsWatch: fine for your own device, not for a shared one.
+*Forget my BarentsWatch access* removes them. Whether BarentsWatch's login server answers a web page
+is not yet verified; if it does not, the panel says so and you can paste an access token instead
+(valid about an hour, e.g. from `curl -d grant_type=client_credentials -d client_id=… -d
+client_secret=… -d scope=ais https://id.barentswatch.no/connect/token`). The AIS API itself answers
+browsers (CORS `*`, checked 2026-11-23). For other people to use it, put a small relay in front
+that keeps the secret (for example behind a Google sign-in).
+
+The layer asks only for the area in view (plus 30 %), from zoom 7, every 30 seconds and after a
+pan out of that area; later polls ask only for what changed (`since`). Code: `public/ais.js`
+(requests, decoding, shapes; tested) and `public/aismap.js` (fetching, drawing, panel).
+
 ## Ships
 
 **Ships** in the top bar covers the chart with a 3D ship inspector (`public/ships/`). Close it with
@@ -77,8 +104,8 @@ AIS does not carry, matched by IMO/MMSI.
 ## Not used, and why
 
 - **ENC (S-57) WMS** `wms.geonorge.no/skwms1/wms.ecc_enc`: restricted to approved IP addresses.
-- **Live AIS**: BarentsWatch's open AIS API needs an OAuth client secret, which a static page can't
-  keep secret. Kystverket's raw AIS feed is a TCP socket, which browsers can't open.
+- **Kystverket's raw AIS feed**: a TCP socket, which browsers can't open (the AIS layer uses
+  BarentsWatch's API instead, see above).
 - **High-resolution bathymetry** inside 12 nm is graded (military restriction); public depth data
   there is coarse.
 
