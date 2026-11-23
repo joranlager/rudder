@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0b2236">
+  <meta name="description" content="Marine simulator on Norway's official public sea charts and marine data">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; connect-src https:; worker-src 'self' blob:">
+  <title>Rudder</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map" aria-label="Sea chart"></div>
+
+  <header class="topbar">
+    <div class="brand"><img src="icon.svg" alt="" width="26" height="26"><span>Rudder</span></div>
+    <form id="search" class="search" role="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Find a place, light or harbour" aria-label="Find a place">
+      <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+    </form>
+    <button id="layers-btn" class="icon-btn" type="button" aria-expanded="false" aria-controls="layers" title="Charts and layers">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Zm-7.6 9L2 13.2l10 5 10-5-2.4-1.2L12 15.8 4.4 12Zm0 4L2 17.2l10 5 10-5-2.4-1.2L12 19.8 4.4 16Z"/></svg>
+    </button>
+  </header>
+
+  <aside id="layers" class="panel layers" aria-label="Charts and layers" hidden>
+    <div class="panel-head"><h2>Charts and layers</h2><button class="close" type="button" data-close="layers" aria-label="Close">×</button></div>
+    <section><h3>Background</h3><div id="basemaps"></div></section>
+    <div id="overlays"></div>
+    <p class="fine">Overlays that need a closer view say so until you zoom in. The official ENC (S-57) service is restricted to approved users and is not used.</p>
+  </aside>
+
+  <aside id="info" class="panel info" aria-label="Marine information" aria-live="polite" hidden>
+    <div class="panel-head"><h2 id="info-title">Position</h2><button class="close" type="button" data-close="info" aria-label="Close">×</button></div>
+    <div id="info-body"></div>
+  </aside>
+
+  <footer class="readout" aria-live="off">
+    <span id="cursor" title="Pointer position">—</span>
+    <span id="zoom" title="Zoom level"></span>
+    <span id="build" class="build" title="Build">__BUILD__</span>
+  </footer>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
