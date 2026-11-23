@@ -10,6 +10,11 @@
   "scripts": {
     "start": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "vendor": "node scripts/vendor.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "three": "0.180.0"
   }
 }

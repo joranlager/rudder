@@ -1,0 +1,230 @@
+/* Ship inspector (Ships in the top bar). Loaded with the inspector, so the chart does not carry it.
+   Its tokens follow Rudder's palette (style.css) and are scoped to .ships. */
+
+.ships {
+  --label: var(--ink); --label-2: var(--muted); --separator: var(--line); --blue: var(--accent);
+  --fill: color-mix(in srgb, var(--ink) 7%, transparent); --fill-strong: color-mix(in srgb, var(--ink) 15%, transparent);
+  --tint-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+  --card: color-mix(in srgb, var(--ink) 3%, var(--panel));
+  --material: var(--panel); --material-edge: var(--line); --bar: var(--panel); --segment: var(--accent);
+  --green: #1f9d55; --orange: #c46a00; --red: #c0392b;
+  --shadow-small: 0 1px 3px rgba(8, 26, 40, 0.2);
+  --radius-group: 10px; --radius-sheet: 16px; --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------- base controls, scoped so the chart's own styles are untouched ---------- */
+
+.ships button {
+  appearance: none; font: 600 15px var(--font); min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px;
+  cursor: pointer; background: transparent; color: var(--blue); transition: opacity 0.15s, background 0.2s;
+}
+.ships button:active { opacity: 0.6; }
+.ships button:disabled { opacity: 0.35; cursor: not-allowed; }
+.ships button.primary { background: var(--blue); color: #fff; }
+.ships button.tinted, .ships button.ghost { background: var(--tint-bg); color: var(--blue); }
+.ships .close { min-height: 30px; width: 30px; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--fill-strong); color: var(--label-2); }
+.ships input:not([type]), .ships input[type="text"], .ships input[type="search"], .ships select {
+  appearance: none; -webkit-appearance: none; flex: 1; min-width: 0; min-height: 40px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font: 400 15px var(--font);
+}
+.ships input:focus, .ships select:focus { outline: none; border-color: var(--accent); }
+.ships select {
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%238e9aa5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.ships input[type="checkbox"][role="switch"] {
+  appearance: none; -webkit-appearance: none; flex: none; width: 46px; height: 28px; border-radius: 999px; margin: 0;
+  position: relative; cursor: pointer; background: var(--fill-strong); transition: background 0.25s var(--ease);
+}
+.ships input[type="checkbox"][role="switch"]::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); transition: transform 0.25s var(--ease);
+}
+.ships input[type="checkbox"][role="switch"]:checked { background: var(--accent); }
+.ships input[type="checkbox"][role="switch"]:checked::after { transform: translateX(18px); }
+.ships .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ships .muted { color: var(--label-2); }
+.ships .small { font-size: 13px; line-height: 1.35; }
+.ships .error { color: var(--red); font-size: 14px; margin: 4px 0 12px; }
+.ships .notice { background: var(--tint-bg); color: var(--blue); border-radius: var(--radius-group); padding: 10px 14px; font-size: 14px; margin: 0 0 14px; }
+.ships .group { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-group); margin: 0 0 14px; list-style: none; padding: 0; overflow: hidden; }
+.ships .group.pad { padding: 12px 14px; }
+.ships .group.pad .small { margin: 8px 0 0; }
+.ships .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-2); margin: 0 4px 6px; }
+.ships .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 14px; cursor: pointer; }
+.ships .switch-row span { display: grid; gap: 2px; }
+.ships .switch-row strong { font-weight: 400; }
+.ships .switch-row + .switch-row { border-top: 1px solid var(--line); }
+.ships .pad-note { padding: 0 4px 12px; margin: 0; }
+.ships .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.ships .chip { font-size: 13px; padding: 0 10px; min-height: 30px; border-radius: 999px; background: var(--fill); color: var(--label-2); font-weight: 500; }
+.ships h3, .ships p { margin-top: 0; }
+
+.ships {
+  position: fixed; inset: 0; z-index: 3; background: #0d1b2a; color: var(--label);
+  font-family: var(--font); overflow: hidden;
+}
+.ships[hidden] { display: none; }
+
+.ships-view { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.ships-view canvas { display: block; }
+.ships-noview { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #cfd8e3; }
+
+/* ---------- toolbar under the top bar ---------- */
+
+.ships-tools {
+  position: absolute; z-index: 2; left: max(16px, env(safe-area-inset-left)); right: 16px;
+  top: calc(env(safe-area-inset-top) + 64px);
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none;
+}
+.ships-tools > * { pointer-events: auto; }
+
+.ships-seg {
+  display: inline-flex; flex-wrap: wrap; gap: 1px; padding: 3px; border-radius: 999px;
+  background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
+  border: 0.5px solid var(--material-edge); box-shadow: var(--shadow-small);
+}
+.ships-seg button {
+  min-height: 34px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  color: var(--label); background: transparent; display: inline-flex; align-items: center; gap: 4px;
+}
+.ships-seg button[aria-checked="true"], .ships-seg button[aria-selected="true"] { background: var(--accent); color: #fff; box-shadow: var(--shadow-small); }
+.ships-seg button[aria-pressed="true"] { color: var(--blue); }
+.ships-seg button[aria-pressed="false"] { color: var(--label-2); }
+
+/* ---------- the sheet: right side on a wide screen, bottom on a phone ---------- */
+
+.ships-sheet {
+  position: absolute; z-index: 3; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--material); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
+  border: 0.5px solid var(--material-edge); box-shadow: var(--shadow);
+  top: calc(env(safe-area-inset-top) + 64px); right: max(12px, env(safe-area-inset-right)); bottom: 12px; width: 400px;
+  border-radius: var(--radius-sheet);
+}
+.ships-head { display: flex; align-items: center; gap: 10px; padding: 14px 14px 8px 18px; flex: none; }
+.ships-grab {
+  flex: 1; min-width: 0; min-height: 0; padding: 0; text-align: left; background: none; color: var(--label);
+  display: grid; gap: 2px; border-radius: 0; cursor: default;
+}
+.ships-grab:active { opacity: 1; }
+.ships .ships-grab { color: var(--ink); }
+.ships-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ships-sub { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ships-tabs { margin: 0 14px 8px; display: flex; flex-wrap: nowrap; background: var(--fill); border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ships-tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); }
+.ships-tabs button { flex: 1; justify-content: center; padding: 0 6px; font-size: 13.5px; min-height: 32px; }
+.ships-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 8px 14px 24px; flex: 1; }
+
+@media (min-width: 641px) {
+  .ships-view { right: 424px; }
+  .ships-tools { right: 424px; }
+}
+
+@media (max-width: 640px) {
+  .ships-tools { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); gap: 6px; top: calc(env(safe-area-inset-top) + 60px); }
+  .ships-seg button { min-height: 32px; padding: 0 9px; font-size: 13px; flex: none; }
+  /* camera row: one line that scrolls sideways instead of wrapping over the ship */
+  .ships-views { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .ships-views::-webkit-scrollbar { display: none; }
+  .ships-sheet {
+    top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 52dvh;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding-bottom: env(safe-area-inset-bottom);
+    transition: height 0.35s var(--ease);
+  }
+  .ships-view { bottom: calc(52dvh - 20px); transition: bottom 0.35s var(--ease); }
+  .ships[data-sheet="closed"] .ships-sheet { height: calc(108px + env(safe-area-inset-bottom)); }
+  .ships[data-sheet="closed"] .ships-view { bottom: 90px; }
+  .ships[data-sheet="closed"] .ships-body { display: none; }
+  .ships-head { padding-top: 10px; }
+  .ships-head::before {
+    content: ""; position: absolute; top: 6px; left: 50%; margin-left: -18px; width: 36px; height: 5px; border-radius: 3px; background: var(--fill-strong);
+  }
+  .ships-grab { cursor: pointer; }
+  .ships-title { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ships-sheet, .ships-view { transition: none; }
+}
+
+/* ---------- inside the sheet ---------- */
+
+.ships-body .row { margin-bottom: 12px; }
+.ships-body .group.pad .row { margin-top: 10px; }
+.ships-body .label { margin-top: 18px; }
+.ships-body .label:first-child { margin-top: 4px; }
+.ships-search { margin-bottom: 6px !important; }
+.ships-chips { margin: 0 0 14px; }
+.ships-chips .chip { min-height: 30px; font-size: 13px; }
+
+.ships-hits li + li { border-top: 0.5px solid var(--separator); margin-left: 76px; }
+.ships-hits li + li button { margin-left: -76px; width: calc(100% + 76px); }
+.ships-hits button {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 56px; border-radius: 0;
+  text-align: left; color: var(--label); font-weight: 400; background: none;
+}
+.ships-hits button[aria-pressed="true"] { background: var(--tint-bg); }
+.ships-thumb { width: 52px; height: 38px; border-radius: 6px; overflow: hidden; background: var(--fill); flex: none; }
+.ships-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ships-hit { display: grid; gap: 1px; min-width: 0; }
+.ships-hit b { font-weight: 600; font-size: 16px; }
+.ships-hit small { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ships-qid { text-transform: none; font-size: 12px; margin-left: 4px; }
+.ships-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; margin: 8px 0 0; }
+.ships-facts dt { color: var(--label-2); }
+.ships-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ships-links { display: flex; gap: 16px; }
+.ships-links a { color: var(--blue); text-decoration: none; }
+
+.ships-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 16px; }
+.ships-gallery button { padding: 0; min-height: 0; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 2px solid transparent; background: var(--fill); }
+.ships-gallery button[aria-pressed="true"] { border-color: var(--blue); }
+.ships-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.ships-selects { display: grid; gap: 10px; }
+.ships-selects label, .ships-text label { display: grid; gap: 4px; font-size: 13px; color: var(--label-2); }
+.ships-text { display: grid; gap: 10px; }
+
+.ships-range { display: grid; gap: 4px; padding: 6px 0; }
+.ships-range-top { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+.ships-range-top b { font-weight: 400; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.ships-range input[type="range"] { width: 100%; accent-color: var(--blue); margin: 0; min-height: 28px; }
+.ships-src { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 600; vertical-align: 1px; }
+.ships-src.wikidata { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
+.ships-src.estimated { background: color-mix(in srgb, var(--orange) 18%, transparent); color: var(--orange); }
+.ships-src.manual { background: var(--tint-bg); color: var(--blue); }
+
+.ships-photo { margin: 0 0 4px; border-radius: 10px; overflow: hidden; background: var(--fill); }
+.ships-photo img { width: 100%; max-height: 190px; object-fit: cover; display: block; }
+.ships-photo figcaption { padding: 6px 10px; margin: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ships-photo a { color: inherit; }
+.ships-palette { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ships-palette button {
+  min-height: 34px; padding: 0; border-radius: 8px; border: 0.5px solid var(--separator); position: relative;
+  box-shadow: var(--shadow-small);
+}
+.ships-palette button.faded { opacity: 0.55; }
+.ships-palette span { position: absolute; right: 4px; bottom: 1px; font-size: 9px; color: #fff; mix-blend-mode: difference; font-weight: 600; }
+
+.ships-slots li { display: flex; align-items: center; gap: 8px; padding-right: 12px; }
+.ships-slots li + li { border-top: 0.5px solid var(--separator); }
+.ships-slots li[aria-selected="true"] { background: var(--tint-bg); }
+.ships-slots button { flex: 1; text-align: left; font-weight: 400; color: var(--label); background: none; border-radius: 0; padding: 0 16px; }
+.ships-slots li[aria-selected="true"] button { color: var(--blue); font-weight: 600; }
+.ships-slots input[type="color"] {
+  width: 44px; height: 30px; padding: 0; border: 0.5px solid var(--separator); border-radius: 8px; background: none; cursor: pointer;
+}
+
+/* ---------- 3D dimension labels ---------- */
+
+.ship-callout {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 8px;
+  background: rgba(6, 20, 32, 0.82); border: 1px solid rgba(94, 230, 255, 0.55); color: #dff9ff;
+  font: 600 12px/1.3 var(--font); white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.ship-callout em { font-style: normal; font-weight: 500; font-size: 10px; padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); }
+.ship-callout em.wikidata { color: #6ee7b7; }
+.ship-callout em.estimated { color: #fcd34d; }
+.ship-callout em.manual { color: #7dd3fc; }

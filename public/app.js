@@ -86,12 +86,45 @@ function updateZoomHints() {
 function togglePanel(id, open) {
   const el = $(`#${id}`);
   el.hidden = open === undefined ? !el.hidden : !open;
+  if (!el.hidden) closeShips(); // a chart panel brings the chart back
   if (id === 'layers') $('#layers-btn').setAttribute('aria-expanded', String(!el.hidden));
   if (id === 'info' && el.hidden) clearClick();
 }
 $('#layers-btn').addEventListener('click', () => togglePanel('layers'));
 document.addEventListener('click', (e) => { const c = e.target.closest('[data-close]'); if (c) togglePanel(c.dataset.close, false); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { togglePanel('layers', false); togglePanel('info', false); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  // In the ship inspector, Escape in a field only leaves the field.
+  if (shipsOpen()) { if (!e.target.closest?.('#ships input, #ships select')) closeShips(); return; }
+  togglePanel('layers', false); togglePanel('info', false);
+});
+
+// ---------- ships ----------
+// "Ships" in the top bar covers the chart with the 3D ship inspector (public/ships/). It is loaded the
+// first time it is opened, so the chart never waits for three.js, and it stops drawing while closed.
+let ships = null, shipsLoading = null;
+const shipsOpen = () => !$('#ships').hidden;
+async function openShips() {
+  togglePanel('layers', false); togglePanel('info', false);
+  $('#ships').hidden = false;
+  $('#ships-btn').setAttribute('aria-expanded', 'true');
+  if (ships) { ships.resume(); return; }
+  shipsLoading ??= import('./ships/ui.js')
+    .then((m) => { ships = m.createShipInspector($('#ships'), { onClose: closeShips }); })
+    .catch((err) => {
+      shipsLoading = null;
+      $('#ships').innerHTML = `<p class="ships-noview">Could not load the ship inspector (${esc(err.message)}).</p>`;
+    });
+  await shipsLoading;
+  if (!shipsOpen()) ships?.pause(); // closed again while it was loading
+}
+function closeShips() {
+  if (!shipsOpen()) return;
+  $('#ships').hidden = true;
+  $('#ships-btn').setAttribute('aria-expanded', 'false');
+  ships?.pause();
+}
+$('#ships-btn').addEventListener('click', () => (shipsOpen() ? closeShips() : openShips()));
 
 // ---------- pointer readout ----------
 const showZoom = () => { $('#zoom').textContent = `z${map.getZoom().toFixed(1)}`; updateZoomHints(); };
@@ -232,4 +265,4 @@ input.addEventListener('focus', () => { list.hidden = !results.length; });
 renderLayerPanel();
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
-window.rudder = { map, settings, showPoint };
+window.rudder = { map, settings, showPoint, openShips, closeShips };

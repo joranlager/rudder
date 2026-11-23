@@ -47,6 +47,10 @@ button { font: inherit; color: inherit; }
 .icon-btn svg { width: 22px; height: 22px; fill: var(--ink); }
 .icon-btn[aria-expanded="true"] { background: var(--accent); }
 .icon-btn[aria-expanded="true"] svg { fill: #fff; }
+/* Ships: a labelled pill next to the layers button */
+.ships-btn { width: auto; padding: 0 14px 0 11px; border-radius: 999px; gap: 6px; display: flex; align-items: center; font-weight: 600; }
+.ships-btn + .icon-btn { margin-left: 0; }
+.ships-btn[aria-expanded="true"] { color: #fff; }
 
 .panel { position: fixed; z-index: 4; background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 12px 14px 14px; overflow: auto; backdrop-filter: blur(8px); }
@@ -93,6 +97,8 @@ button { font: inherit; color: inherit; }
 
 @media (max-width: 640px) {
   .brand span { display: none; }
+  .ships-btn { width: 42px; padding: 0; justify-content: center; }
+  .ships-btn span { display: none; }
   .layers, .info { left: 8px; right: 8px; width: auto; }
   .layers { top: auto; bottom: 8px; max-height: 65%; }
   .info { bottom: 8px; max-height: 55%; }

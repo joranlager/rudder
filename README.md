@@ -1,13 +1,15 @@
 # Rudder
 
 A marine simulator on Norway's official, public sea charts and marine data. This first part is
-the map: real charts, depths and live marine conditions. The vessel comes next.
+the map: real charts, depths and live marine conditions, plus a 3D ship inspector that builds the
+vessels (see [Ships](#ships)).
 
 It is plain static files with no backend, so it runs on GitHub Pages.
 
 ```bash
 npm start      # http://localhost:8080 (local static server)
-npm test       # parsers, URL builders, navigation maths
+npm test       # parsers, URL builders, navigation maths, ship models
+npm run vendor # rebuilds public/vendor/three.js from the pinned devDependencies (after npm ci)
 npm run build  # copies public/ to dist/ and stamps the build
 ```
 
@@ -47,6 +49,30 @@ Tapping a point shows, for that position:
 - **Weather now**: wind, air temperature and pressure, from MET Norway's locationforecast.
 
 The search box finds places, lights, skerries and harbours in Kartverket's place-name register.
+
+## Ships
+
+**Ships** in the top bar covers the chart with a 3D ship inspector (`public/ships/`). Close it with
+the same button, the × in its sheet, Escape, or the layers button.
+
+- **Find a ship** on Wikidata (SPARQL, limited to ships, boats and ship classes): type, class,
+  dimensions, tonnage, speed, builder, operator, flag, home port, IMO/MMSI and service dates, with
+  photos from Wikimedia Commons (the item's image, its category and a text search).
+- **Build** the hull from length, beam, draft, depth and fullness, with a bulbous, raked, plumb or
+  clipper bow and a transom or cruiser stern. Deckhouses, funnels, masts, cargo and sails follow the
+  vessel type (container ship, tanker, bulk, cargo, cruise ship, ferry, liner, warship, aircraft
+  carrier, sailing ship, yacht, tug). Values missing on Wikidata are estimated and marked *est.*
+- **Livery** sampled from a photo (k-means, sky and water left out); name, port of registry, side
+  name, IMO number, draft marks and load-line mark painted on the hull.
+- **Look** in a studio, at sea (sea state, speed with a wake, sun height; the hull heaves, pitches
+  and rolls on the waves) or under water, with dimension lines in metres or feet.
+- **Export** Wavefront `.obj` + `.mtl` + the painted hull pictures (metres, Y up, bow towards +X).
+
+It is loaded the first time it is opened, so the chart never waits for three.js (about 0.7 MB,
+vendored in `public/vendor/three.js` by `npm run vendor`). The hull builder takes the same inputs
+an AIS static report carries (length and beam from the antenna offsets, draught, ship type), so
+ships in sight on the chart can later be modelled from AIS; Wikidata and Commons then fill in what
+AIS does not carry, matched by IMO/MMSI.
 
 ## Not used, and why
 
