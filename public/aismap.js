@@ -131,7 +131,7 @@ export function createAisLayer(map) {
     if (el) {
       el.textContent = text;
       el.dataset.tone = tone;
-      if (action === 'renew') el.insertAdjacentHTML('beforeend', ' <button type="button" class="link-btn" data-shortcut>Get a new token</button>');
+      if (action === 'renew') el.insertAdjacentHTML('beforeend', ' <button type="button" class="link-btn" data-renew>Get a new token</button>');
     }
   }
 
@@ -151,7 +151,7 @@ export function createAisLayer(map) {
       // A network error here, with the network up, means the login server did not let this page read its answer.
       throw Object.assign(new Error(navigator.onLine === false
         ? 'Offline.'
-        : 'BarentsWatch only lets its own website log in from a browser, so Rudder cannot use the ID and secret directly. Get a token with Shortcuts in Settings instead.'), { fatal: true, expired: Boolean(saved) });
+        : 'BarentsWatch only lets its own website log in from a browser, so Rudder cannot use the ID and secret directly. Get a token in Settings instead.'), { fatal: true, expired: Boolean(saved) });
     }
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -228,7 +228,7 @@ export function createAisLayer(map) {
       <label class="opt"><input type="checkbox" data-ais="on" ${cfg.on ? 'checked' : ''} ${ready ? '' : 'disabled'}>
         <span>Show ships</span><small>Live positions from Kystverket's AIS via BarentsWatch, Norwegian waters. Tap a ship for details and its 3D model.</small></label>
       ${ready ? '' : '<p class="ais-setup">Needs your BarentsWatch AIS client. <button type="button" class="link-btn" data-open="settings">Set it up in Settings</button></p>'}
-      <p class="ais-status" data-tone="${status.tone}" role="status">${esc(status.text)}${status.action === 'renew' ? ' <button type="button" class="link-btn" data-shortcut>Get a new token</button>' : ''}</p>
+      <p class="ais-status" data-tone="${status.tone}" role="status">${esc(status.text)}${status.action === 'renew' ? ' <button type="button" class="link-btn" data-renew>Get a new token</button>' : ''}</p>
       <div class="ais-legend">${TYPE_GROUPS.map((g) => `<span><i style="background:${g.color}"></i>${esc(g.label)}</span>`).join('')}</div>`;
   }
 

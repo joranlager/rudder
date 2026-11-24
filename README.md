@@ -76,19 +76,39 @@ website read its answers in a browser (CORS: `access-control-allow-origin` is se
 `https://www.barentswatch.no` only, whatever the client; checked 2026-11-24). The AIS API itself
 answers any website.
 
-So Rudder asks the **Shortcuts** app for it (iPhone, iPad, Mac), which is not a browser and not held
-to CORS (`public/handoff.js`). Set up once, as **Settings → BarentsWatch AIS → Set up the shortcut**
-explains: a shortcut named exactly **Rudder token** with *Get Contents of URL* (POST, form:
-`grant_type=client_credentials`, `client_id`, `client_secret`, `scope=ais` to
-`https://id.barentswatch.no/connect/token`) and *Get Dictionary Value* `access_token`. Then **Get
-token with Shortcuts** in Settings, or **Get a new token** in the layers panel when one runs out
-(about an hour), opens `shortcuts://x-callback-url/run-shortcut?name=Rudder%20token&x-success=…`;
-Shortcuts runs it and opens Rudder again with the token appended as `result`. Rudder takes it out
-of the address at once (keeping the chart position), keeps it on the device, tests it and switches
-the ships on. The secret stays in the shortcut. Shortcuts opens Rudder in the default browser, so
-use Rudder there. A token fetched any other way can be pasted in Settings instead.
+WebAssembly does not get around this: it runs inside the browser under the same rules. So Rudder
+gets the token one of three ways, none of which installs anything. **Get a new token** in the layers
+panel, when one runs out (about an hour), picks the way that suits the device.
 
-The token (and a client ID and secret, kept for when BarentsWatch lets Rudder log in directly) is
+**Any browser (Windows, Mac, Linux, Android): the "Rudder token" bookmark** (`public/bwlogin.js`).
+The login server's own site, `https://id.barentswatch.no`, is not cross-site to it, and its pages
+show without logging in. Save your client ID and secret in **Settings → 1. Your BarentsWatch
+client**, and drag the **Rudder token** link from Settings to the bookmarks bar (once). **Get token
+from BarentsWatch** opens `id.barentswatch.no` in a new window; click the bookmark there. It runs as
+part of that page: it asks Rudder (the window that opened it, by `postMessage` to Rudder's origin)
+for the client ID and secret, posts them to `/connect/token`, sends the answer back and closes the
+window. Rudder keeps the token, tests it and switches the ships on. The bookmark holds no secret,
+Rudder answers only the window it opened and only while it shows `id.barentswatch.no` or
+`www.barentswatch.no`, and the bookmark only talks to Rudder's origin. The login pages are
+sandboxed without dialogs, so the bookmark reports in a banner at the top of the page. On Android
+Chrome, run it by typing its name in the address bar. Checked 2026-11-24: from that page the login
+server answers (BarentsWatch's real `invalid_client` for a made-up client).
+
+**iPhone, iPad, Mac: the Shortcuts app** (`public/handoff.js`), which is not a browser and not held
+to CORS. Set up once, as Settings explains: a shortcut named exactly **Rudder token** with *Get
+Contents of URL* (POST, form: `grant_type=client_credentials`, `client_id`, `client_secret`,
+`scope=ais` to `https://id.barentswatch.no/connect/token`) and *Get Dictionary Value*
+`access_token`. **Get token with Shortcuts** opens
+`shortcuts://x-callback-url/run-shortcut?name=Rudder%20token&x-success=…`; Shortcuts runs it and
+opens Rudder again with the token appended as `result`. Rudder takes it out of the address at once
+(keeping the chart position). Shortcuts opens Rudder in the default browser, so use Rudder there.
+
+**Windows or Mac: a command, then paste.** curl comes with Windows 10/11 and macOS. Settings shows the
+command with your client filled in (`curl.exe … | clip` for PowerShell or Command Prompt,
+`curl … | pbcopy` for Terminal); it copies BarentsWatch's answer to the clipboard, and **Paste token**
+reads it back. A token, `Bearer …` or the whole JSON answer can also be pasted by hand.
+
+The token and the client ID and secret are
 kept **only on the device**, in the browser's storage for Rudder (`localStorage`,
 `rudder.barentswatch.v1`; `public/credentials.js`), and sent only to BarentsWatch. There is no
 Rudder server. Saving asks the browser to keep the data (`navigator.storage.persist`), and Settings

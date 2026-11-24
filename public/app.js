@@ -49,9 +49,14 @@ map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAc
 // Ships from AIS (BarentsWatch), drawn over the chart when switched on in the layers panel.
 const ais = createAisLayer(map);
 // Settings: BarentsWatch access, kept on this device.
-const settingsPanel = createSettings($('#settings-body'), { ais });
-// Any "Get token" button runs the "Rudder token" shortcut, which comes back here with the token.
-document.addEventListener('click', (e) => { if (e.target.closest('[data-shortcut]')) location.href = shortcutUrl(location.href); });
+const settingsPanel = createSettings($('#settings-body'), { ais, openPanel: () => togglePanel('settings', true) });
+// Getting a BarentsWatch token: Shortcuts (iPhone, iPad, Mac), the bookmark on BarentsWatch (any
+// browser, bwlogin.js), or "Get a new token", which picks the way that suits this device.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-shortcut]')) location.href = shortcutUrl(location.href);
+  else if (e.target.closest('[data-bwlogin]')) settingsPanel.bookmarkLogin();
+  else if (e.target.closest('[data-renew]')) settingsPanel.renew();
+});
 
 // ---------- layer panel ----------
 function renderLayerPanel() {
@@ -339,7 +344,7 @@ enableLogoReload($('#brand'), { onReload: () => { $('#reloading').hidden = false
 // Back from Shortcuts: show the result in Settings, and the ships once there is a token.
 if (handoff) {
   togglePanel('settings', true);
-  settingsPanel.fromShortcut(handoff).then(() => { if (handoff.status === 'ok') ais.setOn(true); });
+  settingsPanel.fromToken(handoff, 'Got a new token from Shortcuts.');
 }
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
