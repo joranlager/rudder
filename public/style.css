@@ -297,3 +297,6 @@ body.bridge-view .maplibregl-canvas-container { cursor: grab; }
   .telegraph button { font-size: 11px; padding: 3px 6px; }
 }
 .gyro-wrap > div { display: grid; }
+
+/* With the helm console open, the map ends where the console begins (helm.js sets --helm-room). */
+body.helm-on #map { bottom: var(--helm-room, 0px); }

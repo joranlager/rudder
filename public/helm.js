@@ -83,6 +83,12 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
   let depth = { depth: null, text: '—', hit: null, busy: false }; // last sounding; hit: where aground
   let contact = null; // the ship we are touching, if any
   let wheelDrag = null;
+  let roomObserver = null;
+
+  function makeRoom() {
+    document.documentElement.style.setProperty('--helm-room', `${el.offsetHeight}px`);
+    map.resize();
+  }
 
   const where = () => (s ? { lat: s.lat, lon: s.lon, heading: s.heading } : null);
 
@@ -317,6 +323,11 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     render();
     el.hidden = false;
     document.body.classList.add('helm-on');
+    // The map makes room for the console: it ends where the console begins, so the bridge view is
+    // centred in the window above it (as on a real bridge) and nothing hides behind the console.
+    roomObserver = new ResizeObserver(() => makeRoom());
+    roomObserver.observe(el);
+    makeRoom();
     document.addEventListener('keydown', onKey);
     if (!bridge.active || bridge.mmsi !== v.mmsi) bridge.enter(ais.vessel(v.mmsi) ?? v);
     last = 0;
@@ -332,6 +343,10 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     el.hidden = true;
     el.innerHTML = '';
     document.body.classList.remove('helm-on');
+    roomObserver?.disconnect();
+    roomObserver = null;
+    document.documentElement.style.removeProperty('--helm-room');
+    map.resize();
     document.removeEventListener('keydown', onKey);
     ais.setControlled(null);
     onStatus('The helm is handed back: the ship follows its real AIS reports again.');

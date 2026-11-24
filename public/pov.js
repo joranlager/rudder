@@ -29,7 +29,11 @@ const deg = (r) => (r * 180) / Math.PI;
 export function eyeHeight(v) {
   const { params } = hullFromAis(v);
   const freeboard = Math.max(0.5, params.depth - params.draft);
-  return Math.max(2.5, freeboard + Math.max(0, params.decks - 1) * TIER_M + EYE_M);
+  const fromDecks = freeboard + Math.max(0, params.decks - 1) * TIER_M + EYE_M;
+  // Bridges are set high enough to see over the bow and the cargo: on bigger ships about 8 % of the
+  // length above the deck, whatever the model's deck count (a 100 m tanker's is some 15 m up).
+  const toSeeOver = freeboard + 0.08 * params.length + 4;
+  return Math.max(2.5, fromDecks, toSeeOver);
 }
 
 /** Move [lon, lat] by `m` metres towards `bearing` (degrees). */
@@ -73,7 +77,7 @@ export function bridgeLine(v, heading) {
  * The bridge view on `map`. `ais` (aismap.js) gives the newest report of a ship, where it is shown
  * now, and keeps its model drawn while the view is on. `onExit` is told when the view ends by itself.
  */
-export function createBridgeView(map, { ais, bar, far = null, bottomInset = () => 0, onEnter = () => {}, onExit = () => {} }) {
+export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}, onExit = () => {} }) {
   let mmsi = null;
   let look = 0;
   let pitch = LOOK_PITCH;
@@ -97,8 +101,9 @@ export function createBridgeView(map, { ais, bar, far = null, bottomInset = () =
     const o = map.calculateCameraOptionsFromTo(
       new maplibregl.LngLat(...cam.from), cam.eye, new maplibregl.LngLat(...cam.to), 0,
     );
-    // Whatever covers the bottom of the screen (the helm console) is left out: the view is centred above it.
-    map.jumpTo({ ...o, padding: { top: 0, left: 0, right: 0, bottom: bottomInset() } });
+    // No camera padding: with the camera tilted this far, MapLibre's far plane collapses to a few
+    // metres when there is any. (The helm console makes room by shrinking the map instead: helm.js.)
+    map.jumpTo(o);
     const text = `${(v.name || '').trim() || `MMSI ${v.mmsi}`}|${bridgeLine(v, heading)}`;
     if (text !== lastText) {
       lastText = text;
@@ -205,7 +210,7 @@ export function createBridgeView(map, { ais, bar, far = null, bottomInset = () =
     map.transform.fov = DEFAULT_FOV;
     map.setMaxZoom(saved.maxZoom);
     map.setMaxPitch(saved.maxPitch);
-    map.jumpTo({ padding: { top: 0, left: 0, right: 0, bottom: 0 }, center: saved.center, zoom: Math.min(saved.zoom, saved.maxZoom), pitch: Math.min(saved.pitch, saved.maxPitch), bearing: saved.bearing });
+    map.jumpTo({ center: saved.center, zoom: Math.min(saved.zoom, saved.maxZoom), pitch: Math.min(saved.pitch, saved.maxPitch), bearing: saved.bearing });
     for (const h of saved.handlers) map[h].enable();
     saved = null;
     onExit(message);

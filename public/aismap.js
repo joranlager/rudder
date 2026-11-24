@@ -10,7 +10,7 @@ import {
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
 import { scaleBarMetres, modelsAtScale } from './scalebar.js';
-import { createShipModels, pickShips, MAX_MODELS } from './shipmodels.js';
+import { createShipModels, pickShips, boxAround, MAX_MODELS, POV_RADIUS_M } from './shipmodels.js';
 
 const STORE_KEY = 'rudder.ais.v1';
 const MIN_ZOOM = 7; // wider views would ask for most of the coast at once
@@ -101,10 +101,17 @@ export function createAisLayer(map) {
     const active = cfg.on && map.getSource('ais-points') && (pov !== null || modelsAtScale(scaleBarMetres(map)));
     let list = [];
     if (active) {
-      const b = map.getBounds(), c = map.getCenter();
-      const padX = (b.getEast() - b.getWest()) * 0.2, padY = (b.getNorth() - b.getSouth()) * 0.2;
-      list = pickShips(vessels.values(), [b.getWest() - padX, b.getSouth() - padY, b.getEast() + padX, b.getNorth() + padY], [c.lng, c.lat]);
       const own = pov !== null ? vessels.get(pov) : null;
+      if (own) {
+        // From a bridge, the ships around it, nearest first. (MapLibre's view bounds are no use here:
+        // with the helm console's padding and the camera tilted far over they shrink to a few metres.)
+        const at = models.shown(own);
+        list = pickShips(vessels.values(), boxAround(at.lat, at.lon, POV_RADIUS_M), [at.lon, at.lat]);
+      } else {
+        const b = map.getBounds(), c = map.getCenter();
+        const padX = (b.getEast() - b.getWest()) * 0.2, padY = (b.getNorth() - b.getSouth()) * 0.2;
+        list = pickShips(vessels.values(), [b.getWest() - padX, b.getSouth() - padY, b.getEast() + padX, b.getNorth() + padY], [c.lng, c.lat]);
+      }
       if (own && !list.includes(own)) list = [own, ...list].slice(0, MAX_MODELS);
     }
     const ids = list.map((v) => v.mmsi);
@@ -409,6 +416,8 @@ export function createAisLayer(map) {
       const f = map.queryRenderedFeatures(box, { layers: LAYERS.filter((l) => map.getLayer(l)) })[0];
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;
     },
+    /** MMSIs drawn as 3D models now (for checking). */
+    get modelled() { return [...modelled]; },
     vessel: (mmsi) => vessels.get(Number(mmsi)) ?? null,
     /** Ships reported within `metres` of a point (by their last report; good enough to find those that could touch). */
     vesselsNear(lat, lon, metres) {

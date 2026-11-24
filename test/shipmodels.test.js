@@ -78,3 +78,15 @@ test('hull textures are made smaller for the chart, keeping their shape', async 
   assert.deepEqual(mapTextureSize(4096, 2060), [1024, 515]);
   assert.deepEqual(mapTextureSize(800, 200), [800, 200], 'small ones stay');
 });
+
+test('from a bridge, the ships around it are picked by distance, whatever the camera shows', async () => {
+  const { boxAround, POV_RADIUS_M } = await import('../public/shipmodels.js');
+  const [w, s, e, n] = boxAround(59.43, 10.53, 1000);
+  assert.ok(Math.abs((n - s) * 111_320 - 2000) < 1);
+  assert.ok(Math.abs((e - w) * 111_320 * Math.cos((59.43 * Math.PI) / 180) - 2000) < 1);
+  const own = ship({ mmsi: 1, latitude: 59.43, longitude: 10.53 });
+  const ahead = ship({ mmsi: 2, latitude: 59.4336, longitude: 10.53 });
+  const far = ship({ mmsi: 3, latitude: 59.6, longitude: 10.53 });
+  const picked = pickShips([far, ahead, own], boxAround(59.43, 10.53, POV_RADIUS_M), [10.53, 59.43]).map((v) => v.mmsi);
+  assert.deepEqual(picked, [1, 2]);
+});

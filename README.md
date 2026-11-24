@@ -110,7 +110,10 @@ modelled.
 
 **Looking around from the bridge**: drag (mouse or one finger) to look around and up or down; the
 mouse wheel or a pinch zooms (like binoculars). The Port, Ahead, Stbd and Astern buttons put the view
-back level and unzoomed. With the console open, the view is centred in the part of the screen above it.
+back level and unzoomed. With the console open, the map ends where the console begins, so the view is
+centred in the window above it. The eye is on the bridge, high enough to see over the bow and cargo
+(about 8 % of the ship's length above the deck at least), and the ships within 6 km are drawn,
+nearest first.
 
 ## Land heights in 3D
 
