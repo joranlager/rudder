@@ -11,6 +11,8 @@
 
 import { positionAt, traceCoords, playbackReport, TRACE_COLORS, MAX_GAP_MS, HOLD_MS } from './track.js';
 
+const MAX_HOLD_MS = 120 * 60e3; // the longest a ship is held after its last record (track.js holdFor)
+
 const WINDOW_MS = 60 * 60e3; // positions read around the clock: half an hour each way
 const SYMBOLS_MS = 250; // how often the chart symbols follow
 const TRACE_MS = 1000; // how often traces grow
@@ -18,7 +20,7 @@ const TRACE_SOURCE = 'track-traces';
 
 export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEnd = () => {} }) {
   let active = false, playing = false, speed = 60;
-  let t = 0, startT = 0, endT = 0; // clock, where playback began, the newest recorded time
+  let t = 0, startT = 0, endT = 0, floorT = 0; // clock, where playback began, the newest recorded time, the earliest to go back to
   let byShip = new Map(); // mmsi -> records sorted by time, for the window loaded
   let win = null; // [t0, t1] loaded
   let loading = null;
@@ -30,7 +32,8 @@ export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEn
 
   async function loadWindow(at) {
     const s = await store();
-    const w = [at - WINDOW_MS / 2 - MAX_GAP_MS, at + WINDOW_MS / 2];
+    // Far enough back for the record before the clock, and for ships lying still that are held a long while.
+    const w = [at - WINDOW_MS / 2 - MAX_HOLD_MS, at + WINDOW_MS / 2];
     const recs = await s.range(w[0], w[1]);
     const map2 = new Map();
     for (const r of recs) { let a = map2.get(r.m); if (!a) map2.set(r.m, (a = [])); a.push(r); }
@@ -41,7 +44,7 @@ export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEn
   /** Make sure the window around the clock is loaded (in the background while playing). */
   function ensure() {
     const margin = 5 * 60e3;
-    if (win && t > win[0] + MAX_GAP_MS && t < win[1] - margin) return;
+    if (win && t > win[0] + MAX_HOLD_MS && t < win[1] - margin) return;
     if (loading) return;
     loading = loadWindow(t).finally(() => { loading = null; });
   }
@@ -139,9 +142,10 @@ export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEn
     get time() { return t; },
     get speed() { return speed; },
     get start() { return startT; },
+    get floor() { return floorT; },
     get end() { return endT; },
-    /** Begin playback at time `from` (ms). */
-    async begin(from) {
+    /** Begin playback at time `from` (ms); the slider can go back to `floor` (the recording's start). */
+    async begin(from, floor = from) {
       const s = await store();
       const st = await s.stats();
       if (!st.count) throw new Error('Nothing recorded yet: switch on recording and leave Rudder open a while.');
@@ -149,6 +153,7 @@ export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEn
       endT = st.last;
       t = Math.min(Math.max(from, st.first), endT);
       startT = t;
+      floorT = Math.min(Math.max(floor, st.first), t);
       await loadWindow(t);
       if (!active) {
         active = true;
@@ -162,12 +167,14 @@ export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEn
       onTick();
     },
     play() { if (active) { if (t >= endT) t = startT; playing = true; onTick(); } },
+    /** Ships placed at the clock in the loaded window (0: nothing recorded around this time). */
+    get shipsNow() { let n = 0; for (const recs of byShip.values()) if (positionAt(recs, t)) n++; return n; },
     pause() { playing = false; onTick(); },
     setSpeed(x) { speed = x; onTick(); },
     /** Jump to time `to`: the window is read again and the traces rebuilt up to there. */
     async seek(to) {
       if (!active) return;
-      t = Math.min(Math.max(to, startT), endT);
+      t = Math.min(Math.max(to, floorT), endT);
       await loadWindow(t);
       for (const m of traces.keys()) await rebuildTrace(m);
       onTick();

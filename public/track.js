@@ -18,7 +18,44 @@ const deg = (r) => (r * 180) / Math.PI;
 
 export const KEEP = { moveM: 25, turnDeg: 5, quietMs: 10 * 60e3 };
 export const MAX_GAP_MS = 30 * 60e3; // a longer silence is not bridged: the ship waits at its last place, then is gone
-export const HOLD_MS = 15 * 60e3; // how long a ship is shown at its last place after its last kept position
+export const HOLD_MS = 15 * 60e3; // how long a ship under way is shown at its last place after its last kept position
+export const HOLD_STILL_MS = 120 * 60e3; // a ship lying still: as long as the live chart keeps a report (ais.js pruneVessels)
+
+/** How long a ship is held at a record's place when nothing follows: longer when it was lying still. */
+export const holdFor = (rec) => ((rec.s ?? 0) < 1 ? HOLD_STILL_MS : HOLD_MS);
+
+// ---------- when the recorder ran ----------
+// The recorder notes each poll; polls close together make one stretch of recording. Playback only
+// makes sense inside a stretch: before the first, every ship's first real position is still to come
+// (the first poll also brings reports up to a day old, which say little about that time).
+
+/** Note a poll at time t: it extends the last stretch, or begins a new one after a pause. */
+export function addPoll(sessions, t, pollMs) {
+  const out = sessions.map((s) => ({ ...s }));
+  const last = out.at(-1);
+  if (last && t >= last.from && t - last.to <= 3 * pollMs) last.to = Math.max(last.to, t);
+  else out.push({ from: t, to: t });
+  return out;
+}
+
+/** Stretches that end before `before` are dropped (as the positions are). */
+export const pruneSessions = (sessions, before) => sessions.filter((s) => s.to >= before);
+
+/** Total time recorded. */
+export const coveredMs = (sessions) => sessions.reduce((sum, s) => sum + (s.to - s.from), 0);
+
+/**
+ * The time to play back from, inside a stretch of recording: before the first stretch, its start;
+ * in a pause between two, the start of the next; after the last, its end. `moved` says whether it changed.
+ */
+export function clampToCoverage(sessions, t) {
+  if (!sessions.length) return { t, moved: false };
+  for (const s of sessions) {
+    if (t < s.from) return { t: s.from, moved: true };
+    if (t <= s.to) return { t, moved: false };
+  }
+  return { t: sessions.at(-1).to, moved: true };
+}
 export const SPEEDS = [1, 2, 5, 10, 30, 60, 120, 300, 600];
 export const TRACE_COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#ffffff'];
 
@@ -123,7 +160,7 @@ export function positionAt(recs, t) {
   if (i < 0) return null;
   const a = recs[i], b = recs[i + 1];
   if (b && b.t - a.t <= MAX_GAP_MS) return between(a, b, t);
-  if (t - a.t > HOLD_MS) return null;
+  if (t - a.t > holdFor(a)) return null;
   return { lat: a.la, lon: a.lo, heading: a.h ?? a.c ?? null, cog: a.c ?? null, sog: 0 };
 }
 

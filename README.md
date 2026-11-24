@@ -81,6 +81,10 @@ with BarentsWatch access, and in one tab at a time (others say they are waiting)
 kept when the ship has moved 25 m or turned 5° since its last kept one, or 10 minutes have passed,
 so ships lying alongside cost little (`public/track.js`, `public/recorder.js`). Positions older
 than the chosen number of days (1 to 30) are dropped; **Clear recordings** deletes them all.
+The recorder notes when it ran (stretches of polls a minute apart; a pause while Rudder was closed
+starts a new stretch), and playback starts inside a stretch: a time before the recording began, or
+in a pause, moves to the next stretch, and the panel says so. (The first poll also brings each
+ship's latest report from up to a day before, which says little about that time.)
 The panel shows the ships tracked, positions stored, the span recorded, positions in the last hour,
 ships under way at the last poll and the storage used.
 
@@ -89,8 +93,8 @@ time, and a speed (1x to 600x), and **Play back**. Live AIS pauses and the ships
 between two recorded positions each ship follows a smooth curve that leaves the first and reaches
 the second at the speed and course the ship reported there (a cubic Hermite curve), so turns come
 out as arcs; where the course does not fit the move, the straight line is used. A ship silent for
-more than 30 minutes waits at its last place for 15 minutes and is then gone until it reports
-again. The 3D ships, the bridge view and tapping work as with live ships. The slider moves to any
+more than 30 minutes waits at its last place for 15 minutes (two hours if it was lying still, as on
+the live chart) and is then gone until it reports again. The 3D ships, the bridge view and tapping work as with live ships. The slider moves to any
 point in the recording; Pause, Play and **Back to live** do what they say (`public/playback.js`).
 
 **Traces.** During playback, tap a ship and **Give it a trace**: a coloured line of where it has

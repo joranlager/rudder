@@ -6,7 +6,7 @@
 // Rudder is open in a browser with BarentsWatch access, and only in one tab at a time (the others
 // are told which one records). Old positions are dropped after the chosen number of days.
 
-import { toRecord, staticOf, sameStatic, shouldKeep } from './track.js';
+import { toRecord, staticOf, sameStatic, shouldKeep, addPoll, pruneSessions } from './track.js';
 
 const STORE_KEY = 'rudder.recorder.v1';
 export const POLL_MS = 60_000;
@@ -14,7 +14,10 @@ export const KEEP_DAYS = [1, 3, 7, 14, 30];
 const LOCK = 'rudder-recorder';
 
 function load() {
-  try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); return { on: Boolean(s?.on), keepDays: KEEP_DAYS.includes(s?.keepDays) ? s.keepDays : 3 }; } catch { return { on: false, keepDays: 3 }; }
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    return { on: Boolean(s?.on), keepDays: KEEP_DAYS.includes(s?.keepDays) ? s.keepDays : 3, sessions: Array.isArray(s?.sessions) ? s.sessions : [] };
+  } catch { return { on: false, keepDays: 3, sessions: [] }; }
 }
 
 export function createRecorder({ ais, storePromise, onChange = () => {} }) {
@@ -46,6 +49,9 @@ export function createRecorder({ ais, storePromise, onChange = () => {} }) {
       await store.putShips(ships);
       lastFetch = started;
       Object.assign(stats, { polls: stats.polls + 1, lastPoll: Date.now(), lastAdded: keep.length, lastSeen: list.length, error: '' });
+      // When the recording ran: playback starts inside it (track.js clampToCoverage).
+      cfg.sessions = pruneSessions(addPoll(cfg.sessions, started, POLL_MS), Date.now() - cfg.keepDays * 86400e3).slice(-500);
+      save();
       if (!lastPrune || Date.now() - lastPrune > 3600e3) { lastPrune = Date.now(); await store.prune(Date.now() - cfg.keepDays * 86400e3); }
       // Ships under way report often, so the changes since the last poll include them all.
       stats.moving = moving;
@@ -94,6 +100,10 @@ export function createRecorder({ ais, storePromise, onChange = () => {} }) {
     get on() { return cfg.on; },
     get keepDays() { return cfg.keepDays; },
     setOn(on) { cfg.on = Boolean(on); save(); if (cfg.on) start(); else stop(); },
+    /** Stretches of time the recorder ran, oldest first: [{ from, to }]. */
+    get sessions() { return cfg.sessions; },
+    /** Forget them (with the recorded positions). */
+    clearSessions() { cfg.sessions = []; save(); },
     setKeepDays(d) { if (KEEP_DAYS.includes(d)) { cfg.keepDays = d; save(); lastPrune = 0; onChange(); } },
     pollNow: poll,
   };

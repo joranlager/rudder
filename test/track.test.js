@@ -100,3 +100,28 @@ test('a played-back ship is reported like an AIS ship', () => {
   assert.deepEqual(r, { m: 5, name: 'X', shipType: 70, mmsi: 5, latitude: 59, longitude: 10, trueHeading: 511, courseOverGround: 45,
     speedOverGround: 7, msgtime: '2026-11-25T12:00:00.000Z', playback: true });
 });
+
+test('a ship lying still is held as long as the live chart keeps a report; one under way not', async () => {
+  const { HOLD_STILL_MS } = await import('../public/track.js');
+  const still = [rec({ s: 0 })], moving = [rec({ s: 10 })];
+  assert.ok(positionAt(still, T0 + 60 * 60e3), 'an hour later, still there');
+  assert.equal(positionAt(still, T0 + HOLD_STILL_MS + 1), null);
+  assert.equal(positionAt(moving, T0 + HOLD_MS + 1), null);
+});
+
+test('when the recorder ran: polls close together make one stretch', async () => {
+  const { addPoll, coveredMs, clampToCoverage, pruneSessions } = await import('../public/track.js');
+  const P = 60e3;
+  let s = [];
+  for (let i = 0; i <= 30; i++) s = addPoll(s, T0 + i * P, P); // 30 minutes recording
+  s = addPoll(s, T0 + 3 * 3600e3, P); // Rudder closed, opened again three hours later
+  s = addPoll(s, T0 + 3 * 3600e3 + P, P);
+  assert.deepEqual(s, [{ from: T0, to: T0 + 30 * P }, { from: T0 + 3 * 3600e3, to: T0 + 3 * 3600e3 + P }]);
+  assert.equal(coveredMs(s), 31 * P);
+  assert.deepEqual(clampToCoverage(s, T0 - 3600e3), { t: T0, moved: true }, 'before the recording: its start');
+  assert.deepEqual(clampToCoverage(s, T0 + 10 * P), { t: T0 + 10 * P, moved: false });
+  assert.deepEqual(clampToCoverage(s, T0 + 3600e3), { t: T0 + 3 * 3600e3, moved: true }, 'in the pause: the next stretch');
+  assert.deepEqual(clampToCoverage(s, T0 + 9 * 3600e3), { t: T0 + 3 * 3600e3 + P, moved: true }, 'after: the end');
+  assert.deepEqual(clampToCoverage([], T0), { t: T0, moved: false });
+  assert.equal(pruneSessions(s, T0 + 3600e3).length, 1);
+});

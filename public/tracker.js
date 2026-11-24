@@ -2,7 +2,7 @@
 // has been recorded, playback of it (playback.js) from a date and time or a while ago, at a chosen
 // speed, with a slider to move through time, and coloured traces behind chosen ships.
 
-import { SPEEDS, TRACE_COLORS, parseAgo, formatSpan } from './track.js';
+import { SPEEDS, TRACE_COLORS, parseAgo, formatSpan, clampToCoverage, coveredMs } from './track.js';
 import { KEEP_DAYS, POLL_MS } from './recorder.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -48,10 +48,12 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
   function render() {
     if (!open) return;
     const line = recordingLine();
-    const span = stats.first && stats.last ? formatSpan(stats.last - stats.first) : '—';
+    const sessions = recorder.sessions;
+    const recFrom = sessions[0]?.from ?? null, recTo = sessions.at(-1)?.to ?? null;
+    const span = sessions.length ? formatSpan(coveredMs(sessions)) : '—';
     const pb = playback;
-    const sliderMin = stats.first ?? 0, sliderMax = (pb.active ? pb.end : stats.last) ?? 0;
-    if (!atValue && stats.last) atValue = localInput(Math.max(stats.first, stats.last - 3600e3));
+    const sliderMin = pb.active ? pb.floor : recFrom ?? stats.first ?? 0, sliderMax = (pb.active ? pb.end : stats.last) ?? 0;
+    if (!atValue && recTo) atValue = localInput(Math.max(recFrom, recTo - 3600e3));
     el.innerHTML = `
       <section class="set-section">
         <h3>Recording</h3>
@@ -67,7 +69,7 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
           <div><dt>Under way now</dt><dd>${recorder.stats.lastPoll ? nf.format(recorder.stats.moving) : '—'}</dd></div>
           <div><dt>Storage used</dt><dd>${bytes(stats.usage)}</dd></div>
         </dl>
-        <p class="fine">From ${esc(when(stats.first))}<br>to ${esc(when(stats.last))}</p>
+        <p class="fine">${sessions.length ? `Recorded from ${esc(when(recFrom))}<br>to ${esc(when(recTo))}${sessions.length > 1 ? ` (${sessions.length} stretches, with pauses while Rudder was closed)` : ''}` : 'Nothing recorded yet.'}</p>
         <div class="tk-row">
           <label>Keep for <select data-rec="keep">${KEEP_DAYS.map((d) => `<option value="${d}" ${d === recorder.keepDays ? 'selected' : ''}>${d} day${d > 1 ? 's' : ''}</option>`).join('')}</select></label>
           <button type="button" class="set-btn danger" data-rec="clear" ${stats.count ? '' : 'disabled'}>Clear recordings</button>
@@ -84,7 +86,7 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
             <label class="tk-speed">Speed <select data-pb="speed">${SPEEDS.map((x) => `<option value="${x}" ${x === pb.speed ? 'selected' : ''}>${x}×</option>`).join('')}</select></label>
             <button type="button" class="set-btn" data-pb="live">Back to live</button>
           </div>
-          <p class="fine">${nf.format(pb.shipsInWindow)} ships around this time. Tap a ship for its trace.</p>` : `
+          <p class="fine">${pb.shipsNow ? `${nf.format(pb.shipsNow)} ships at this time. Tap a ship for its trace.` : 'No ships recorded at this time: move the slider into the recording.'}</p>` : `
           <div class="tk-from" role="radiogroup" aria-label="Start from">
             <label><input type="radio" name="tk-mode" value="ago" ${mode === 'ago' ? 'checked' : ''}> A while ago</label>
             <input type="text" data-pb="ago" value="${esc(agoText)}" inputmode="numeric" placeholder="h:mm" aria-label="Hours and minutes ago" ${mode === 'ago' ? '' : 'disabled'}>
@@ -149,7 +151,13 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
     if (!b) return;
     const act = b.dataset.pb ?? b.dataset.rec ?? b.dataset.trace;
     try {
-      if (act === 'begin') { msg = { text: '', tone: '' }; await playback.begin(fromTime()); }
+      if (act === 'begin') {
+        // Start inside the recording: before it began (or in a pause) there are no ships to show.
+        const sessions = recorder.sessions;
+        const { t: from, moved } = clampToCoverage(sessions, fromTime());
+        msg = moved ? { text: `No recording at the time chosen: playing from ${when(from)}.`, tone: '' } : { text: '', tone: '' };
+        await playback.begin(from, sessions[0]?.from ?? from);
+      }
       else if (act === 'play') playback.play();
       else if (act === 'pause') playback.pause();
       else if (act === 'live') playback.stop();
@@ -157,6 +165,7 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
         if (!confirm('Delete every recorded position and ship from this device? This cannot be undone.')) return;
         const s = await storePromise;
         await s.clear();
+        recorder.clearSessions();
         await refreshStats();
       } else if (act === 'remove') playback.removeTrace(Number(b.closest('[data-m]').dataset.m));
     } catch (err) {
