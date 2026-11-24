@@ -37,6 +37,13 @@ export function modelPlacement(v) {
 
 export const MAP_TEXTURE_PX = 1024;
 
+/**
+ * Parts of a ship hidden when the view is from its own bridge (pov.js): the eye is inside them.
+ * Hull, deck and cargo stay, so the bow is seen ahead.
+ */
+export const ABOVE_DECK = new Set(['deckhouse', 'windows', 'bridge_wings', 'wheelhouse', 'lifeboat', 'funnel', 'funnel_top', 'mast', 'radar', '']);
+export const hiddenFromBridge = (name) => ABOVE_DECK.has(name ?? '');
+
 /** Size of a painted texture for the chart: at most MAP_TEXTURE_PX on its longer side. */
 export function mapTextureSize(w, h, max = MAP_TEXTURE_PX) {
   const k = Math.min(1, max / Math.max(w, h));
@@ -94,6 +101,15 @@ export function createShipModels(map) {
   const models = new Map(); // mmsi -> { key, root, model, v, place, shown }
   const motion = createMotion();
   let frameTimer = 0;
+  let own = null; // MMSI of the ship the view is from: its superstructure is hidden
+
+  /** Show or hide a model's superstructure (hidden on the ship the view is from). */
+  function dress(mmsi) {
+    const m = models.get(mmsi);
+    if (!m) return;
+    const bare = mmsi === own;
+    m.model.group.traverse((o) => { if (o !== m.model.group && (o.isMesh || o.isLine)) o.visible = !(bare && hiddenFromBridge(o.name)); });
+  }
   let wanted = []; // vessels to show
   let building = false, dirty = false;
 
@@ -194,6 +210,7 @@ export function createShipModels(map) {
       scene.add(root);
       m = { key, root, model };
       models.set(v.mmsi, m);
+      dress(v.mmsi);
     }
     // The newest report; the position and heading are worked out each frame from it (render).
     m.v = v;
@@ -247,6 +264,20 @@ export function createShipModels(map) {
       sync();
     },
     get count() { return models.size; },
+    /** The view is from this ship's bridge (or none): hide its superstructure, show the last one's again. */
+    setOwn(mmsi) {
+      const was = own;
+      own = mmsi;
+      dress(was);
+      dress(own);
+      map.triggerRepaint();
+    },
+    /** Where ship `v` is drawn now (its model's position, or dead reckoning from `v` when it has none). */
+    shown(v) {
+      const m = models.get(v.mmsi);
+      const at = motion.show(m?.v ?? v, Date.now());
+      return { ...at, heading: at.heading ?? m?.lastHeading ?? m?.place?.heading ?? null };
+    },
     /** The modelled ship drawn under a screen point (where it is shown now, not where it last reported), or null. */
     vesselAt(point) {
       const now = Date.now();

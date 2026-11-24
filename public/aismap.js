@@ -10,7 +10,7 @@ import {
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
 import { scaleBarMetres, modelsAtScale } from './scalebar.js';
-import { createShipModels, pickShips } from './shipmodels.js';
+import { createShipModels, pickShips, MAX_MODELS } from './shipmodels.js';
 
 const STORE_KEY = 'rudder.ais.v1';
 const MIN_ZOOM = 7; // wider views would ask for most of the coast at once
@@ -93,14 +93,18 @@ export function createAisLayer(map) {
 
   const models = createShipModels(map);
   let modelled = []; // MMSIs drawn as models: their arrows and outlines step aside
+  let pov = null; // MMSI of the ship whose bridge the view is from (pov.js): always modelled
 
   function updateModels() {
-    const active = cfg.on && map.getSource('ais-points') && modelsAtScale(scaleBarMetres(map));
+    // From the bridge the chart is tilted far over, so the scale bar says little: models stay on.
+    const active = cfg.on && map.getSource('ais-points') && (pov !== null || modelsAtScale(scaleBarMetres(map)));
     let list = [];
     if (active) {
       const b = map.getBounds(), c = map.getCenter();
       const padX = (b.getEast() - b.getWest()) * 0.2, padY = (b.getNorth() - b.getSouth()) * 0.2;
       list = pickShips(vessels.values(), [b.getWest() - padX, b.getSouth() - padY, b.getEast() + padX, b.getNorth() + padY], [c.lng, c.lat]);
+      const own = pov !== null ? vessels.get(pov) : null;
+      if (own && !list.includes(own)) list = [own, ...list].slice(0, MAX_MODELS);
     }
     const ids = list.map((v) => v.mmsi);
     if (ids.join() !== modelled.join()) {
@@ -369,5 +373,13 @@ export function createAisLayer(map) {
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;
     },
     vessel: (mmsi) => vessels.get(Number(mmsi)) ?? null,
+    /** Where a ship is drawn now: moved on from its last report, as its 3D model is. */
+    shownShip: (v) => models.shown(v),
+    /** The bridge view is from this ship (or none): keep it, and the 3D models, drawn whatever the scale. */
+    setPov(mmsi) {
+      pov = mmsi === null ? null : Number(mmsi);
+      models.setOwn(pov);
+      updateModels();
+    },
   };
 }

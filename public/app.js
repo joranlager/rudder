@@ -1,6 +1,8 @@
 import { BASEMAPS, OVERLAYS, buildStyle, mergeSettings } from './layers.js';
 import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
+import { createBridgeView } from './pov.js';
+import { modelPlacement } from './shipmodels.js';
 import { createSettings } from './settings.js';
 import { enableLogoReload } from './reload.js';
 import { readHandoff, shortcutUrl } from './handoff.js';
@@ -48,6 +50,13 @@ map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAc
 
 // Ships from AIS (BarentsWatch), drawn over the chart when switched on in the layers panel.
 const ais = createAisLayer(map);
+// View from the bridge of a ship (pov.js), from its card.
+const bridge = createBridgeView(map, {
+  ais,
+  bar: $('#bridge-bar'),
+  onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); },
+  onExit: (message) => { if (message) alert(message); },
+});
 // Settings: BarentsWatch access, kept on this device.
 const settingsPanel = createSettings($('#settings-body'), { ais, openPanel: () => togglePanel('settings', true) });
 // Getting a BarentsWatch token: Shortcuts (iPhone, iPad, Mac), the bookmark on BarentsWatch (any
@@ -262,11 +271,14 @@ function tideGraph(curve, now) {
 
 // A tap on a ship shows the ship; anywhere else, the sea at that point.
 map.on('click', (e) => {
+  if (bridge.active) return; // from the bridge the chart is not tapped
   const v = ais.vesselAt(e.point);
   if (v) showVessel(v); else showPoint(e.lngLat);
 });
 
 // ---------- a ship from AIS ----------
+/** The bridge view needs a heading (or a course while moving) and a size to place the eye. */
+const bridgeOk = (v) => modelPlacement(v) !== null;
 function showVessel(v) {
   clearClick();
   const { length, beam } = vesselSize(v);
@@ -291,7 +303,8 @@ function showVessel(v) {
   $('#info-body').innerHTML = `<p class="pos">${formatPosition(v.latitude, v.longitude)}</p>
     <dl class="rows">${rows.map(([k, x]) => `<dt>${k}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
     <div class="info-actions">
-      <button type="button" class="info-btn primary" data-open3d="${v.mmsi}">Open 3D model</button>
+      <button type="button" class="info-btn primary" data-bridge="${v.mmsi}" ${bridgeOk(v) ? '' : 'disabled title="Needs a size and heading from AIS"'}>View from the bridge</button>
+      <button type="button" class="info-btn" data-open3d="${v.mmsi}">Open 3D model</button>
       <button type="button" class="info-btn" data-sea-here="${v.mmsi}">Sea and weather here</button>
     </div>
     <div class="src">AIS from Kystverket via BarentsWatch. Size and draught as the ship reports them.</div>`;
@@ -300,9 +313,10 @@ function showVessel(v) {
 $('#info-body').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
-  const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere);
+  const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere ?? b.dataset.bridge);
   if (!v) return;
-  if (b.dataset.open3d) { await openShips(); ships?.showAisVessel(v); }
+  if (b.dataset.bridge) bridge.enter(v);
+  else if (b.dataset.open3d) { await openShips(); ships?.showAisVessel(v); }
   else showPoint({ lat: v.latitude, lng: v.longitude });
 });
 
@@ -352,4 +366,4 @@ if (handoff) {
 }
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
-window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais };
+window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge };

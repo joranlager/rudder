@@ -60,6 +60,18 @@
     <div id="info-body"></div>
   </aside>
 
+  <!-- View from the bridge of a ship (pov.js) -->
+  <div id="bridge-bar" class="bridge-bar" role="region" aria-label="View from the bridge" hidden>
+    <div class="bridge-who"><b data-bridge-name></b><span data-bridge-line></span></div>
+    <div class="bridge-looks" role="group" aria-label="Look">
+      <button type="button" data-look="port" aria-pressed="false" title="Look to port (←)">Port</button>
+      <button type="button" data-look="ahead" aria-pressed="true" title="Look ahead (↑)">Ahead</button>
+      <button type="button" data-look="starboard" aria-pressed="false" title="Look to starboard (→)">Stbd</button>
+      <button type="button" data-look="astern" aria-pressed="false" title="Look astern (↓)">Astern</button>
+    </div>
+    <button type="button" class="bridge-exit" data-bridge-exit title="Back to the chart (Esc)">Exit</button>
+  </div>
+
   <div id="reloading" class="reloading" role="status" hidden><img src="icon.svg" alt="" width="56" height="56"><p>Reloading…</p></div>
 
   <footer class="readout" aria-live="off">
