@@ -29,3 +29,16 @@ test('a simulated report gives way to the first real one, however old', () => {
   mergeVessels(m, [{ mmsi: 1, latitude: 58, longitude: 5, msgtime: '2026-11-24T11:00:00Z' }]);
   assert.equal(m.get(1).latitude, 59, 'real reports still keep the newest');
 });
+
+test('the steering stick: across its track from hard port to hard starboard, easy to centre', async () => {
+  const { stickToRudder, rudderToStick } = await import('../public/helm.js');
+  assert.equal(stickToRudder(0), -35);
+  assert.equal(stickToRudder(1), 35);
+  assert.equal(stickToRudder(0.5), 0);
+  assert.equal(stickToRudder(0.51), 0, 'a little off centre is still midships');
+  assert.equal(stickToRudder(0.75), 18);
+  assert.equal(stickToRudder(-3), -35, 'dragged past the end');
+  assert.equal(rudderToStick(0), 50);
+  assert.equal(rudderToStick(35), 100);
+  assert.equal(rudderToStick(-17.5), 25);
+});

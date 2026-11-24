@@ -1,4 +1,4 @@
-// Taking the helm of a ship: the user commands it from a bridge console (engine telegraph, wheel,
+// Taking the helm of a ship: the user commands it from a bridge console (engine telegraph, steering stick,
 // thrusters where the type has them, and the usual instruments), and the ship moves by the handling
 // model in shiphandling.js. Its real AIS reports are ignored meanwhile (aismap.js); handing it back
 // lets the next real report put it where it really is. It cannot sail through other ships or onto
@@ -33,45 +33,20 @@ export function orderForSpeed(u, h) {
   return best.order;
 }
 
-/** A ship's wheel, drawn as SVG: rim, eight spokes with handles, hub. The group turns with the helm. */
-function wheelSvg() {
-  const spokes = Array.from({ length: 8 }, (_, i) => {
-    const a = (i * Math.PI) / 4, x = Math.sin(a), y = -Math.cos(a);
-    return `<line x1="${50 + 9 * x}" y1="${50 + 9 * y}" x2="${50 + 47 * x}" y2="${50 + 47 * y}"/>
-      <circle class="handle" cx="${50 + 47 * x}" cy="${50 + 47 * y}" r="3.2"/>`;
-  }).join('');
-  return `<svg viewBox="0 0 100 100" class="wheel-svg" aria-hidden="true"><g class="wheel-turn">
-    <circle class="rim" cx="50" cy="50" r="36"/><circle class="rim-in" cx="50" cy="50" r="33"/>${spokes}
-    <circle class="hub" cx="50" cy="50" r="9"/><circle class="king" cx="50" cy="${50 - 36}" r="2.4"/></g></svg>`;
+/**
+ * The steering stick: its position across its track (0 = hard to port, 1 = hard to starboard) as a
+ * rudder order in whole degrees, with a small dead band at midships so it is easy to centre.
+ */
+export function stickToRudder(frac) {
+  const deg = (Math.min(1, Math.max(0, frac)) * 2 - 1) * RUDDER_MAX;
+  return Math.abs(deg) < 1.5 ? 0 : Math.round(deg);
 }
 
-/** The rudder angle indicator: an arc from 35° port (red) to 35° starboard (green), with the order and the actual angle. */
-function rudderGauge() {
-  const arc = (from, to, cls) => {
-    const p = (a) => { const r = ((a / RUDDER_MAX) * 70 - 90) * Math.PI / 180; return [60 + 46 * Math.cos(r), 56 + 46 * Math.sin(r)]; };
-    const [x1, y1] = p(from), [x2, y2] = p(to);
-    return `<path class="${cls}" d="M${x1.toFixed(1)},${y1.toFixed(1)} A46,46 0 0 1 ${x2.toFixed(1)},${y2.toFixed(1)}"/>`;
-  };
-  return `<svg viewBox="0 0 120 64" class="rudder-gauge" aria-hidden="true">
-    ${arc(-RUDDER_MAX, 0, 'port')}${arc(0, RUDDER_MAX, 'stbd')}
-    <g class="order-mark"><line x1="60" y1="6" x2="60" y2="16"/></g>
-    <g class="needle"><line x1="60" y1="56" x2="60" y2="14"/></g><circle class="pivot" cx="60" cy="56" r="3"/>
-    <text x="10" y="62">P</text><text x="106" y="62">S</text></svg>`;
-}
+/** Where a rudder angle sits on the stick's track, 0..100 %. */
+export const rudderToStick = (deg) => 50 + (Math.max(-RUDDER_MAX, Math.min(RUDDER_MAX, deg)) / RUDDER_MAX) * 50;
 
-/** The compass card of the gyro repeater, turning so the heading is at the top. */
-function gyroSvg() {
-  const ticks = Array.from({ length: 36 }, (_, i) => {
-    const a = (i * 10 * Math.PI) / 180, long = i % 9 === 0, r1 = long ? 33 : 37;
-    return `<line x1="${50 + r1 * Math.sin(a)}" y1="${50 - r1 * Math.cos(a)}" x2="${50 + 42 * Math.sin(a)}" y2="${50 - 42 * Math.cos(a)}"${long ? ' class="major"' : ''}/>`;
-  }).join('');
-  const labels = ['N', 'E', 'S', 'W'].map((t, i) => {
-    const a = (i * 90 * Math.PI) / 180;
-    return `<text x="${50 + 25 * Math.sin(a)}" y="${54 - 25 * Math.cos(a)}">${t}</text>`;
-  }).join('');
-  return `<svg viewBox="0 0 100 100" class="gyro" aria-hidden="true"><g class="card">${ticks}${labels}</g>
-    <path class="lubber" d="M50,3 L46,12 L54,12 Z"/></svg>`;
-}
+/** Short telegraph labels for the one-row telegraph. */
+const SHORT = { 4: 'Full', 3: 'Half', 2: 'Slow', 1: 'D.slow', 0: 'Stop' };
 
 export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
   let v0 = null; // the ship's last real report when the helm was taken (name, size, type)
@@ -82,7 +57,7 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
   let frame = 0, last = 0, lastReport = 0, lastDepth = 0;
   let depth = { depth: null, text: '—', hit: null, busy: false }; // last sounding; hit: where aground
   let contact = null; // the ship we are touching, if any
-  let wheelDrag = null;
+  let stickDrag = null; // the steering stick's track while it is dragged
   let roomObserver = null;
 
   function makeRoom() {
@@ -94,40 +69,44 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
 
   function render() {
     const order = TELEGRAPH.find((t) => t.order === c.order);
+    const thr = (t) => `<label class="thr ${h[t] ? '' : 'none'}" title="${h[t] ? `${t === 'bow' ? 'Q / E' : 'Z / C'}, double-click to stop` : 'None on this ship'}">
+        <span>${t === 'bow' ? 'Bow' : 'Stern'}</span>
+        <input type="range" min="-100" max="100" step="5" value="${Math.round(c[t] * 100)}" data-thruster="${t}" ${h[t] ? '' : 'disabled'} aria-label="${t} thruster, port to starboard">
+        <b data-i="${t}">${h[t] ? '0' : '–'}</b></label>`;
     el.innerHTML = `
       <div class="helm-alarm" data-i="alarm" role="alert" hidden></div>
-      <div class="helm-instruments" role="group" aria-label="Instruments">
-        <div class="inst gyro-wrap">${gyroSvg()}<div><span class="inst-label">Heading</span><b data-i="hdg">—</b></div></div>
-        <div class="inst"><span class="inst-label">Speed over ground</span><b data-i="sog">—</b><span class="inst-sub" data-i="stw"></span></div>
-        <div class="inst"><span class="inst-label">Rate of turn</span><b data-i="rot">—</b><div class="rot-bar"><i data-i="rot-bar"></i></div></div>
-        <div class="inst"><span class="inst-label">Rudder</span>${rudderGauge()}<b data-i="rudder">—</b></div>
-        <div class="inst" data-i="depth-box"><span class="inst-label">Depth under the keel</span><b data-i="depth">—</b><span class="inst-sub" data-i="draught"></span></div>
+      <div class="helm-strip" role="group" aria-label="Instruments">
+        <span class="ds"><i>HDG</i><b data-i="hdg">—</b></span>
+        <span class="ds"><i>SOG</i><b data-i="sog">—</b><em data-i="stw"></em></span>
+        <span class="ds"><i>ROT</i><b data-i="rot">—</b></span>
+        <span class="ds"><i>Rudder</i><b data-i="rudder">—</b></span>
+        <span class="ds" data-i="depth-box"><i>Depth</i><b data-i="depth">—</b><em data-i="draught"></em></span>
       </div>
-      <div class="helm-controls">
-        <div class="telegraph" role="radiogroup" aria-label="Engine telegraph">
-          <span class="tg-head">Ahead</span>
-          ${[...TELEGRAPH].reverse().map((t) => `<button type="button" role="radio" data-order="${t.order}" aria-checked="${t.order === c.order}"
-              aria-label="${esc(t.label)}" class="${t.order > 0 ? 'ahead' : t.order < 0 ? 'astern' : 'stop'}">${esc(t.label.replace(/ (ahead|astern)$/i, ''))}</button>`).join('')}
-          <span class="tg-head">Astern</span>
-          <div class="tg-answer" title="Engine answer"><i data-i="answer"></i></div>
+      <div class="helm-row">
+        <div class="telegraph" role="radiogroup" aria-label="Engine telegraph (W / S)">
+          <span class="tg-cap astern">Astern</span><span class="tg-cap ahead">Ahead</span>
+          <div class="tg-buttons">${TELEGRAPH.map((t) => `<button type="button" role="radio" data-order="${t.order}" aria-checked="${t.order === c.order}"
+            aria-label="${esc(t.label)}" class="${t.order > 0 ? 'ahead' : t.order < 0 ? 'astern' : 'stop'}">${SHORT[Math.abs(t.order)]}</button>`).join('')}</div>
+          <div class="tg-answer" title="Engine answer: the speed the ship has reached"><i data-i="answer"></i></div>
         </div>
-        <div class="helm-wheel">
-          <div class="wheel" data-wheel title="Drag to turn the wheel (A / D)">${wheelSvg()}</div>
-          <div class="wheel-buttons">
-            <button type="button" data-rudder="-${RUDDER_MAX}" title="Hard to port">Hard port</button>
-            <button type="button" data-rudder="0" title="Midships (X)">Midships</button>
-            <button type="button" data-rudder="${RUDDER_MAX}" title="Hard to starboard">Hard stbd</button>
+        <div class="steer">
+          <span class="steer-cap">Steering (A / D, X midships)</span>
+          <div class="steer-row">
+            <small class="port">P</small>
+            <div class="stick" data-stick role="slider" tabindex="0" aria-label="Rudder order" aria-valuemin="-${RUDDER_MAX}" aria-valuemax="${RUDDER_MAX}" aria-valuenow="${c.rudder}">
+              <span class="stick-scale"></span><span class="stick-actual" data-i="stick-actual" title="Where the rudder is"></span>
+              <span class="stick-knob" data-i="stick-knob"></span>
+            </div>
+            <small class="stbd">S</small>
+          </div>
+          <div class="steer-buttons">
+            <button type="button" data-rudder="-${RUDDER_MAX}">Hard port</button><button type="button" data-rudder="0">Midships</button><button type="button" data-rudder="${RUDDER_MAX}">Hard stbd</button>
           </div>
         </div>
-        <div class="thrusters">
-          ${['bow', 'stern'].map((t) => `<label class="thruster ${h[t] ? '' : 'none'}">
-            <span>${t === 'bow' ? 'Bow thruster' : 'Stern thruster'}${h[t] ? '' : ' <em>(none on this ship)</em>'}</span>
-            <span class="thr-row"><small>P</small><input type="range" min="-100" max="100" step="5" value="${Math.round(c[t] * 100)}" data-thruster="${t}" ${h[t] ? '' : 'disabled'}
-              aria-label="${t} thruster, port to starboard"><small>S</small></span>
-            <span class="thr-value" data-i="${t}">0</span></label>`).join('')}
-          <p class="helm-keys">W/S engine · A/D rudder · X midships${h.bow ? ' · Q/E bow' : ''}${h.stern ? ' · Z/C stern' : ''}</p>
-          <div class="helm-buttons"><button type="button" class="helm-view" data-helm-bridge>Bridge view</button>
-          <button type="button" class="helm-release" data-helm-release>Hand back the helm</button></div>
+        <div class="thrusters">${thr('bow')}${thr('stern')}</div>
+        <div class="helm-buttons">
+          <button type="button" data-helm-bridge>Bridge view</button>
+          <button type="button" class="helm-release" data-helm-release>Hand back</button>
         </div>
       </div>
       <span class="sr-only" aria-live="polite" data-i="order-said">${esc(order?.label ?? '')}</span>`;
@@ -139,31 +118,28 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     const q = (k) => el.querySelector(`[data-i="${k}"]`);
     const { sog } = overGround(s);
     q('hdg').textContent = `${s.heading.toFixed(1).padStart(5, '0')}°`;
-    el.querySelector('.gyro .card')?.setAttribute('transform', `rotate(${-s.heading} 50 50)`);
     q('sog').textContent = `${sog.toFixed(1)} kn`;
-    q('stw').textContent = s.u < -0.05 ? 'going astern' : Math.abs(s.v) > 0.05 ? `sideways ${Math.abs(s.v * 3600 / 1852).toFixed(1)} kn ${s.v > 0 ? 'stbd' : 'port'}` : '';
+    q('stw').textContent = s.u < -0.05 ? 'astern' : Math.abs(s.v) > 0.05 ? `${Math.abs(s.v * 3600 / 1852).toFixed(1)} kn to ${s.v > 0 ? 'stbd' : 'port'}` : '';
     const rot = s.r * 180 / Math.PI * 60;
-    q('rot').textContent = `${Math.abs(rot) < 0.5 ? '0' : Math.abs(rot).toFixed(0)}°/min ${rot > 0.5 ? 'stbd' : rot < -0.5 ? 'port' : ''}`;
-    const bar = q('rot-bar');
-    const w = clamp(Math.abs(rot) / 60, 0, 1) * 50;
-    bar.style.left = rot >= 0 ? '50%' : `${50 - w}%`;
-    bar.style.width = `${w}%`;
-    bar.className = rot >= 0 ? 'stbd' : 'port';
-    q('rudder').textContent = `${Math.abs(actual.rudder).toFixed(0)}° ${actual.rudder > 0.5 ? 'stbd' : actual.rudder < -0.5 ? 'port' : 'midships'}`;
-    el.querySelector('.rudder-gauge .needle')?.setAttribute('transform', `rotate(${(actual.rudder / RUDDER_MAX) * 70} 60 56)`);
-    el.querySelector('.rudder-gauge .order-mark')?.setAttribute('transform', `rotate(${(c.rudder / RUDDER_MAX) * 70} 60 56)`);
-    el.querySelector('.wheel-turn')?.setAttribute('transform', `rotate(${c.rudder * 4} 50 50)`);
+    q('rot').textContent = `${Math.abs(rot) < 0.5 ? '0' : Math.abs(rot).toFixed(0)}°/min ${rot > 0.5 ? 'S' : rot < -0.5 ? 'P' : ''}`;
+    q('rudder').textContent = Math.abs(actual.rudder) < 0.5 ? 'mid' : `${Math.abs(actual.rudder).toFixed(0)}° ${actual.rudder > 0 ? 'S' : 'P'}`;
+    q('stick-knob').style.left = `${rudderToStick(c.rudder)}%`;
+    q('stick-actual').style.left = `${rudderToStick(actual.rudder)}%`;
+    el.querySelector('[data-stick]')?.setAttribute('aria-valuenow', String(c.rudder));
     for (const t of ['bow', 'stern']) {
       const tv = q(t);
-      if (tv) tv.textContent = h[t] ? `${Math.round(Math.abs(actual[t]) * 100)}% ${actual[t] > 0.02 ? 'stbd' : actual[t] < -0.02 ? 'port' : ''}${thrusterGrip(s.u) < 0.99 && Math.abs(actual[t]) > 0.02 ? ` · grip ${Math.round(thrusterGrip(s.u) * 100)}%` : ''}` : '—';
+      if (tv) {
+        tv.textContent = h[t] ? `${Math.round(Math.abs(actual[t]) * 100)}${actual[t] > 0.02 ? 'S' : actual[t] < -0.02 ? 'P' : ''}` : '–';
+        tv.title = h[t] && thrusterGrip(s.u) < 0.99 ? `Grip ${Math.round(thrusterGrip(s.u) * 100)} % at this speed` : '';
+      }
     }
     const ans = q('answer');
     const share = s.u >= 0 ? s.u / h.aheadMs : s.u / h.asternMs;
-    ans.style.height = `${clamp(Math.abs(share), 0, 1) * 50}%`;
-    ans.style.bottom = share >= 0 ? '50%' : `${50 - clamp(Math.abs(share), 0, 1) * 50}%`;
+    ans.style.width = `${clamp(Math.abs(share), 0, 1) * 50}%`;
+    ans.style.left = share >= 0 ? '50%' : `${50 - clamp(Math.abs(share), 0, 1) * 50}%`;
     ans.className = share >= 0 ? 'ahead' : 'astern';
     q('depth').textContent = depth.text;
-    q('draught').textContent = `draught ${h.draught.toFixed(1)} m`;
+    q('draught').textContent = `/ ${h.draught.toFixed(1)}`;
     q('depth-box').classList.toggle('shallow', depth.depth != null && depth.depth < h.draught + 2);
     const alarm = q('alarm');
     const away = { bow: 'go astern', stern: 'go ahead', antenna: 'go astern', 'port side': 'push to starboard', 'starboard side': 'push to port' };
@@ -267,27 +243,30 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
   });
   // A double click (or tap) on a thruster puts it back to zero.
   el.addEventListener('dblclick', (e) => { const t = e.target.dataset?.thruster; if (t) setThruster(t, 0); });
-  // The wheel turns by dragging around its hub: four degrees of wheel for one of rudder.
+  // The steering stick: drag (or tap) along its track; the rudder order follows the stick's position.
+  const stickAt = (track, x) => { const r = track.getBoundingClientRect(); return stickToRudder((x - r.left) / r.width); };
   el.addEventListener('pointerdown', (e) => {
-    const w = e.target.closest('[data-wheel]');
-    if (!w) return;
-    const r = w.getBoundingClientRect();
-    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    wheelDrag = { cx, cy, angle: Math.atan2(e.clientX - cx, cy - e.clientY), start: c.rudder };
-    w.setPointerCapture(e.pointerId);
+    const track = e.target.closest('[data-stick]');
+    if (!track) return;
+    stickDrag = track;
+    track.setPointerCapture(e.pointerId);
+    setRudder(stickAt(track, e.clientX));
     e.preventDefault();
   });
-  el.addEventListener('pointermove', (e) => {
-    if (!wheelDrag) return;
-    const a = Math.atan2(e.clientX - wheelDrag.cx, wheelDrag.cy - e.clientY);
-    let d = ((a - wheelDrag.angle) * 180) / Math.PI;
-    d = ((d + 540) % 360) - 180;
-    wheelDrag.start += d / 4;
-    wheelDrag.angle = a;
-    setRudder(wheelDrag.start);
+  el.addEventListener('pointermove', (e) => { if (stickDrag) setRudder(stickAt(stickDrag, e.clientX)); });
+  el.addEventListener('pointerup', () => { stickDrag = null; });
+  el.addEventListener('pointercancel', () => { stickDrag = null; });
+  el.addEventListener('dblclick', (e) => { if (e.target.closest('[data-stick]')) setRudder(0); });
+  // With the stick focused, the arrow keys move it a degree at a time (Home: midships).
+  el.addEventListener('keydown', (e) => {
+    if (!e.target.closest('[data-stick]')) return;
+    if (e.key === 'ArrowLeft') setRudder(c.rudder - 1);
+    else if (e.key === 'ArrowRight') setRudder(c.rudder + 1);
+    else if (e.key === 'Home') setRudder(0);
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
   });
-  el.addEventListener('pointerup', () => { wheelDrag = null; });
-  el.addEventListener('pointercancel', () => { wheelDrag = null; });
 
   function onKey(e) {
     if (!s || e.target.closest?.('input[type=search], input[type=text], textarea') || e.ctrlKey || e.metaKey || e.altKey) return;

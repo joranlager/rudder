@@ -74,14 +74,18 @@ near the map. The field is hidden while the ships are off or failing.
 that ship. Its real AIS reports are ignored while you have it; **Hand back the helm** lets the next
 real report put it back where it really is. The ship moves by a handling model
 (`public/shiphandling.js`) and the view goes to its bridge, with a bridge console below
-(`public/helm.js`):
+(`public/helm.js`). The console is a compact strip along the bottom: a row of read-outs above one row
+of controls (about 130 px on a computer, a third of a phone's screen), and the map ends where it
+begins, so nothing hides behind it.
 
-- **Engine telegraph**: full, half, slow and dead slow ahead or astern, and stop, with the engine's
-  answer beside it. Speed builds up and dies away with the ship's size (a 140 m ferry takes about a
+- **Engine telegraph**: one row from full astern to full ahead, with stop in the middle, and the
+  engine's answer (the speed reached) beneath it. Speed builds up and dies away with the ship's size (a 140 m ferry takes about a
   minute to get most of the way; with the engine stopped it carries its way a long time), and astern
   gives about half the speed of ahead. Taking the helm keeps the order nearest the speed it had.
-- **Wheel**: drag it round (four turns of the wheel to one of rudder), or Hard port, Midships, Hard
-  stbd. The rudder follows at a believable speed (about 28 s hard over to hard over on a big ship)
+- **Steering stick**: drag the lever (or tap its track) to the port or starboard side for that much
+  rudder, up to 35° at the ends; a yellow mark shows where the rudder actually is. Double-click it,
+  or Midships, to centre it; Hard port and Hard stbd go to the ends; with the stick focused the arrow
+  keys move it a degree at a time. The rudder follows at a believable speed (about 28 s hard over to hard over on a big ship)
   and turns the ship only with water flowing past it: the ship's own speed and the propeller's wash.
   Hard over gives a turning circle of about four ship lengths, and the ship loses speed in the turn.
   Tugs turn much tighter.
