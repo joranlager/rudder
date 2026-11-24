@@ -13,6 +13,13 @@ npm run vendor # rebuilds public/vendor/three.js from the pinned devDependencies
 npm run build  # copies public/ to dist/ and stamps the build
 ```
 
+## Reload
+
+Tap the **Rudder logo** (top left) **four times** quickly (within 2.5 seconds) for a hard reload: the
+page and every file it loaded from Rudder's own site are fetched again past the browser cache, then
+the page reloads at the same chart position. Useful right after a deploy, since GitHub Pages lets
+browsers keep files for 10 minutes. Code: `public/reload.js`.
+
 ## Deploy
 
 `.github/workflows/pages.yml` tests, builds and deploys **every branch** to GitHub Pages on each

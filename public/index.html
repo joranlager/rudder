@@ -25,7 +25,7 @@
   <div id="ships" hidden></div>
 
   <header class="topbar">
-    <div class="brand"><img src="icon.svg" alt="" width="26" height="26"><span>Rudder</span></div>
+    <button id="brand" class="brand" type="button" title="Tap four times to reload" aria-label="Rudder. Tap four times to reload the app."><img src="icon.svg" alt="" width="26" height="26"><span>Rudder</span></button>
     <form id="search" class="search" role="search" autocomplete="off">
       <input id="search-input" type="search" placeholder="Find a place, light or harbour" aria-label="Find a place">
       <ul id="search-results" class="search-results" role="listbox" hidden></ul>
@@ -59,6 +59,8 @@
     <div class="panel-head"><h2 id="info-title">Position</h2><button class="close" type="button" data-close="info" aria-label="Close">×</button></div>
     <div id="info-body"></div>
   </aside>
+
+  <div id="reloading" class="reloading" role="status" hidden><img src="icon.svg" alt="" width="56" height="56"><p>Reloading…</p></div>
 
   <footer class="readout" aria-live="off">
     <span id="cursor" title="Pointer position">—</span>

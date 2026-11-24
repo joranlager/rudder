@@ -2,6 +2,7 @@ import { BASEMAPS, OVERLAYS, buildStyle, mergeSettings } from './layers.js';
 import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
 import { createSettings } from './settings.js';
+import { enableLogoReload } from './reload.js';
 import { typeName, navStatusText, draughtM, vesselSize, ageMinutes } from './ais.js';
 import {
   tideUrl, parseTide, tideSummary, oceanUrl, weatherUrl, nearestStep, depthUrl, parseDepth, formatDepth,
@@ -323,6 +324,9 @@ input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 1
 input.addEventListener('focus', () => { list.hidden = !results.length; });
 
 renderLayerPanel();
+
+// Four quick taps on the logo: hard reload (see reload.js).
+enableLogoReload($('#brand'), { onReload: () => { $('#reloading').hidden = false; } });
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
 window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais };
