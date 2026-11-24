@@ -3,6 +3,7 @@ import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
 import { createSettings } from './settings.js';
 import { enableLogoReload } from './reload.js';
+import { readHandoff, shortcutUrl } from './handoff.js';
 import { typeName, navStatusText, draughtM, vesselSize, ageMinutes } from './ais.js';
 import {
   tideUrl, parseTide, tideSummary, oceanUrl, weatherUrl, nearestStep, depthUrl, parseDepth, formatDepth,
@@ -19,6 +20,11 @@ function loadSettings() {
 }
 let settings = loadSettings();
 const saveSettings = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch { /* private mode */ } };
+
+// Back from the Shortcuts app with a BarentsWatch token (handoff.js)? Take it out of the address
+// before the map reads it, so the chart opens where it was and the token is not left in the history.
+const handoff = readHandoff(location.href);
+if (handoff) history.replaceState(null, '', handoff.cleanUrl);
 
 // ---------- map ----------
 const map = new maplibregl.Map({
@@ -43,7 +49,9 @@ map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAc
 // Ships from AIS (BarentsWatch), drawn over the chart when switched on in the layers panel.
 const ais = createAisLayer(map);
 // Settings: BarentsWatch access, kept on this device.
-createSettings($('#settings-body'), { ais });
+const settingsPanel = createSettings($('#settings-body'), { ais });
+// Any "Get token" button runs the "Rudder token" shortcut, which comes back here with the token.
+document.addEventListener('click', (e) => { if (e.target.closest('[data-shortcut]')) location.href = shortcutUrl(location.href); });
 
 // ---------- layer panel ----------
 function renderLayerPanel() {
@@ -327,6 +335,12 @@ renderLayerPanel();
 
 // Four quick taps on the logo: hard reload (see reload.js).
 enableLogoReload($('#brand'), { onReload: () => { $('#reloading').hidden = false; } });
+
+// Back from Shortcuts: show the result in Settings, and the ships once there is a token.
+if (handoff) {
+  togglePanel('settings', true);
+  settingsPanel.fromShortcut(handoff).then(() => { if (handoff.status === 'ok') ais.setOn(true); });
+}
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
 window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais };

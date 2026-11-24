@@ -69,25 +69,32 @@ inspector from its AIS report: length, beam and draught from AIS (marked *AIS*),
 estimated from its type, and, when its IMO number is on Wikidata, its type, height and photos from
 there.
 
-**Access.** BarentsWatch's AIS API needs your own free BarentsWatch client. On
-[Min side](https://www.barentswatch.no/minside/), under **Utviklertilganger**, open **AIS - API**
-(not BarentsWatch - API) and create a client. Then open **Settings** (the gear in the top bar), enter
-the client ID and secret under **BarentsWatch AIS**, and press **Save on this phone**: Rudder tests
-them at once (a token, then a small AIS request) and says what is wrong if anything is.
+**Access.** BarentsWatch's AIS API needs a token from your own free BarentsWatch client (on
+[Min side](https://www.barentswatch.no/minside/), under **Utviklertilganger**, open **AIS - API** and
+create one). A web page cannot get that token itself: BarentsWatch's login server only lets its own
+website read its answers in a browser (CORS: `access-control-allow-origin` is sent for
+`https://www.barentswatch.no` only, whatever the client; checked 2026-11-24). The AIS API itself
+answers any website.
 
-They are kept **only on the device**, in the browser's storage for Rudder (`localStorage`,
-`rudder.barentswatch.v1`; `public/credentials.js`), and sent only to BarentsWatch. There is no Rudder
-server. Saving asks the browser to keep the data (`navigator.storage.persist`), and Settings shows
-whether it agreed. On iPhone and iPad, Safari clears a website's storage after about 7 days without a
-visit, so add Rudder to the home screen (Share → Add to Home Screen) and open it from there; the app
-has a web manifest and icons for that. **Remove my BarentsWatch access** in Settings deletes them.
-Anyone who can use the phone unlocked can use the access too.
+So Rudder asks the **Shortcuts** app for it (iPhone, iPad, Mac), which is not a browser and not held
+to CORS (`public/handoff.js`). Set up once, as **Settings → BarentsWatch AIS → Set up the shortcut**
+explains: a shortcut named exactly **Rudder token** with *Get Contents of URL* (POST, form:
+`grant_type=client_credentials`, `client_id`, `client_secret`, `scope=ais` to
+`https://id.barentswatch.no/connect/token`) and *Get Dictionary Value* `access_token`. Then **Get
+token with Shortcuts** in Settings, or **Get a new token** in the layers panel when one runs out
+(about an hour), opens `shortcuts://x-callback-url/run-shortcut?name=Rudder%20token&x-success=…`;
+Shortcuts runs it and opens Rudder again with the token appended as `result`. Rudder takes it out
+of the address at once (keeping the chart position), keeps it on the device, tests it and switches
+the ships on. The secret stays in the shortcut. Shortcuts opens Rudder in the default browser, so
+use Rudder there. A token fetched any other way can be pasted in Settings instead.
 
-Whether BarentsWatch's login server answers a web page is not yet verified with a real client. If it
-does not, Settings says so, and **Use an access token instead** takes a token fetched elsewhere
-(valid about an hour). The AIS API itself answers browsers (CORS `*`, checked 2026-11-23). For other
-people to use Rudder, put a small relay in front that keeps the secret (for example behind a Google
-sign-in).
+The token (and a client ID and secret, kept for when BarentsWatch lets Rudder log in directly) is
+kept **only on the device**, in the browser's storage for Rudder (`localStorage`,
+`rudder.barentswatch.v1`; `public/credentials.js`), and sent only to BarentsWatch. There is no
+Rudder server. Saving asks the browser to keep the data (`navigator.storage.persist`), and Settings
+shows whether it agreed. On iPhone and iPad, Safari clears a website's storage after about 7 days
+without a visit unless it is on the home screen; the app has a web manifest and icons for that.
+**Remove my BarentsWatch access** in Settings deletes it all.
 
 The layer asks only for the area in view (plus 30 %), from zoom 7, every 30 seconds and after a
 pan out of that area; later polls ask only for what changed (`since`). Code: `public/ais.js`
