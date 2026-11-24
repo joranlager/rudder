@@ -142,7 +142,9 @@ export function createShipModels(map) {
         moving ||= at.moving;
         const merc = maplibregl.MercatorCoordinate.fromLngLat([at.lon, at.lat], 0);
         m.root.position.set((merc.x - o.x) / s, 0, (merc.y - o.y) / s);
-        const heading = at.heading ?? m.place.heading;
+        // A ship that reports no heading keeps the last one it was drawn with.
+        const heading = at.heading ?? m.lastHeading ?? m.place.heading;
+        m.lastHeading = heading;
         m.root.rotation.y = Math.PI / 2 - (heading * Math.PI) / 180;
       }
       const frame = new THREE.Matrix4().makeTranslation(o.x, o.y, o.z)
@@ -251,7 +253,7 @@ export function createShipModels(map) {
       for (const m of models.values()) {
         const at = m.shown ?? motion.show(m.v, now);
         const { length, beam, toBow } = vesselSize(m.v);
-        const { bow, stern } = bowAndStern(at.lat, at.lon, at.heading ?? m.place.heading, toBow, length);
+        const { bow, stern } = bowAndStern(at.lat, at.lon, at.heading ?? m.lastHeading ?? m.place.heading, toBow, length);
         const b = map.project([bow[1], bow[0]]), st = map.project([stern[1], stern[0]]);
         const pxPerM = Math.hypot(b.x - st.x, b.y - st.y) / length;
         if (hitsShip(point, b, st, (beam / 2) * pxPerM)) return m.v;

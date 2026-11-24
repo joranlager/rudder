@@ -135,8 +135,12 @@ three.js is loaded the first time models are needed.
 **The models move by themselves.** Between AIS reports each modelled ship is moved by dead reckoning
 from its last report (`public/motion.js`): along its course over ground at its speed over ground,
 on an arc while it reports a rate of turn (for at most a minute, then straight on), with the bow on
-its reported heading. Ships slower than 0.3 kn lie still, and a ship not heard from for 5 minutes
-is held where it got to. When a new report arrives, the difference between where the ship was
+its reported heading. A ship not heard from for 5 minutes is held where it got to. Ships lying
+still (under 1 kn, or at anchor, moored or aground and under 3 kn) are not dead reckoned and are held
+steady: alongside, their GPS position wanders a few metres and their compass a few degrees, and their
+course over ground points anywhere, which turned about the antenna made the stern swing. A steady
+ship keeps its place and heading unless a report moves it more than 10 m or turns it more than 5°,
+and its heading never comes from its course. When a new report arrives, the difference between where the ship was
 shown and where the report puts it is eased away over 4 seconds, so ships never jump. While any
 ship is under way the chart redraws about 30 times a second; when all lie still it redraws only
 when needed. Hovering and tapping follow the moving model, not its last reported position.

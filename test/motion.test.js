@@ -98,3 +98,47 @@ test('hits follow the shown ship', () => {
   assert.equal(hitsShip({ x: 105, y: 0 }, b, s, 8), true, 'a little slack at the ends');
   assert.equal(hitsShip({ x: 50, y: 5 }, b, s, 1), true, 'thin ships still get 6 px');
 });
+
+test('a docked ship with a noisy GPS and compass holds still instead of swinging', async () => {
+  const { isSteady, STEADY_M } = await import('../public/motion.js');
+  const m = createMotion();
+  const R0 = 6371008.8;
+  const dock = (i, o = {}) => ship({
+    msgtime: new Date(T0 + i * 10e3).toISOString(), navigationalStatus: 5, speedOverGround: [0, 0.2, 0.4, 0.1][i % 4],
+    courseOverGround: [12, 250, 97, 301][i % 4], trueHeading: [180, 182, 178, 183][i % 4], rateOfTurn: [0, -8, 6, 0][i % 4],
+    latitude: 59 + (([0, 3, -4, 2][i % 4]) / R0) * 180 / Math.PI, longitude: 5.7, ...o,
+  });
+  assert.equal(isSteady(dock(0)), true);
+  const first = m.show(dock(0), T0);
+  for (let i = 1; i < 12; i++) {
+    const t = T0 + i * 10e3;
+    for (const dt of [0, 1000, 2500, 5000]) {
+      const p = m.show(dock(i), t + dt);
+      assert.equal(p.heading, 180, `report ${i}: heading held`);
+      assert.equal(p.lat, first.lat, `report ${i}: not moved for a few metres of GPS noise`);
+      assert.equal(p.moving, false);
+    }
+  }
+  assert.ok(STEADY_M >= 5);
+});
+
+test('a steady ship still follows a real move or turn, eased', () => {
+  const m = createMotion();
+  m.show(ship({ speedOverGround: 0, trueHeading: 180 }), T0);
+  const turned = ship({ msgtime: new Date(T0 + 10e3).toISOString(), speedOverGround: 0, trueHeading: 200 });
+  assert.equal(m.show(turned, T0 + 10e3).heading, 180, 'eased from where it was');
+  assert.equal(m.show(turned, T0 + 10e3 + EASE_MS).heading, 200, 'and on to the new heading');
+  const moved = ship({ msgtime: new Date(T0 + 20e3).toISOString(), speedOverGround: 0, trueHeading: 200, latitude: 59.0005 });
+  m.show(moved, T0 + 20e3);
+  assert.equal(m.show(moved, T0 + 20e3 + EASE_MS).lat, 59.0005, '55 m is a real move');
+});
+
+test('slow or moored ships are not dead reckoned and never take their heading from the course', async () => {
+  const { isSteady } = await import('../public/motion.js');
+  assert.equal(isSteady(ship({ speedOverGround: 0.8 })), true, 'under 1 knot');
+  assert.equal(isSteady(ship({ speedOverGround: 2, navigationalStatus: 5 })), true, 'moored and creeping');
+  assert.equal(isSteady(ship({ speedOverGround: 2, navigationalStatus: 0 })), false, 'under way at 2 knots');
+  assert.equal(isSteady(ship({ speedOverGround: 8, navigationalStatus: 5 })), false, 'status left on "moored" while sailing');
+  const p = predict(ship({ speedOverGround: 0.8, courseOverGround: 45, trueHeading: 511 }), T0 + 60e3);
+  assert.deepEqual([p.lat, p.lon, p.heading], [59, 5.7, null]);
+});
