@@ -145,6 +145,18 @@ shown and where the report puts it is eased away over 4 seconds, so ships never 
 ship is under way the chart redraws about 30 times a second; when all lie still it redraws only
 when needed. Hovering and tapping follow the moving model, not its last reported position.
 
+**View from the bridge.** In a ship's card, **View from the bridge** puts the chart's camera on that
+ship's bridge, looking along its heading, and moves it with the ship (dead reckoning between
+reports, as the models do). The eye is at the ship's GPS antenna, at the bridge's height estimated
+from its model (freeboard, the decks below the bridge, 1.7 m eye height), looking at the sea far
+enough ahead that the horizon shows (82° from straight down). The ship's own deckhouse, funnels and
+masts are hidden, since the eye is inside them; its hull and deck stay, so its bow is seen ahead.
+Other ships in view are drawn as 3D models whatever the scale. While the view is on, the chart
+cannot be dragged or zoomed: the ship moves it. The bar at the bottom shows speed and heading, looks
+**Port**, **Ahead**, **Stbd** or **Astern** (or ← → in 15° steps, ↑ ahead, ↓ astern), and **Exit**
+(or Esc) puts the chart back as it was. It needs the ship's size and heading from AIS. Code:
+`public/pov.js`, using MapLibre's `calculateCameraOptionsFromTo` with the tilt limit raised to 85°.
+
 ## Ships
 
 **Ships** in the top bar covers the chart with a 3D ship inspector (`public/ships/`). Close it with

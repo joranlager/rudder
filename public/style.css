@@ -161,3 +161,24 @@ kbd { font: 11px ui-monospace, monospace; padding: 1px 4px; border: 1px solid va
   .info { bottom: 8px; max-height: 55%; }
   .readout { top: calc(env(safe-area-inset-top) + 62px); bottom: auto; }
 }
+
+/* View from the bridge (pov.js) */
+body.bridge-view #map { background: linear-gradient(#7fb3dc 0%, #bcd9ee 45%, #e3eff7 60%); }
+body.bridge-view .layers, body.bridge-view .info, body.bridge-view .readout,
+body.bridge-view .maplibregl-ctrl-top-left, body.bridge-view .search { display: none; }
+.bridge-bar { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 14px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 16px; border-radius: 999px;
+  background: rgba(11, 34, 54, 0.92); color: #fff; box-shadow: var(--shadow); max-width: calc(100% - 16px); }
+.bridge-bar[hidden] { display: none; }
+.bridge-who { display: grid; line-height: 1.2; min-width: 0; }
+.bridge-who b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bridge-who span { font-size: 12px; opacity: .8; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bridge-looks { display: flex; gap: 2px; background: rgba(255, 255, 255, .1); border-radius: 999px; padding: 2px; }
+.bridge-looks button, .bridge-exit { border: 0; border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+  background: none; color: #fff; }
+.bridge-looks button[aria-pressed="true"] { background: #fff; color: var(--brand); font-weight: 600; }
+.bridge-exit { background: var(--gold); color: var(--brand); font-weight: 700; padding: 6px 14px; }
+@media (max-width: 560px) {
+  .bridge-bar { flex-wrap: wrap; justify-content: center; border-radius: 18px; gap: 8px; }
+  .bridge-who { width: 100%; text-align: center; }
+}
