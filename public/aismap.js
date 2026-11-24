@@ -86,11 +86,20 @@ export function createAisLayer(map) {
     for (const id of LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
   }
 
-  function draw() {
-    if (!map.getSource('ais-points')) {
-      if (!map.isStyleLoaded()) return;
+  /** The AIS sources and layers exist; if the map cannot take them yet, try again when it is idle. */
+  function ensureLayers() {
+    if (map.getSource('ais-points')) return true;
+    try {
       addLayers();
+      return true;
+    } catch {
+      map.once('idle', () => { if (ensureLayers()) draw(); });
+      return false;
     }
+  }
+
+  function draw() {
+    if (!ensureLayers()) return;
     const { points, outlines } = toGeoJson([...vessels.values()]);
     map.getSource('ais-points').setData(points);
     map.getSource('ais-hulls').setData(outlines);
@@ -116,21 +125,25 @@ export function createAisLayer(map) {
 
   // ---------- fetching ----------
 
-  function setStatus(text, tone = '') {
-    status = { text, tone };
+  function setStatus(text, tone = '', action = '') {
+    status = { text, tone, action };
     const el = panel?.querySelector('.ais-status');
-    if (el) { el.textContent = text; el.dataset.tone = tone; }
+    if (el) {
+      el.textContent = text;
+      el.dataset.tone = tone;
+      if (action === 'renew') el.insertAdjacentHTML('beforeend', ' <button type="button" class="link-btn" data-shortcut>Get a new token</button>');
+    }
   }
 
   async function getToken(force = false) {
     if (!force && token && token.expiresAt > Date.now()) return token.token;
-    const kind = accessKind(creds);
-    if (kind === 'token') {
-      token = pastedToken(creds.pasted);
-      if (token && token.expiresAt > Date.now()) return token.token;
-      throw Object.assign(new Error('The access token in Settings has expired. Paste a new one, or use a client ID and secret.'), { fatal: true });
+    // A saved token (from Shortcuts or pasted) while it lasts; else the client ID and secret.
+    const saved = creds.pasted ? pastedToken(creds.pasted) : null;
+    if (saved && saved.expiresAt > Date.now()) { token = saved; return token.token; }
+    if (!(creds.clientId && creds.clientSecret)) {
+      if (saved) throw Object.assign(new Error('Your BarentsWatch token has expired.'), { fatal: true, expired: true });
+      throw Object.assign(new Error('Set up BarentsWatch access in Settings.'), { fatal: true });
     }
-    if (!kind) throw Object.assign(new Error('Set up your BarentsWatch AIS client in Settings.'), { fatal: true });
     let res;
     try {
       res = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: tokenRequestBody(creds.clientId, creds.clientSecret) });
@@ -138,7 +151,7 @@ export function createAisLayer(map) {
       // A network error here, with the network up, means the login server did not let this page read its answer.
       throw Object.assign(new Error(navigator.onLine === false
         ? 'Offline.'
-        : 'The BarentsWatch login server did not answer this page (it may not accept requests from browsers). Paste an access token in Settings instead.'), { fatal: true });
+        : 'BarentsWatch only lets its own website log in from a browser, so Rudder cannot use the ID and secret directly. Get a token with Shortcuts in Settings instead.'), { fatal: true, expired: Boolean(saved) });
     }
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -184,7 +197,7 @@ export function createAisLayer(map) {
       const n = [...vessels.values()].filter((v) => v.longitude >= view[0] && v.longitude <= view[2] && v.latitude >= view[1] && v.latitude <= view[3]).length;
       setStatus(`${n} ship${n === 1 ? '' : 's'} in view · updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, 'ok');
     } catch (e) {
-      setStatus(e.message, 'err');
+      setStatus(e.message, 'err', e.expired ? 'renew' : '');
       if (e.fatal) stop();
     } finally {
       busy = false;
@@ -215,7 +228,7 @@ export function createAisLayer(map) {
       <label class="opt"><input type="checkbox" data-ais="on" ${cfg.on ? 'checked' : ''} ${ready ? '' : 'disabled'}>
         <span>Show ships</span><small>Live positions from Kystverket's AIS via BarentsWatch, Norwegian waters. Tap a ship for details and its 3D model.</small></label>
       ${ready ? '' : '<p class="ais-setup">Needs your BarentsWatch AIS client. <button type="button" class="link-btn" data-open="settings">Set it up in Settings</button></p>'}
-      <p class="ais-status" data-tone="${status.tone}" role="status">${esc(status.text)}</p>
+      <p class="ais-status" data-tone="${status.tone}" role="status">${esc(status.text)}${status.action === 'renew' ? ' <button type="button" class="link-btn" data-shortcut>Get a new token</button>' : ''}</p>
       <div class="ais-legend">${TYPE_GROUPS.map((g) => `<span><i style="background:${g.color}"></i>${esc(g.label)}</span>`).join('')}</div>`;
   }
 
@@ -274,12 +287,25 @@ export function createAisLayer(map) {
     }
   }
 
-  if (map.isStyleLoaded()) addLayers(); else map.once('load', addLayers);
-  if (cfg.on) map.once('idle', start);
+  // 'style.load' comes as soon as the style is read; 'load' waits for every chart tile, which on a
+  // slow or failing tile service can be very late or never.
+  if (map.isStyleLoaded()) addLayers(); else map.once('style.load', ensureLayers);
+  if (cfg.on) setTimeout(start, 0);
+
+  /** Switch the layer on or off (as the checkbox does). */
+  function setOn(on) {
+    if (cfg.on === on) return;
+    cfg.on = on;
+    save();
+    setVisible(on);
+    if (on) start(); else { stop(); setStatus(''); }
+    if (panel) renderPanel(panel);
+  }
 
   return {
     renderPanel,
     onPanelEvent,
+    setOn,
     credentialsChanged,
     testAccess,
     /** The vessel under a map point (a little slack around small symbols), or null. */
