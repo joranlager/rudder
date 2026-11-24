@@ -120,6 +120,31 @@ The layer asks only for the area in view (plus 30 %), from zoom 7, every 30 seco
 pan out of that area; later polls ask only for what changed (`since`). Code: `public/ais.js`
 (requests, decoding, shapes; tested) and `public/aismap.js` (fetching, drawing, panel).
 
+**3D ships up close.** When the metric scale bar reads **200 m or less** (about zoom 14 and in), ships
+with a known size and heading are drawn as **3D models** on the chart instead of flat outlines: the
+same models as **Open 3D model** builds from AIS (type, length, beam, draught, name on the hull),
+turned to their heading and placed by their GPS antenna. Tilt the chart (two fingers, or right-drag)
+to see them from the side. Only the part above the waterline is drawn, since the chart is the sea.
+Their outlines stay, invisible, so hovering and tapping work as before; ships without a heading
+keep their dot. The scale reading is computed as MapLibre's scale bar does (`public/scalebar.js`).
+The models are drawn with three.js in a MapLibre custom layer sharing the map's WebGL context
+(`public/shipmodels.js`), at most the 40 ships nearest the middle of the view; each is built once
+(5–15 ms) and only moved after that, with its hull painting reduced to 1024 px for the chart.
+three.js is loaded the first time models are needed.
+
+**The models move by themselves.** Between AIS reports each modelled ship is moved by dead reckoning
+from its last report (`public/motion.js`): along its course over ground at its speed over ground,
+on an arc while it reports a rate of turn (for at most a minute, then straight on), with the bow on
+its reported heading. A ship not heard from for 5 minutes is held where it got to. Ships lying
+still (under 1 kn, or at anchor, moored or aground and under 3 kn) are not dead reckoned and are held
+steady: alongside, their GPS position wanders a few metres and their compass a few degrees, and their
+course over ground points anywhere, which turned about the antenna made the stern swing. A steady
+ship keeps its place and heading unless a report moves it more than 10 m or turns it more than 5°,
+and its heading never comes from its course. When a new report arrives, the difference between where the ship was
+shown and where the report puts it is eased away over 4 seconds, so ships never jump. While any
+ship is under way the chart redraws about 30 times a second; when all lie still it redraws only
+when needed. Hovering and tapping follow the moving model, not its last reported position.
+
 ## Ships
 
 **Ships** in the top bar covers the chart with a 3D ship inspector (`public/ships/`). Close it with
