@@ -138,6 +138,12 @@ button { font: inherit; color: inherit; }
 .set-token summary { cursor: pointer; color: var(--accent); }
 .set-code { display: block; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--muted) 12%, transparent);
   overflow-wrap: anywhere; user-select: all; }
+.set-bookmarklet { display: inline-block; margin: 6px 0 2px; padding: 5px 12px; border-radius: 999px; background: var(--brand); color: #fff;
+  font-weight: 650; text-decoration: none; cursor: grab; }
+.set-tabs { margin: 4px 0; }
+.set-tabs .link-btn[aria-pressed="false"] { color: var(--muted); text-decoration: none; font-weight: 500; }
+.set-more summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
+kbd { font: 11px ui-monospace, monospace; padding: 1px 4px; border: 1px solid var(--line); border-radius: 4px; }
 .info-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .info-btn.primary { background: var(--accent); color: #fff; }
 
