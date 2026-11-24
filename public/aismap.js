@@ -155,6 +155,23 @@ export function createAisLayer(map) {
     });
     map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; tip.hidden = true; });
   }
+  // The same for the moving 3D models, which are not where their (hidden) outlines are.
+  let tipOnModel = false;
+  map.on('mousemove', (e) => {
+    const v = modelled.length ? models.vesselAt(e.point) : null;
+    if (v) {
+      tipOnModel = true;
+      map.getCanvas().style.cursor = 'pointer';
+      tip.textContent = (v.name || '').trim() || String(v.mmsi);
+      tip.style.left = `${e.point.x + 12}px`;
+      tip.style.top = `${e.point.y + 12}px`;
+      tip.hidden = false;
+    } else if (tipOnModel) {
+      tipOnModel = false;
+      map.getCanvas().style.cursor = '';
+      tip.hidden = true;
+    }
+  });
 
   // ---------- fetching ----------
 
@@ -344,6 +361,9 @@ export function createAisLayer(map) {
     /** The vessel under a map point (a little slack around small symbols), or null. */
     vesselAt(point) {
       if (!cfg.on || !map.getLayer('ais-dot')) return null;
+      // A 3D model is where the ship is now, which can be ahead of its last report.
+      const hit = modelled.length ? models.vesselAt(point) : null;
+      if (hit) return vessels.get(hit.mmsi) ?? hit;
       const box = [[point.x - 8, point.y - 8], [point.x + 8, point.y + 8]];
       const f = map.queryRenderedFeatures(box, { layers: LAYERS.filter((l) => map.getLayer(l)) })[0];
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;

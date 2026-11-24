@@ -5,11 +5,17 @@
 // ship inspector's builder (ships/ship.js) from its AIS report, as "Open 3D model" does, and kept
 // until it leaves the view. Only the part above the waterline is drawn: the chart is the sea.
 //
+// The ships move by themselves: every frame each model is placed where dead reckoning from its last
+// AIS report puts it (motion.js), and new reports are eased in. While any ship is under way the map
+// is redrawn about 30 times a second; when all lie still, it is redrawn only when needed.
+//
 // three.js (about 0.7 MB) and the builder are loaded the first time models are needed.
 
 import { drawHeading, vesselSize, hullFromAis } from './ais.js';
+import { createMotion, hitsShip, bowAndStern } from './motion.js';
 
-export const MAX_MODELS = 40; // nearest to the middle of the view; a harbour seldom has more in view
+export const MAX_MODELS = 40;
+const FRAME_MS = 33; // about 30 frames a second while ships move: smooth, and kind to the battery // nearest to the middle of the view; a harbour seldom has more in view
 const LAYER_ID = 'ais-models';
 
 /**
@@ -85,7 +91,9 @@ export function createShipModels(map) {
   let lib = null; // { THREE, buildShip, DEFAULT_LIVERY, HULL_FONTS } once loaded
   let loading = null;
   let scene = null, camera = null, renderer = null;
-  const models = new Map(); // mmsi -> { key, root, model }
+  const models = new Map(); // mmsi -> { key, root, model, v, place, shown }
+  const motion = createMotion();
+  let frameTimer = 0;
   let wanted = []; // vessels to show
   let building = false, dirty = false;
 
@@ -125,8 +133,17 @@ export function createShipModels(map) {
       const c = map.getCenter();
       const o = maplibregl.MercatorCoordinate.fromLngLat(c, 0);
       const s = o.meterInMercatorCoordinateUnits();
-      for (const { root, merc } of models.values()) {
-        root.position.set((merc.x - o.x) / s, 0, (merc.y - o.y) / s);
+      // Where each ship is now, moved on from its last report.
+      const now = Date.now();
+      let moving = false;
+      for (const m of models.values()) {
+        const at = motion.show(m.v, now);
+        m.shown = at;
+        moving ||= at.moving;
+        const merc = maplibregl.MercatorCoordinate.fromLngLat([at.lon, at.lat], 0);
+        m.root.position.set((merc.x - o.x) / s, 0, (merc.y - o.y) / s);
+        const heading = at.heading ?? m.place.heading;
+        m.root.rotation.y = Math.PI / 2 - (heading * Math.PI) / 180;
       }
       const frame = new THREE.Matrix4().makeTranslation(o.x, o.y, o.z)
         .scale(new THREE.Vector3(s, -s, s))
@@ -134,6 +151,8 @@ export function createShipModels(map) {
       camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix).multiply(frame);
       renderer.resetState();
       renderer.render(scene, camera);
+      // Keep the ships moving: ask for the next frame (MapLibre draws only when asked).
+      if (moving && !frameTimer) frameTimer = setTimeout(() => { frameTimer = 0; map.triggerRepaint(); }, FRAME_MS);
     },
     onRemove() {
       for (const mmsi of [...models.keys()]) drop(mmsi);
@@ -148,6 +167,7 @@ export function createShipModels(map) {
     scene?.remove(m.root);
     m.model.dispose();
     models.delete(mmsi);
+    motion.forget(mmsi);
   }
 
   /** Build (when new or changed) or move one ship's model. */
@@ -170,15 +190,16 @@ export function createShipModels(map) {
       const root = new THREE.Group();
       root.add(model.group);
       scene.add(root);
-      m = { key, root, model, merc: null };
+      m = { key, root, model };
       models.set(v.mmsi, m);
     }
-    m.merc = maplibregl.MercatorCoordinate.fromLngLat([v.longitude, v.latitude], 0);
-    m.root.rotation.y = p.rotationY;
-    m.model.group.position.set(-p.antenna.x, 0, -p.antenna.z); // the antenna on the reported position
+    // The newest report; the position and heading are worked out each frame from it (render).
+    m.v = v;
+    m.place = p;
+    m.model.group.position.set(-p.antenna.x, 0, -p.antenna.z); // the antenna on the ship's position
   }
 
-  /** Bring the models in line with `wanted`, building at most one new model per frame. */
+  /** Bring the models in line with `wanted`, building a few new models per frame. */
   function sync() {
     if (!lib || !scene) return;
     if (building) { dirty = true; return; } // run again when the current round is done
@@ -224,5 +245,18 @@ export function createShipModels(map) {
       sync();
     },
     get count() { return models.size; },
+    /** The modelled ship drawn under a screen point (where it is shown now, not where it last reported), or null. */
+    vesselAt(point) {
+      const now = Date.now();
+      for (const m of models.values()) {
+        const at = m.shown ?? motion.show(m.v, now);
+        const { length, beam, toBow } = vesselSize(m.v);
+        const { bow, stern } = bowAndStern(at.lat, at.lon, at.heading ?? m.place.heading, toBow, length);
+        const b = map.project([bow[1], bow[0]]), st = map.project([stern[1], stern[0]]);
+        const pxPerM = Math.hypot(b.x - st.x, b.y - st.y) / length;
+        if (hitsShip(point, b, st, (beam / 2) * pxPerM)) return m.v;
+      }
+      return null;
+    },
   };
 }
