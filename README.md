@@ -68,6 +68,35 @@ fetched on the first search, kept for 10 minutes and searched on the device (`ma
 `public/ais.js`). If that list cannot be fetched, the results say why and still show the ships
 near the map. The field is hidden while the ships are off or failing.
 
+## Ships tracker: recording and playback
+
+The **Ships tracker** button in the top bar (next to Settings) opens a panel for recording every
+ship's AIS positions in Norwegian waters and playing them back.
+
+**Recording.** Rudder has no server, so the open app does the recording: with **Record every ship's
+positions** on, it asks BarentsWatch every minute for every ship's latest report (no area: all of
+Norway; the first time in full, then only what changed) and keeps the positions in the browser's
+database on this device (IndexedDB, `public/trackstore.js`). It records only while Rudder is open
+with BarentsWatch access, and in one tab at a time (others say they are waiting). A position is
+kept when the ship has moved 25 m or turned 5° since its last kept one, or 10 minutes have passed,
+so ships lying alongside cost little (`public/track.js`, `public/recorder.js`). Positions older
+than the chosen number of days (1 to 30) are dropped; **Clear recordings** deletes them all.
+The panel shows the ships tracked, positions stored, the span recorded, positions in the last hour,
+ships under way at the last poll and the storage used.
+
+**Playback.** Choose where to start, a while ago (hours:minutes, for example 1:30) or a date and
+time, and a speed (1x to 600x), and **Play back**. Live AIS pauses and the ships move as recorded:
+between two recorded positions each ship follows a smooth curve that leaves the first and reaches
+the second at the speed and course the ship reported there (a cubic Hermite curve), so turns come
+out as arcs; where the course does not fit the move, the straight line is used. A ship silent for
+more than 30 minutes waits at its last place for 15 minutes and is then gone until it reports
+again. The 3D ships, the bridge view and tapping work as with live ships. The slider moves to any
+point in the recording; Pause, Play and **Back to live** do what they say (`public/playback.js`).
+
+**Traces.** During playback, tap a ship and **Give it a trace**: a coloured line of where it has
+been since playback began, growing along the same smooth path as it sails. Each trace's colour can
+be changed and the trace shown or hidden, in the ship's card or under Traces in the panel.
+
 ## Taking the helm
 
 **Take the helm** (in a ship's card, or in the bar of the view from the bridge) gives you command of

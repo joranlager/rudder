@@ -93,12 +93,13 @@ export function createAisLayer(map) {
 
   const models = createShipModels(map);
   let modelled = []; // MMSIs drawn as models: their arrows and outlines step aside
+  let playback = null; // { now } while recorded tracks play back (playback.js)
   let pov = null; // MMSI of the ship whose bridge the view is from (pov.js): always modelled
   let controlled = null; // MMSI of the ship the user has the helm of (helm.js): its AIS reports are ignored
 
   function updateModels() {
     // From the bridge the chart is tilted far over, so the scale bar says little: models stay on.
-    const active = cfg.on && map.getSource('ais-points') && (pov !== null || modelsAtScale(scaleBarMetres(map)));
+    const active = (cfg.on || playback) && map.getSource('ais-points') && (pov !== null || modelsAtScale(scaleBarMetres(map)));
     let list = [];
     if (active) {
       const own = pov !== null ? vessels.get(pov) : null;
@@ -142,9 +143,9 @@ export function createAisLayer(map) {
     }
   }
 
-  function draw() {
+  function draw(now = playback ? playback.now : Date.now()) {
     if (!ensureLayers()) return;
-    const { points, outlines } = toGeoJson([...vessels.values()]);
+    const { points, outlines } = toGeoJson([...vessels.values()], now);
     map.getSource('ais-points').setData(points);
     map.getSource('ais-hulls').setData(outlines);
     updateModels();
@@ -236,7 +237,7 @@ export function createAisLayer(map) {
   }
 
   async function fetchShips({ full = false } = {}) {
-    if (!cfg.on || busy || document.hidden) return;
+    if (!cfg.on || busy || document.hidden || playback) return;
     if (map.getZoom() < MIN_ZOOM) { setStatus(`Zoom in to see ships (from zoom ${MIN_ZOOM}).`); return; }
     const b = map.getBounds();
     const view = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
@@ -372,22 +373,51 @@ export function createAisLayer(map) {
   const DIRECTORY_MS = 10 * 60e3;
   let directory = null, directoryAt = 0, directoryLoading = null;
 
+  /** Every ship's latest report in Norwegian waters (only those changed since `since`, when given). */
+  async function fetchAll(since = null) {
+    if (!accessKind(loadCredentials())) throw new Error('Set up BarentsWatch access in Settings.');
+    creds = loadCredentials();
+    const body = directoryRequest();
+    if (since) body.since = new Date(since).toISOString();
+    let t = await getToken();
+    const ask = (tok) => fetch(LATEST_URL, {
+      method: 'POST', headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    let res = await ask(t);
+    if (res.status === 401) { t = await getToken(true); res = await ask(t); }
+    if (!res.ok) throw new Error(`AIS answered HTTP ${res.status}`);
+    const list = await res.json();
+    return Array.isArray(list) ? list : [];
+  }
+
   async function shipDirectory() {
     if (directory && Date.now() - directoryAt < DIRECTORY_MS) return directory;
-    directoryLoading ??= (async () => {
-      let t = await getToken();
-      const ask = (tok) => fetch(LATEST_URL, {
-        method: 'POST', headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' }, body: JSON.stringify(directoryRequest()),
-      });
-      let res = await ask(t);
-      if (res.status === 401) { t = await getToken(true); res = await ask(t); }
-      if (!res.ok) throw new Error(`AIS answered HTTP ${res.status}`);
-      const list = await res.json();
-      directory = Array.isArray(list) ? list : [];
+    directoryLoading ??= fetchAll().then((list) => {
+      directory = list;
       directoryAt = Date.now();
       return directory;
-    })().finally(() => { directoryLoading = null; });
+    }).finally(() => { directoryLoading = null; });
     return directoryLoading;
+  }
+
+  // ---------- playback of recorded positions (playback.js) ----------
+  // While it plays, live updates pause; the ships drawn are those the playback hands over, at its time.
+
+  function setPlayback(where) {
+    if (where) {
+      playback = { now: Date.now() };
+      stop();
+      ensureLayers();
+      setVisible(true);
+      models.setPlayback(where);
+    } else if (playback) {
+      playback = null;
+      models.setPlayback(null);
+      vessels.clear();
+      setVisible(cfg.on);
+      draw();
+      if (cfg.on) start();
+    }
   }
 
   /** Switch the layer on or off (as the checkbox does). */
@@ -408,13 +438,25 @@ export function createAisLayer(map) {
     testAccess,
     /** The vessel under a map point (a little slack around small symbols), or null. */
     vesselAt(point) {
-      if (!cfg.on || !map.getLayer('ais-dot')) return null;
+      if (!(cfg.on || playback) || !map.getLayer('ais-dot')) return null;
       // A 3D model is where the ship is now, which can be ahead of its last report.
       const hit = modelled.length ? models.vesselAt(point) : null;
       if (hit) return vessels.get(hit.mmsi) ?? hit;
       const box = [[point.x - 8, point.y - 8], [point.x + 8, point.y + 8]];
       const f = map.queryRenderedFeatures(box, { layers: LAYERS.filter((l) => map.getLayer(l)) })[0];
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;
+    },
+    fetchAll,
+    /** Play back recorded positions: `where(v)` places each ship every frame; null goes back to live. */
+    setPlayback,
+    get playingBack() { return playback !== null; },
+    /** The ships at playback time `now` (their reports), drawn on the chart. */
+    playbackFrame(list, now) {
+      if (!playback) return;
+      playback.now = now;
+      vessels.clear();
+      for (const v of list) vessels.set(v.mmsi, v);
+      draw(now);
     },
     /** MMSIs drawn as 3D models now (for checking). */
     get modelled() { return [...modelled]; },
