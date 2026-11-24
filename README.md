@@ -68,6 +68,42 @@ fetched on the first search, kept for 10 minutes and searched on the device (`ma
 `public/ais.js`). If that list cannot be fetched, the results say why and still show the ships
 near the map. The field is hidden while the ships are off or failing.
 
+## Taking the helm
+
+**Take the helm** (in a ship's card, or in the bar of the view from the bridge) gives you command of
+that ship. Its real AIS reports are ignored while you have it; **Hand back the helm** lets the next
+real report put it back where it really is. The ship moves by a handling model
+(`public/shiphandling.js`) and the view goes to its bridge, with a bridge console below
+(`public/helm.js`):
+
+- **Engine telegraph**: full, half, slow and dead slow ahead or astern, and stop, with the engine's
+  answer beside it. Speed builds up and dies away with the ship's size (a 140 m ferry takes about a
+  minute to get most of the way; with the engine stopped it carries its way a long time), and astern
+  gives about half the speed of ahead. Taking the helm keeps the order nearest the speed it had.
+- **Wheel**: drag it round (four turns of the wheel to one of rudder), or Hard port, Midships, Hard
+  stbd. The rudder follows at a believable speed (about 28 s hard over to hard over on a big ship)
+  and turns the ship only with water flowing past it: the ship's own speed and the propeller's wash.
+  Hard over gives a turning circle of about four ship lengths, and the ship loses speed in the turn.
+  Tugs turn much tighter.
+- **Thrusters**, where the type has them (ferries and cruise ships bow and stern; cargo ships,
+  tankers, container ships and yachts a bow thruster; sailing ships and tugs none): push the bow or
+  stern sideways, turning the ship on the spot or moving it sideways. They lose their grip as the
+  ship gathers way, and have none from about 5 knots. Double-click a slider to stop a thruster.
+- **Instruments**: gyro heading, speed over ground (and going astern or sideways), rate of turn,
+  rudder angle (ordered and actual) and depth from the chart's depth bands, sounded every 3 seconds.
+  Running onto water shallower than the draught, or off the charted water, puts the ship **aground**:
+  it stops, and only going astern takes it off.
+- **Keys**: W/S engine, A/D rudder 5° at a time, X midships, Q/E bow thruster, Z/C stern thruster.
+
+The chart symbols, card and search follow the simulated ship. **Bridge view** in the console leaves
+or returns to the bridge, so the ship can also be conned from the chart. Speeds and turning come
+from rules of thumb by type and size, not from any one ship's trials; wind and current are not
+modelled.
+
+**Looking around from the bridge**: drag (mouse or one finger) to look around and up or down; the
+mouse wheel or a pinch zooms (like binoculars). The Port, Ahead, Stbd and Astern buttons put the view
+back level and unzoomed. With the console open, the view is centred in the part of the screen above it.
+
 ## Land heights in 3D
 
 Under the layers button, **Land heights in 3D** drapes the chart over Kartverket's terrain model

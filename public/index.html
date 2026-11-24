@@ -75,8 +75,12 @@
       <button type="button" data-look="starboard" aria-pressed="false" title="Look to starboard (→)">Stbd</button>
       <button type="button" data-look="astern" aria-pressed="false" title="Look astern (↓)">Astern</button>
     </div>
+    <button type="button" class="bridge-helm" data-bridge-helm title="Command this ship yourself">Take the helm</button>
     <button type="button" class="bridge-exit" data-bridge-exit title="Back to the chart (Esc)">Exit</button>
   </div>
+
+  <!-- The bridge console while the user has the helm of a ship (helm.js) -->
+  <section id="helm" class="helm" aria-label="Bridge console" hidden></section>
 
   <div id="reloading" class="reloading" role="status" hidden><img src="icon.svg" alt="" width="56" height="56"><p>Reloading…</p></div>
 
