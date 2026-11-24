@@ -78,3 +78,37 @@ test('hull textures are made smaller for the chart, keeping their shape', async 
   assert.deepEqual(mapTextureSize(4096, 2060), [1024, 515]);
   assert.deepEqual(mapTextureSize(800, 200), [800, 200], 'small ones stay');
 });
+
+test('from a bridge, the ships around it are picked by distance, whatever the camera shows', async () => {
+  const { boxAround, POV_RADIUS_M } = await import('../public/shipmodels.js');
+  const [w, s, e, n] = boxAround(59.43, 10.53, 1000);
+  assert.ok(Math.abs((n - s) * 111_320 - 2000) < 1);
+  assert.ok(Math.abs((e - w) * 111_320 * Math.cos((59.43 * Math.PI) / 180) - 2000) < 1);
+  const own = ship({ mmsi: 1, latitude: 59.43, longitude: 10.53 });
+  const ahead = ship({ mmsi: 2, latitude: 59.4336, longitude: 10.53 });
+  const far = ship({ mmsi: 3, latitude: 59.6, longitude: 10.53 });
+  const picked = pickShips([far, ahead, own], boxAround(59.43, 10.53, POV_RADIUS_M), [10.53, 59.43]).map((v) => v.mmsi);
+  assert.deepEqual(picked, [1, 2]);
+});
+
+test('ships float at their freeboard: the hull depth follows the beam and draught AIS reports', async () => {
+  const { hullFromAis } = await import('../public/ais.js');
+  const { depthFor } = await import('../public/ships/presets.js');
+  const ferry = hullFromAis({ mmsi: 1, shipType: 60, dimensionA: 25, dimensionB: 25, dimensionC: 6, dimensionD: 6, draught: 30 }).params;
+  assert.equal(ferry.beam, 12);
+  assert.ok(ferry.depth - ferry.draft > 3, `a 50 m ferry 12 m wide shows ${ (ferry.depth - ferry.draft).toFixed(1) } m of hull`);
+  const loaded = depthFor('tanker', 20, 6.5), ballast = depthFor('tanker', 20, 3.5);
+  assert.equal(loaded, ballast, 'the hull is the same, loaded or not');
+  assert.ok(ballast - 3.5 > loaded - 6.5, 'in ballast it floats higher');
+  assert.ok(depthFor('tug', 10, 9) >= 10, 'always at least a metre above the waterline');
+});
+
+test('ferries and cruise ships stand higher out of the water than working ships', async () => {
+  const { hullFromAis } = await import('../public/ais.js');
+  const fb = (v) => { const p = hullFromAis(v).params; return p.depth - p.draft; };
+  const ferry = fb({ mmsi: 1, shipType: 60, dimensionA: 25, dimensionB: 25, dimensionC: 6, dimensionD: 6, draught: 30 });
+  const cargo = fb({ mmsi: 1, shipType: 70, dimensionA: 25, dimensionB: 25, dimensionC: 6, dimensionD: 6, draught: 30 });
+  assert.ok(ferry >= 4.5 && ferry > cargo, `ferry ${ferry.toFixed(1)} m, cargo ${cargo.toFixed(1)} m`);
+  const big = fb({ mmsi: 1, shipType: 60, dimensionA: 70, dimensionB: 69, dimensionC: 10, dimensionD: 11, draught: 55 });
+  assert.ok(big > 10 && big < 15, `a 139 m car ferry: ${big.toFixed(1)} m`);
+});

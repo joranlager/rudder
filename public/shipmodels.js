@@ -78,6 +78,14 @@ export function modelKey(v) {
   return [params.kind, params.length, params.beam, params.draft, (v.name || '').trim()].join('|');
 }
 
+export const POV_RADIUS_M = 6000; // from a bridge: ships this close are modelled, nearest first
+
+/** The [west, south, east, north] box reaching `metres` each way from a point. */
+export function boxAround(lat, lon, metres) {
+  const dLat = metres / 111_320, dLon = metres / (111_320 * Math.cos((lat * Math.PI) / 180));
+  return [lon - dLon, lat - dLat, lon + dLon, lat + dLat];
+}
+
 /** The ships to model: placeable, in (or near) the view, nearest the middle first, at most `max`. */
 export function pickShips(vessels, [w, s, e, n], [cx, cy], max = MAX_MODELS) {
   const out = [];

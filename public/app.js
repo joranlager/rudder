@@ -64,7 +64,6 @@ const bridge = createBridgeView(map, {
   ais,
   bar: $('#bridge-bar'),
   far,
-  bottomInset: () => (helm?.active ? $('#helm').offsetHeight : 0),
   onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); land.setTrueScale(true); far.setLand(land.on); },
   onExit: (message) => { land.setTrueScale(false); if (message && !helm?.active) alert(message); },
 });
