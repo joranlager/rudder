@@ -6,7 +6,7 @@
 
 import {
   TOKEN_URL, LATEST_URL, TYPE_GROUPS, tokenRequestBody, parseToken, pastedToken, latestRequest, bboxPolygon, bboxInside,
-  mergeVessels, pruneVessels, toGeoJson,
+  mergeVessels, pruneVessels, toGeoJson, directoryRequest, matchVessels,
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
 import { scaleBarMetres, modelsAtScale } from './scalebar.js';
@@ -346,6 +346,31 @@ export function createAisLayer(map) {
   if (map.isStyleLoaded()) addLayers(); else map.once('style.load', ensureLayers);
   if (cfg.on) setTimeout(start, 0);
 
+  // ---------- every ship, for the search box ----------
+  // BarentsWatch has no search by name, but answers with every ship heard in Norwegian waters in the
+  // last 24 hours when no area is given. That list is fetched on the first ship search and kept for
+  // DIRECTORY_MS; searching it happens here, on the device.
+  const DIRECTORY_MS = 10 * 60e3;
+  let directory = null, directoryAt = 0, directoryLoading = null;
+
+  async function shipDirectory() {
+    if (directory && Date.now() - directoryAt < DIRECTORY_MS) return directory;
+    directoryLoading ??= (async () => {
+      let t = await getToken();
+      const ask = (tok) => fetch(LATEST_URL, {
+        method: 'POST', headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' }, body: JSON.stringify(directoryRequest()),
+      });
+      let res = await ask(t);
+      if (res.status === 401) { t = await getToken(true); res = await ask(t); }
+      if (!res.ok) throw new Error(`AIS answered HTTP ${res.status}`);
+      const list = await res.json();
+      directory = Array.isArray(list) ? list : [];
+      directoryAt = Date.now();
+      return directory;
+    })().finally(() => { directoryLoading = null; });
+    return directoryLoading;
+  }
+
   /** Switch the layer on or off (as the checkbox does). */
   function setOn(on) {
     if (cfg.on === on) return;
@@ -373,6 +398,23 @@ export function createAisLayer(map) {
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;
     },
     vessel: (mmsi) => vessels.get(Number(mmsi)) ?? null,
+    /** Whether ships can be searched: BarentsWatch access is set up on this device. */
+    canSearch: () => Boolean(accessKind(loadCredentials())),
+    /** Ships matching `query` among every ship heard in the last 24 hours (fetched once, kept 10 minutes). */
+    async searchShips(query, signal) {
+      if (!accessKind(loadCredentials())) return [];
+      creds = loadCredentials();
+      const list = await shipDirectory();
+      if (signal?.aborted) return [];
+      return matchVessels(list, query);
+    },
+    /** Put a ship found by search on the chart (the layer is switched on) and return its newest report. */
+    showShip(v) {
+      mergeVessels(vessels, [v]);
+      setOn(true);
+      draw();
+      return vessels.get(v.mmsi) ?? v;
+    },
     /** Where a ship is drawn now: moved on from its last report, as its 3D model is. */
     shownShip: (v) => models.shown(v),
     /** The bridge view is from this ship (or none): keep it, and the 3D models, drawn whatever the scale. */

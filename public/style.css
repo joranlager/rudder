@@ -182,3 +182,9 @@ body.bridge-view .maplibregl-ctrl-top-left, body.bridge-view .search { display: 
   .bridge-bar { flex-wrap: wrap; justify-content: center; border-radius: 18px; gap: 8px; }
   .bridge-who { width: 100%; text-align: center; }
 }
+
+/* Ships in the search results */
+.search-results .hit-ship { padding-left: 34px; position: relative; }
+.search-results .hit-icon { position: absolute; left: 10px; top: 8px; }
+.search-results .hit-setup { color: var(--accent); }
+.search-results .hit-note { color: var(--muted); font-size: 13px; cursor: default; }

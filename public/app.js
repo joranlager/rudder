@@ -347,26 +347,65 @@ $('#info-body').addEventListener('click', async (e) => {
   else showPoint({ lat: v.latitude, lng: v.longitude });
 });
 
-// ---------- place search ----------
+// ---------- search: places (Kartverket) and ships (AIS) ----------
+// Results are { kind: 'place', name, type, where, lat, lon }, { kind: 'ship', v } or { kind: 'setup' }.
 let searchTimer = 0, searchCtl = null, results = [], active = -1;
+let places = [], shipHits = [], shipNote = '';
 const input = $('#search-input'), list = $('#search-results');
 function renderResults() {
-  list.hidden = !results.length;
-  list.innerHTML = results.map((p, i) => `<li role="option" data-i="${i}" aria-selected="${i === active}">
-    ${esc(p.name)}<small>${esc(p.type)} · ${esc(p.where)}</small></li>`).join('');
+  list.hidden = !results.length && !shipNote;
+  list.innerHTML = results.map((r, i) => {
+    const sel = `role="option" data-i="${i}" aria-selected="${i === active}"`;
+    if (r.kind === 'ship') {
+      const v = r.v, age = Math.max(0, Math.round(ageMinutes(v)));
+      const heard = age < 1 ? 'just now' : age < 120 ? `${age} min ago` : `${Math.round(age / 60)} h ago`;
+      return `<li ${sel} class="hit-ship"><span class="hit-icon" aria-hidden="true">⛴</span>${esc((v.name || '').trim() || `MMSI ${v.mmsi}`)}
+        <small>${esc(typeName(v.shipType))} · MMSI ${v.mmsi}${v.callSign ? ` · ${esc(v.callSign)}` : ''} · heard ${heard}</small></li>`;
+    }
+    if (r.kind === 'setup') return `<li ${sel} class="hit-setup">Search ships too<small>Set up BarentsWatch AIS in Settings</small></li>`;
+    return `<li ${sel}>${esc(r.name)}<small>${esc(r.type)} · ${esc(r.where)}</small></li>`;
+  }).join('') + (shipNote ? `<li class="hit-note" aria-disabled="true">${esc(shipNote)}</li>` : '');
 }
-function choose(p) {
-  results = []; renderResults(); input.blur();
-  map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12) });
-  map.once('moveend', () => showPoint({ lat: p.lat, lng: p.lon }));
+function combine() {
+  results = [
+    ...shipHits.map((v) => ({ kind: 'ship', v })),
+    ...places.map((p) => ({ kind: 'place', ...p })),
+    ...(ais.canSearch() ? [] : [{ kind: 'setup' }]),
+  ];
+  active = -1;
+  renderResults();
+}
+function choose(r) {
+  results = []; shipNote = ''; renderResults(); input.blur();
+  if (r.kind === 'setup') { togglePanel('settings', true); return; }
+  if (r.kind === 'ship') {
+    // Close enough that ships are drawn as 3D models (scale bar 200 m or less).
+    const v = ais.showShip(r.v);
+    map.flyTo({ center: [v.longitude, v.latitude], zoom: Math.max(map.getZoom(), 15.5) });
+    map.once('moveend', () => showVessel(ais.vessel(v.mmsi) ?? v));
+    return;
+  }
+  map.flyTo({ center: [r.lon, r.lat], zoom: Math.max(map.getZoom(), 12) });
+  map.once('moveend', () => showPoint({ lat: r.lat, lng: r.lon }));
 }
 input.addEventListener('input', () => {
   clearTimeout(searchTimer);
   const q = input.value.trim();
-  if (q.length < 2) { results = []; renderResults(); return; }
-  searchTimer = setTimeout(async () => {
+  if (q.length < 2) { places = []; shipHits = []; shipNote = ''; results = []; renderResults(); return; }
+  searchTimer = setTimeout(() => {
     searchCtl?.abort(); searchCtl = new AbortController();
-    try { results = parsePlaces(await getJson(placeUrl(q), searchCtl.signal)); active = -1; renderResults(); } catch { /* aborted or offline */ }
+    const signal = searchCtl.signal;
+    getJson(placeUrl(q), signal).then((j) => { if (!signal.aborted) { places = parsePlaces(j); combine(); } }).catch(() => { /* aborted or offline */ });
+    if (ais.canSearch()) {
+      shipNote = shipHits.length ? '' : 'Searching ships…';
+      renderResults();
+      ais.searchShips(q, signal)
+        .then((hits) => { if (!signal.aborted) { shipHits = hits; shipNote = ''; combine(); } })
+        .catch((e) => { if (!signal.aborted) { shipHits = []; shipNote = `Ships: ${e.message}`; combine(); } });
+    } else {
+      shipHits = [];
+      combine();
+    }
   }, 250);
 });
 input.addEventListener('keydown', (e) => {
@@ -377,7 +416,7 @@ input.addEventListener('keydown', (e) => {
   }
 });
 $('#search').addEventListener('submit', (e) => { e.preventDefault(); const p = results[Math.max(active, 0)]; if (p) choose(p); });
-list.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li) choose(results[Number(li.dataset.i)]); });
+list.addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) choose(results[Number(li.dataset.i)]); });
 input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 150));
 input.addEventListener('focus', () => { list.hidden = !results.length; });
 

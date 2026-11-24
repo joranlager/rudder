@@ -55,7 +55,14 @@ Tapping a point shows, for that position:
   MET Norway's oceanforecast.
 - **Weather now**: wind, air temperature and pressure, from MET Norway's locationforecast.
 
-The search box finds places, lights, skerries and harbours in Kartverket's place-name register.
+The search box finds places, lights, skerries and harbours in Kartverket's place-name register,
+and, with BarentsWatch AIS access set up, **ships**: by name (Norwegian letters may be typed plainly,
+so *vedero* finds VEDERØY), MMSI, IMO number or call sign. Ships come first in the results, with
+their type, MMSI, call sign and when they were last heard. Choosing one switches the ships on, flies
+close enough to see it as a 3D model and opens its card. BarentsWatch has no search by name, but
+answers with every ship heard in Norwegian waters in the last 24 hours when asked for no particular
+area; that list is fetched on the first ship search, kept for 10 minutes and searched on the device
+(`matchVessels` in `public/ais.js`). Without AIS access the results offer to set it up.
 
 ## Land heights in 3D
 
