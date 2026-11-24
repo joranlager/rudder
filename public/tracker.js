@@ -153,7 +153,16 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
   el.addEventListener('click', async (e) => {
     const b = e.target.closest('button');
     if (!b) return;
-    const act = b.dataset.pb ?? b.dataset.rec ?? b.dataset.trace;
+    // Trace buttons and recording buttons are told apart by their attribute, never by the action's
+    // name alone: a trace's Clear must never reach Clear recordings.
+    if (b.dataset.trace) {
+      const m = Number(b.closest('[data-m]').dataset.m);
+      if (b.dataset.trace === 'remove') traceSet().removeTrace(m);
+      else if (b.dataset.trace === 'clear') traceSet().clearTrace(m);
+      render();
+      return;
+    }
+    const act = b.dataset.pb ?? b.dataset.rec;
     try {
       if (act === 'begin') {
         // Start inside the recording: before it began (or in a pause) there are no ships to show.
@@ -165,14 +174,13 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
       else if (act === 'play') playback.play();
       else if (act === 'pause') playback.pause();
       else if (act === 'live') playback.stop();
-      else if (act === 'clear') {
+      else if (b.dataset.rec === 'clear') {
         if (!confirm('Delete every recorded position and ship from this device? This cannot be undone.')) return;
         const s = await storePromise;
         await s.clear();
         recorder.clearSessions();
         await refreshStats();
-      } else if (act === 'remove') traceSet().removeTrace(Number(b.closest('[data-m]').dataset.m));
-      else if (act === 'clear') traceSet().clearTrace(Number(b.closest('[data-m]').dataset.m));
+      }
     } catch (err) {
       msg = { text: err.message, tone: 'err' };
     }
