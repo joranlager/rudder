@@ -24,7 +24,9 @@ browsers keep files for 10 minutes. Code: `public/reload.js`.
 
 `.github/workflows/pages.yml` tests, builds and deploys **every branch** to GitHub Pages on each
 push. All branches share one Pages site, so **the last deploy wins**: a newer run cancels one still
-in progress. The footer shows which branch and commit is live.
+in progress. The footer shows which branch and commit is live. Every script and stylesheet the page
+loads is stamped with that commit (`?v=<commit>`, `scripts/versioning.mjs`), so a browser never mixes
+files from two deploys (GitHub Pages lets browsers keep files for ten minutes).
 
 ## Map
 
