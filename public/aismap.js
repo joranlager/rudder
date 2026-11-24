@@ -410,6 +410,11 @@ export function createAisLayer(map) {
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;
     },
     vessel: (mmsi) => vessels.get(Number(mmsi)) ?? null,
+    /** Ships reported within `metres` of a point (by their last report; good enough to find those that could touch). */
+    vesselsNear(lat, lon, metres) {
+      const dLat = metres / 111_320, dLon = metres / (111_320 * Math.cos((lat * Math.PI) / 180));
+      return [...vessels.values()].filter((v) => Math.abs(v.latitude - lat) < dLat && Math.abs(v.longitude - lon) < dLon);
+    },
     /** Whether ships can be searched: BarentsWatch access is set up on this device. */
     canSearch: () => Boolean(accessKind(loadCredentials())),
     /** Whether the layer is on and its last request for ships succeeded. */
