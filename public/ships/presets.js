@@ -216,6 +216,18 @@ export function detectKind(texts) {
   for (const [re, kind] of KIND_RULES) if (re.test(joined)) return kind;
   return 'cargo';
 }
+/**
+ * Superstructure decks for a ship of this kind and length. The presets' deck counts are for their
+ * typical length; a smaller ship has fewer, or a short ferry becomes a tower of decks (each deck is at
+ * least 2.5 m). Ferries (AIS "passenger" under 200 m) are mostly car ferries with few decks above
+ * the car deck: 1 at 40 m, 2 at 70 m, 3 at 110 m, 4 from about 150 m.
+ */
+export function decksFor(kind, length) {
+  const p = KIND_PRESETS[kind];
+  const L = length ?? p.length;
+  const n = kind === 'ferry' ? 1 + (L - 30) / 40 : p.decks * (L / p.length);
+  return Math.max(1, Math.min(p.decks, Math.round(n)));
+}
 export function defaultParams(kind, length) {
   const p = KIND_PRESETS[kind];
   const L = length ?? p.length;
@@ -233,7 +245,7 @@ export function defaultParams(kind, length) {
     stern: p.stern,
     sheer: p.sheer,
     flare: p.flare,
-    decks: p.decks,
+    decks: decksFor(kind, L),
     funnels: p.funnels,
     masts: p.masts,
     seed: 7,
