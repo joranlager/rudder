@@ -1,20 +1,22 @@
 // Taking the helm of a ship: the user commands it from a bridge console (engine telegraph, wheel,
 // thrusters where the type has them, and the usual instruments), and the ship moves by the handling
 // model in shiphandling.js. Its real AIS reports are ignored meanwhile (aismap.js); handing it back
-// lets the next real report put it where it really is.
+// lets the next real report put it where it really is. It cannot sail through other ships or onto
+// the bottom or the shore (contact.js).
 //
 // As on a real bridge, orders take time: the rudder turns at a few degrees a second, thrusters
-// spool up, and the engine's speed builds up or dies away with the ship's inertia. A depth sounder
-// reads the chart's depth bands under the ship every few seconds; running onto shallower water than
-// the draught, or off the charted water, puts the ship aground.
+// spool up, and the engine's speed builds up or dies away with the ship's inertia. Every couple of
+// seconds the hull is sounded at its bow, stern, antenna and sides (Kartverket's height service:
+// depth at sea, height on land); land, or less water than the draught, at any of them is aground.
 
 import {
   TELEGRAPH, RUDDER_MAX, handlingFor, initialState, neutralControls, step, overGround, simReport, thrusterGrip, telegraphPower,
 } from './shiphandling.js';
-import { depthUrl, parseDepth, formatDepth } from './marine.js';
+import { hullAt, deepestContact, soundingPoints, seabedUrl, parseSeabed, groundCheck, allowedMotion } from './contact.js';
 
 const REPORT_MS = 500; // how often the chart symbols and card follow the simulated ship
-const DEPTH_MS = 3000;
+const DEPTH_MS = 2000;
+const NEAR_M = 2500; // other ships this close are checked for contact
 const THRUSTER_RATE = 0.5; // share of full thrust gained or lost per second
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -29,16 +31,6 @@ export function orderForSpeed(u, h) {
   let best = TELEGRAPH[4];
   for (const t of TELEGRAPH) if (Math.abs(t.power - share) < Math.abs(best.power - share)) best = t;
   return best.order;
-}
-
-/**
- * Whether the ship is aground at this depth: the chart says the water here is shallower than its
- * draught; or there is no charted water here, and there was at the last sounding (it has gone
- * ashore), or it was already aground (it stays so until it is back in water deep enough).
- */
-export function aground(band, draught, prevWater, wasAground) {
-  if (band) return Number.isFinite(band.max) && band.max < draught;
-  return prevWater || wasAground;
 }
 
 /** A ship's wheel, drawn as SVG: rim, eight spokes with handles, hub. The group turns with the helm. */
@@ -88,7 +80,8 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
   const c = neutralControls(); // orders
   const actual = { rudder: 0, bow: 0, stern: 0 }; // what the steering gear and thrusters have reached
   let frame = 0, last = 0, lastReport = 0, lastDepth = 0;
-  let depth = { band: undefined, text: '—', aground: false, busy: false };
+  let depth = { depth: null, text: '—', hit: null, busy: false }; // last sounding; hit: where aground
+  let contact = null; // the ship we are touching, if any
   let wheelDrag = null;
 
   const where = () => (s ? { lat: s.lat, lon: s.lon, heading: s.heading } : null);
@@ -102,7 +95,7 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
         <div class="inst"><span class="inst-label">Speed over ground</span><b data-i="sog">—</b><span class="inst-sub" data-i="stw"></span></div>
         <div class="inst"><span class="inst-label">Rate of turn</span><b data-i="rot">—</b><div class="rot-bar"><i data-i="rot-bar"></i></div></div>
         <div class="inst"><span class="inst-label">Rudder</span>${rudderGauge()}<b data-i="rudder">—</b></div>
-        <div class="inst" data-i="depth-box"><span class="inst-label">Depth (chart)</span><b data-i="depth">—</b><span class="inst-sub" data-i="draught"></span></div>
+        <div class="inst" data-i="depth-box"><span class="inst-label">Depth under the keel</span><b data-i="depth">—</b><span class="inst-sub" data-i="draught"></span></div>
       </div>
       <div class="helm-controls">
         <div class="telegraph" role="radiogroup" aria-label="Engine telegraph">
@@ -165,10 +158,16 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     ans.className = share >= 0 ? 'ahead' : 'astern';
     q('depth').textContent = depth.text;
     q('draught').textContent = `draught ${h.draught.toFixed(1)} m`;
-    q('depth-box').classList.toggle('shallow', Boolean(depth.band && depth.band.min < h.draught + 2));
+    q('depth-box').classList.toggle('shallow', depth.depth != null && depth.depth < h.draught + 2);
     const alarm = q('alarm');
-    alarm.hidden = !depth.aground;
-    alarm.textContent = depth.aground ? 'AGROUND — go astern to get off' : '';
+    const away = { bow: 'go astern', stern: 'go ahead', antenna: 'go astern', 'port side': 'push to starboard', 'starboard side': 'push to port' };
+    const msg = contact
+      ? `COLLISION with ${(contact.name || '').trim() || `MMSI ${contact.mmsi}`} — back away`
+      : depth.hit
+        ? `AGROUND at the ${depth.hit.name}${depth.hit.reason === 'land' ? ' (land or quay)' : ` (${depth.hit.depth.toFixed(1)} m of water)`} — ${away[depth.hit.name]} to get off`
+        : '';
+    alarm.hidden = !msg;
+    alarm.textContent = msg;
     if (all) for (const b of el.querySelectorAll('[data-order]')) b.setAttribute('aria-checked', String(Number(b.dataset.order) === c.order));
   }
 
@@ -176,14 +175,26 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     if (!s || depth.busy) return;
     depth.busy = true;
     try {
-      const res = await fetch(depthUrl(s.lat, s.lon));
-      const band = parseDepth(await res.text());
-      const ground = aground(band, h.draught, Boolean(depth.band), depth.aground);
-      depth = { band, text: band ? formatDepth(band) : 'no charted depth', aground: ground, busy: false };
-      if (ground) { s = { ...s, u: Math.min(0, s.u), v: 0, r: 0 }; setOrder(Math.min(0, c.order)); onStatus('Aground!'); }
+      const points = soundingPoints(v0, s);
+      const res = await fetch(seabedUrl(points.map((p) => p.p)));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { hit, depth: d } = groundCheck(points, parseSeabed(await res.json()), h.draught);
+      const was = depth.hit;
+      depth = { depth: d, text: d != null ? `${d.toFixed(1)} m` : hit?.reason === 'land' ? 'land' : '—', hit, busy: false };
+      if (hit && !was && s) { s = allowedMotion(hit, { ...s, r: 0 }); onStatus(`Aground at the ${hit.name}!`); }
     } catch {
-      depth.busy = false; // offline: try again later
+      depth.busy = false; // offline or the service is busy: try again later
     }
+  }
+
+  /** Other ships near ours, as outlines around our position, where they are drawn now. */
+  function nearbyHulls(origin) {
+    const out = [];
+    for (const v of ais.vesselsNear(origin.lat, origin.lon, NEAR_M)) {
+      if (v.mmsi === v0.mmsi) continue;
+      out.push({ v, hull: hullAt(v, ais.shownShip(v), origin) });
+    }
+    return out;
   }
 
   function loop(t) {
@@ -194,9 +205,27 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     actual.rudder = towards(actual.rudder, c.rudder, rudderRate(h.length) * dt);
     actual.bow = towards(actual.bow, h.bow ? c.bow : 0, THRUSTER_RATE * dt);
     actual.stern = towards(actual.stern, h.stern ? c.stern : 0, THRUSTER_RATE * dt);
-    s = step(s, { order: c.order, rudder: actual.rudder, bow: actual.bow, stern: actual.stern }, h, dt);
-    // Aground, the ship does not go further ahead: only astern takes it off.
-    if (depth.aground && s.u > 0) s = { ...s, u: 0 };
+    let next = step(s, { order: c.order, rudder: actual.rudder, bow: actual.bow, stern: actual.stern }, h, dt);
+    // Aground, the ship moves only away from where it touches.
+    if (depth.hit) {
+      const free = allowedMotion(depth.hit, next);
+      if (free.u !== next.u || free.v !== next.v) next = { ...free, lat: s.lat, lon: s.lon };
+    }
+    // Other ships: a move that pushes deeper into one is refused, and the ship is stopped.
+    const origin = { lat: s.lat, lon: s.lon };
+    const others = nearbyHulls(origin);
+    const before = deepestContact(hullAt(v0, s, origin), others).depth;
+    const after = deepestContact(hullAt(v0, next, origin), others);
+    // Any deepening is refused (beyond a few centimetres of touching), however small the step, so the
+    // ship cannot creep in a little at a time.
+    if (after.depth > before + 1e-6 && after.depth > 0.05) {
+      if (!contact) onStatus(`Collision with ${(after.v.name || '').trim() || after.v.mmsi}!`);
+      contact = after.v;
+      next = { ...s, u: 0, v: 0, r: 0 };
+    } else {
+      contact = after.depth > 0 ? after.v : null;
+    }
+    s = next;
     const now = Date.now();
     if (now - lastReport > REPORT_MS) { lastReport = now; ais.setReport(simReport(v0, s, now)); update(); }
     if (now - lastDepth > DEPTH_MS) { lastDepth = now; sound(); }
@@ -280,7 +309,8 @@ export function createHelm(map, { ais, bridge, el, onStatus = () => {} }) {
     s = { ...initialState(v), lat: at.lat, lon: at.lon, heading: at.heading ?? initialState(v).heading };
     Object.assign(c, neutralControls(), { order: orderForSpeed(s.u, h) });
     Object.assign(actual, { rudder: 0, bow: 0, stern: 0 });
-    depth = { band: undefined, text: '—', aground: false, busy: false };
+    depth = { depth: null, text: '—', hit: null, busy: false };
+    contact = null;
     lastDepth = 0;
     ais.setControlled(v.mmsi, where);
     ais.setReport(simReport(v0, s));

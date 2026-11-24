@@ -90,9 +90,17 @@ real report put it back where it really is. The ship moves by a handling model
   stern sideways, turning the ship on the spot or moving it sideways. They lose their grip as the
   ship gathers way, and have none from about 5 knots. Double-click a slider to stop a thruster.
 - **Instruments**: gyro heading, speed over ground (and going astern or sideways), rate of turn,
-  rudder angle (ordered and actual) and depth from the chart's depth bands, sounded every 3 seconds.
-  Running onto water shallower than the draught, or off the charted water, puts the ship **aground**:
-  it stops, and only going astern takes it off.
+  rudder angle (ordered and actual) and depth under the keel.
+- **Other ships**: the ship cannot sail through them. Each ship is an outline (a box with a pointed
+  bow, placed by its GPS antenna, where it is drawn now); a move that would push the outlines deeper
+  into each other is refused and the ship stops, with a **collision** alarm naming the other ship.
+  Moving apart is always allowed. (`public/contact.js`)
+- **Ground**: every 2 seconds the hull is sounded at its bow, stern, antenna and both sides with
+  Kartverket's height service (`ws.geonorge.no/hoydedata/v1/punkt`), which gives the depth at sea
+  (from the chart's depth contours, harbour basins included) and the height on land. Land (a quay, a
+  beach) or less water than the draught at any of these points puts the ship **aground** there: it
+  stops, and only moving away from that point (astern off the bow, ahead off the stern, sideways off
+  a side) takes it off.
 - **Keys**: W/S engine, A/D rudder 5° at a time, X midships, Q/E bow thruster, Z/C stern thruster.
 
 The chart symbols, card and search follow the simulated ship. **Bridge view** in the console leaves

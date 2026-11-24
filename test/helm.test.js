@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { orderForSpeed, aground, rudderRate } from '../public/helm.js';
+import { orderForSpeed, rudderRate } from '../public/helm.js';
 import { handlingFor } from '../public/shiphandling.js';
 import { mergeVessels } from '../public/ais.js';
 
@@ -14,15 +14,6 @@ test('taking the helm keeps the engine doing what it was doing', () => {
   assert.equal(orderForSpeed(h.aheadMs * 0.42, h), 2, 'about 40 %: slow ahead');
   assert.equal(orderForSpeed(-h.asternMs, h), -4, 'going astern');
   assert.equal(orderForSpeed(30 * KNOT, h), 4, 'faster than it can: full ahead');
-});
-
-test('aground: shallower than the draught, or off the charted water', () => {
-  assert.equal(aground({ min: 2, max: 5 }, 5.5, true, false), true, 'the band is shallower than the draught');
-  assert.equal(aground({ min: 5, max: 10 }, 5.5, true, false), false, 'some of the band could be too shallow, but not surely');
-  assert.equal(aground({ min: 50, max: Infinity }, 5.5, true, true), false, 'back in deep water: off again');
-  assert.equal(aground(null, 5.5, true, false), true, 'from charted water to none: ashore');
-  assert.equal(aground(null, 5.5, false, false), false, 'no depths here from the start (a dock without data): not aground');
-  assert.equal(aground(null, 5.5, false, true), true, 'still ashore');
 });
 
 test('the rudder turns at a believable speed', () => {
