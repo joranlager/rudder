@@ -1,6 +1,7 @@
 import { BASEMAPS, OVERLAYS, buildStyle, mergeSettings } from './layers.js';
 import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
+import { createSettings } from './settings.js';
 import { typeName, navStatusText, draughtM, vesselSize, ageMinutes } from './ais.js';
 import {
   tideUrl, parseTide, tideSummary, oceanUrl, weatherUrl, nearestStep, depthUrl, parseDepth, formatDepth,
@@ -40,6 +41,8 @@ map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAc
 
 // Ships from AIS (BarentsWatch), drawn over the chart when switched on in the layers panel.
 const ais = createAisLayer(map);
+// Settings: BarentsWatch access, kept on this device.
+createSettings($('#settings-body'), { ais });
 
 // ---------- layer panel ----------
 function renderLayerPanel() {
@@ -94,16 +97,22 @@ function togglePanel(id, open) {
   const el = $(`#${id}`);
   el.hidden = open === undefined ? !el.hidden : !open;
   if (!el.hidden) closeShips(); // a chart panel brings the chart back
+  // Layers and Settings share the same corner: one at a time.
+  if (!el.hidden && (id === 'layers' || id === 'settings')) togglePanel(id === 'layers' ? 'settings' : 'layers', false);
   if (id === 'layers') $('#layers-btn').setAttribute('aria-expanded', String(!el.hidden));
+  if (id === 'settings') $('#settings-btn').setAttribute('aria-expanded', String(!el.hidden));
   if (id === 'info' && el.hidden) clearClick();
 }
 $('#layers-btn').addEventListener('click', () => togglePanel('layers'));
+$('#settings-btn').addEventListener('click', () => togglePanel('settings'));
+// Links between panels, e.g. "Set it up in Settings" in the layers panel.
+document.addEventListener('click', (e) => { const o = e.target.closest('[data-open]'); if (o) togglePanel(o.dataset.open, true); });
 document.addEventListener('click', (e) => { const c = e.target.closest('[data-close]'); if (c) togglePanel(c.dataset.close, false); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   // In the ship inspector, Escape in a field only leaves the field.
   if (shipsOpen()) { if (!e.target.closest?.('#ships input, #ships select')) closeShips(); return; }
-  togglePanel('layers', false); togglePanel('info', false);
+  togglePanel('layers', false); togglePanel('settings', false); togglePanel('info', false);
 });
 
 // ---------- ships ----------
@@ -112,7 +121,7 @@ document.addEventListener('keydown', (e) => {
 let ships = null, shipsLoading = null;
 const shipsOpen = () => !$('#ships').hidden;
 async function openShips() {
-  togglePanel('layers', false); togglePanel('info', false);
+  togglePanel('layers', false); togglePanel('settings', false); togglePanel('info', false);
   $('#ships').hidden = false;
   $('#ships-btn').setAttribute('aria-expanded', 'true');
   if (ships) { ships.resume(); return; }

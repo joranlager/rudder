@@ -9,6 +9,13 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; connect-src https:; worker-src 'self' blob:">
   <title>Rudder</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <!-- Installable: on the home screen the phone keeps Rudder's saved settings (iPhone Safari clears a website's after ~7 days unused) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Rudder">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -30,6 +37,9 @@
     <button id="layers-btn" class="icon-btn" type="button" aria-expanded="false" aria-controls="layers" title="Charts and layers">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Zm-7.6 9L2 13.2l10 5 10-5-2.4-1.2L12 15.8 4.4 12Zm0 4L2 17.2l10 5 10-5-2.4-1.2L12 19.8 4.4 16Z"/></svg>
     </button>
+    <button id="settings-btn" class="icon-btn" type="button" aria-expanded="false" aria-controls="settings" title="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1L15 3.2h-4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+    </button>
   </header>
 
   <aside id="layers" class="panel layers" aria-label="Charts and layers" hidden>
@@ -38,6 +48,11 @@
     <section id="ais-settings" aria-label="Ships (AIS)"></section>
     <div id="overlays"></div>
     <p class="fine">Overlays that need a closer view say so until you zoom in. The official ENC (S-57) service is restricted to approved users and is not used.</p>
+  </aside>
+
+  <aside id="settings" class="panel layers settings" aria-label="Settings" hidden>
+    <div class="panel-head"><h2>Settings</h2><button class="close" type="button" data-close="settings" aria-label="Close">×</button></div>
+    <div id="settings-body"></div>
   </aside>
 
   <aside id="info" class="panel info" aria-label="Marine information" aria-live="polite" hidden>

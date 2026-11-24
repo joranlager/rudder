@@ -52,7 +52,7 @@ The search box finds places, lights, skerries and harbours in Kartverket's place
 
 ## Ships on the chart (AIS)
 
-Under the layers button, **Ships (AIS)** shows live ship positions from Kystverket's AIS, served by
+Under the layers button, **Ships (AIS)** (once access is set up in Settings) shows live ship positions from Kystverket's AIS, served by
 BarentsWatch (Norwegian waters). Each ship is an arrow in its type's colour, turned to its heading
 (a dot when the heading is unknown); from zoom 13 it is drawn at its true size and heading, placed
 by where its GPS antenna sits. Reports older than 15 minutes are faded and those older than two
@@ -62,16 +62,25 @@ inspector from its AIS report: length, beam and draught from AIS (marked *AIS*),
 estimated from its type, and, when its IMO number is on Wikidata, its type, height and photos from
 there.
 
-**Access.** BarentsWatch's AIS API needs a token from a BarentsWatch "AIS client" (free; create one
-on [My Page](https://www.barentswatch.no/minside/)). Rudder has no server, so the client ID and
-secret are typed into the layers panel and kept **only in this browser** (`localStorage`,
-`rudder.ais.v1`), sent only to BarentsWatch: fine for your own device, not for a shared one.
-*Forget my BarentsWatch access* removes them. Whether BarentsWatch's login server answers a web page
-is not yet verified; if it does not, the panel says so and you can paste an access token instead
-(valid about an hour, e.g. from `curl -d grant_type=client_credentials -d client_id=… -d
-client_secret=… -d scope=ais https://id.barentswatch.no/connect/token`). The AIS API itself answers
-browsers (CORS `*`, checked 2026-11-23). For other people to use it, put a small relay in front
-that keeps the secret (for example behind a Google sign-in).
+**Access.** BarentsWatch's AIS API needs your own free BarentsWatch client. On
+[Min side](https://www.barentswatch.no/minside/), under **Utviklertilganger**, open **AIS - API**
+(not BarentsWatch - API) and create a client. Then open **Settings** (the gear in the top bar), enter
+the client ID and secret under **BarentsWatch AIS**, and press **Save on this phone**: Rudder tests
+them at once (a token, then a small AIS request) and says what is wrong if anything is.
+
+They are kept **only on the device**, in the browser's storage for Rudder (`localStorage`,
+`rudder.barentswatch.v1`; `public/credentials.js`), and sent only to BarentsWatch. There is no Rudder
+server. Saving asks the browser to keep the data (`navigator.storage.persist`), and Settings shows
+whether it agreed. On iPhone and iPad, Safari clears a website's storage after about 7 days without a
+visit, so add Rudder to the home screen (Share → Add to Home Screen) and open it from there; the app
+has a web manifest and icons for that. **Remove my BarentsWatch access** in Settings deletes them.
+Anyone who can use the phone unlocked can use the access too.
+
+Whether BarentsWatch's login server answers a web page is not yet verified with a real client. If it
+does not, Settings says so, and **Use an access token instead** takes a token fetched elsewhere
+(valid about an hour). The AIS API itself answers browsers (CORS `*`, checked 2026-11-23). For other
+people to use Rudder, put a small relay in front that keeps the secret (for example behind a Google
+sign-in).
 
 The layer asks only for the area in view (plus 30 %), from zoom 7, every 30 seconds and after a
 pan out of that area; later polls ask only for what changed (`since`). Code: `public/ais.js`

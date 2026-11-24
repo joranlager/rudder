@@ -1,13 +1,14 @@
 // The AIS layer on the chart: fetching from BarentsWatch, drawing the ships, and the AIS part of the
 // layers panel. The decoding and shapes are in ais.js (tested).
 //
-// The client ID and secret (or a pasted access token) are stored in this browser only, under
-// rudder.ais.v1, and sent only to BarentsWatch. Nothing is fetched until the layer is switched on.
+// The client ID and secret (or a pasted access token) are entered in Settings and kept on this
+// device only (credentials.js). Nothing is fetched until the layer is switched on.
 
 import {
   TOKEN_URL, LATEST_URL, TYPE_GROUPS, tokenRequestBody, parseToken, pastedToken, latestRequest, bboxPolygon, bboxInside,
   mergeVessels, pruneVessels, toGeoJson,
 } from './ais.js';
+import { loadCredentials, accessKind } from './credentials.js';
 
 const STORE_KEY = 'rudder.ais.v1';
 const MIN_ZOOM = 7; // wider views would ask for most of the coast at once
@@ -18,7 +19,7 @@ const LAYERS = ['ais-hull', 'ais-hull-line', 'ais-arrow', 'ais-dot'];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 function load() {
-  try { return { on: false, clientId: '', clientSecret: '', pasted: '', ...JSON.parse(localStorage.getItem(STORE_KEY)) }; } catch { return { on: false, clientId: '', clientSecret: '', pasted: '' }; }
+  try { return { on: Boolean(JSON.parse(localStorage.getItem(STORE_KEY))?.on) }; } catch { return { on: false }; }
 }
 
 /** A ship-shaped arrow (bow up), drawn white so MapLibre can colour it per ship (SDF icon). */
@@ -39,6 +40,7 @@ function arrowImage() {
 }
 
 export function createAisLayer(map) {
+  let creds = loadCredentials(); // read before cfg: it moves credentials out of the old store
   let cfg = load();
   const vessels = new Map();
   let token = null; // { token, expiresAt }
@@ -47,7 +49,7 @@ export function createAisLayer(map) {
   let timer = 0, moveTimer = 0, busy = false, seq = 0;
   let status = { text: '', tone: '' };
   let panel = null;
-  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch { /* private mode: kept for this visit only */ } };
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify({ on: cfg.on })); } catch { /* private mode: kept for this visit only */ } };
 
   // ---------- drawing ----------
 
@@ -118,29 +120,31 @@ export function createAisLayer(map) {
     status = { text, tone };
     const el = panel?.querySelector('.ais-status');
     if (el) { el.textContent = text; el.dataset.tone = tone; }
-    if (tone === 'err') panel?.querySelector('.ais-access')?.setAttribute('open', ''); // show where to fix it
   }
 
   async function getToken(force = false) {
     if (!force && token && token.expiresAt > Date.now()) return token.token;
-    if (cfg.pasted) {
-      token = pastedToken(cfg.pasted);
+    const kind = accessKind(creds);
+    if (kind === 'token') {
+      token = pastedToken(creds.pasted);
       if (token && token.expiresAt > Date.now()) return token.token;
-      throw Object.assign(new Error('The pasted access token has expired. Paste a new one, or use a client ID and secret.'), { fatal: true });
+      throw Object.assign(new Error('The access token in Settings has expired. Paste a new one, or use a client ID and secret.'), { fatal: true });
     }
-    if (!cfg.clientId || !cfg.clientSecret) throw Object.assign(new Error('Add your BarentsWatch AIS client below.'), { fatal: true });
+    if (!kind) throw Object.assign(new Error('Set up your BarentsWatch AIS client in Settings.'), { fatal: true });
     let res;
     try {
-      res = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: tokenRequestBody(cfg.clientId, cfg.clientSecret) });
+      res = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: tokenRequestBody(creds.clientId, creds.clientSecret) });
     } catch {
       // A network error here, with the network up, means the login server did not let this page read its answer.
       throw Object.assign(new Error(navigator.onLine === false
         ? 'Offline.'
-        : 'The BarentsWatch login server did not answer this page (it may not accept requests from browsers). Paste an access token instead.'), { fatal: true });
+        : 'The BarentsWatch login server did not answer this page (it may not accept requests from browsers). Paste an access token in Settings instead.'), { fatal: true });
     }
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw Object.assign(new Error(json.error === 'invalid_client' ? 'BarentsWatch did not accept the client ID or secret.' : `Login failed (${json.error || res.status}).`), { fatal: true });
+      throw Object.assign(new Error(json.error === 'invalid_client' ? 'BarentsWatch did not accept the client ID or secret.'
+        : json.error === 'invalid_scope' ? 'This client may not read AIS. Create an "AIS - API" client (not BarentsWatch - API) on My Page.'
+          : `Login failed (${json.error || res.status}).`), { fatal: true });
     }
     token = parseToken(json);
     return token.token;
@@ -201,31 +205,18 @@ export function createAisLayer(map) {
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && cfg.on && timer) fetchShips(); });
 
-  // ---------- the AIS part of the layers panel ----------
+  // ---------- the AIS part of the layers panel (access is set up in Settings) ----------
 
   function renderPanel(el) {
     panel = el;
-    const haveAccess = Boolean(cfg.pasted || (cfg.clientId && cfg.clientSecret));
+    const ready = Boolean(accessKind(creds));
     el.innerHTML = `
       <h3>Ships (AIS)</h3>
-      <label class="opt"><input type="checkbox" data-ais="on" ${cfg.on ? 'checked' : ''}>
+      <label class="opt"><input type="checkbox" data-ais="on" ${cfg.on ? 'checked' : ''} ${ready ? '' : 'disabled'}>
         <span>Show ships</span><small>Live positions from Kystverket's AIS via BarentsWatch, Norwegian waters. Tap a ship for details and its 3D model.</small></label>
+      ${ready ? '' : '<p class="ais-setup">Needs your BarentsWatch AIS client. <button type="button" class="link-btn" data-open="settings">Set it up in Settings</button></p>'}
       <p class="ais-status" data-tone="${status.tone}" role="status">${esc(status.text)}</p>
-      <div class="ais-legend">${TYPE_GROUPS.map((g) => `<span><i style="background:${g.color}"></i>${esc(g.label)}</span>`).join('')}</div>
-      <details class="ais-access" ${haveAccess && status.tone !== 'err' ? '' : 'open'}>
-        <summary>${haveAccess ? 'BarentsWatch access (saved on this device)' : 'Set up BarentsWatch access'}</summary>
-        <p class="fine">Create an <b>AIS client</b> on <a href="https://www.barentswatch.no/minside/" target="_blank" rel="noopener">My Page at BarentsWatch</a> (free) and enter it here. It is kept only in this browser and sent only to BarentsWatch. Do not use this on a shared computer.</p>
-        <form class="ais-form" data-ais-form="client" autocomplete="off">
-          <label>Client ID<input name="clientId" value="${esc(cfg.clientId)}" placeholder="you@example.com:rudder" spellcheck="false" autocapitalize="off"></label>
-          <label>Client secret<input name="clientSecret" type="password" value="${esc(cfg.clientSecret)}" autocomplete="new-password"></label>
-          <button type="submit">Save and show ships</button>
-        </form>
-        <form class="ais-form" data-ais-form="token" autocomplete="off">
-          <label>…or paste an access token<textarea name="pasted" rows="2" spellcheck="false" placeholder="eyJ… (valid for about an hour)">${esc(cfg.pasted)}</textarea></label>
-          <button type="submit">Use this token</button>
-        </form>
-        ${haveAccess ? '<button type="button" class="ais-forget" data-ais="forget">Forget my BarentsWatch access</button>' : ''}
-      </details>`;
+      <div class="ais-legend">${TYPE_GROUPS.map((g) => `<span><i style="background:${g.color}"></i>${esc(g.label)}</span>`).join('')}</div>`;
   }
 
   function onPanelEvent(e) {
@@ -237,37 +228,50 @@ export function createAisLayer(map) {
       if (cfg.on) start(); else { stop(); setStatus(''); }
       return true;
     }
-    if (e.type === 'click' && t.dataset.ais === 'forget') {
-      cfg = { on: false, clientId: '', clientSecret: '', pasted: '' };
-      token = null;
+    return false;
+  }
+
+  /** Settings saved or removed new credentials: drop the old token and start again. */
+  function credentialsChanged() {
+    creds = loadCredentials();
+    token = null;
+    if (!accessKind(creds)) {
+      cfg.on = false;
       save();
       stop();
       setVisible(false);
       vessels.clear();
       draw();
       setStatus('');
-      renderPanel(panel);
-      return true;
-    }
-    if (e.type === 'submit' && t.dataset.aisForm) {
-      e.preventDefault();
-      const f = new FormData(t);
-      if (t.dataset.aisForm === 'client') {
-        cfg.clientId = String(f.get('clientId') ?? '').trim();
-        cfg.clientSecret = String(f.get('clientSecret') ?? '').trim();
-        cfg.pasted = '';
-      } else {
-        cfg.pasted = String(f.get('pasted') ?? '').trim();
-      }
-      token = null;
-      cfg.on = true;
-      save();
-      setVisible(true);
-      renderPanel(panel);
+    } else if (cfg.on) {
+      setStatus('');
       start();
-      return true;
     }
-    return false;
+    if (panel) renderPanel(panel);
+  }
+
+  /**
+   * Check the stored access from Settings: get a token, then ask AIS for a small area (the harbour
+   * of Bergen), so a wrong kind of client shows up here and not later on the chart.
+   */
+  async function testAccess() {
+    creds = loadCredentials();
+    token = null;
+    try {
+      const t = await getToken(true);
+      const res = await fetch(LATEST_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(latestRequest([5.25, 60.38, 5.34, 60.42])),
+      });
+      if (res.status === 401 || res.status === 403) throw new Error('Logged in, but this client may not read AIS. Create an "AIS - API" client on My Page.');
+      if (!res.ok) throw new Error(`Logged in, but the AIS service answered HTTP ${res.status}.`);
+      const list = await res.json();
+      const n = Array.isArray(list) ? list.length : 0;
+      return { ok: true, message: `Connected. BarentsWatch answered with ${n} ship${n === 1 ? '' : 's'} in Bergen harbour.` };
+    } catch (e) {
+      return { ok: false, message: e.message };
+    }
   }
 
   if (map.isStyleLoaded()) addLayers(); else map.once('load', addLayers);
@@ -276,6 +280,8 @@ export function createAisLayer(map) {
   return {
     renderPanel,
     onPanelEvent,
+    credentialsChanged,
+    testAccess,
     /** The vessel under a map point (a little slack around small symbols), or null. */
     vesselAt(point) {
       if (!cfg.on || !map.getLayer('ais-dot')) return null;
