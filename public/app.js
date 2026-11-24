@@ -2,6 +2,9 @@ import { BASEMAPS, OVERLAYS, buildStyle, mergeSettings } from './layers.js';
 import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
 import { createBridgeView } from './pov.js';
+import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
+import { createFarView } from './farview.js';
+import { DEM_MIN_ZOOM } from './terrain.js';
 import { modelPlacement } from './shipmodels.js';
 import { createSettings } from './settings.js';
 import { enableLogoReload } from './reload.js';
@@ -50,12 +53,17 @@ map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAc
 
 // Ships from AIS (BarentsWatch), drawn over the chart when switched on in the layers panel.
 const ais = createAisLayer(map);
+// Land heights in 3D (landheights.js), switched in the layers panel and remembered.
+const land = createLandHeights(map, { basemapIds: BASEMAPS.map((b) => b.id), onError: (m) => console.warn(m) });
+if (settings.terrain) land.setOn(true);
 // View from the bridge of a ship (pov.js), from its card.
+const far = createFarView(map);
 const bridge = createBridgeView(map, {
   ais,
   bar: $('#bridge-bar'),
-  onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); },
-  onExit: (message) => { if (message) alert(message); },
+  far,
+  onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); land.setTrueScale(true); far.setLand(land.on); },
+  onExit: (message) => { land.setTrueScale(false); if (message) alert(message); },
 });
 // Settings: BarentsWatch access, kept on this device.
 const settingsPanel = createSettings($('#settings-body'), { ais, openPanel: () => togglePanel('settings', true) });
@@ -83,9 +91,28 @@ function renderLayerPanel() {
       <input type="range" min="0" max="1" step="0.05" value="${s.opacity}" aria-label="${esc(o.name)} opacity" ${s.on ? '' : 'hidden'}>
     </div>`;
   }).join('')}</section>`).join('');
+  $('#terrain-settings').innerHTML = `<h3>Land</h3>
+    <div class="opt" data-overlay-terrain>
+      <input type="checkbox" id="ov-terrain" ${settings.terrain ? 'checked' : ''}>
+      <label for="ov-terrain">Land heights in 3D</label>
+      <small>The chart over Kartverket's terrain model (hoydedata.no). Tilt with two fingers or right-drag. Also seen from a ship's bridge.</small>
+      <span class="zoomhint" data-minzoom="${DEM_MIN_ZOOM}" data-terrain-hint hidden>Zoom in to see it (from zoom ${DEM_MIN_ZOOM})</span>
+    </div>`;
   updateZoomHints();
   ais.renderPanel($('#ais-settings'));
 }
+$('#terrain-settings').addEventListener('change', (e) => {
+  if (e.target.id !== 'ov-terrain') return;
+  settings.terrain = e.target.checked;
+  land.setOn(settings.terrain);
+  saveSettings();
+  updateZoomHints();
+  // Heights show best tilted; switched off, the chart lies flat again.
+  if (!bridge.active) {
+    if (settings.terrain && map.getPitch() < 20) map.easeTo({ pitch: TERRAIN_TILT, duration: 900 });
+    else if (!settings.terrain) map.easeTo({ pitch: 0, duration: 900 });
+  }
+});
 for (const type of ['change', 'click', 'submit']) $('#ais-settings').addEventListener(type, (e) => ais.onPanelEvent(e));
 
 $('#basemaps').addEventListener('change', (e) => {
@@ -111,7 +138,7 @@ $('#overlays').addEventListener('input', (e) => {
 function updateZoomHints() {
   const z = map.getZoom();
   for (const h of document.querySelectorAll('.zoomhint')) {
-    const on = settings.overlays[h.closest('[data-overlay]').dataset.overlay].on;
+    const on = h.hasAttribute('data-terrain-hint') ? settings.terrain : settings.overlays[h.closest('[data-overlay]').dataset.overlay].on;
     h.hidden = !on || z >= Number(h.dataset.minzoom);
   }
 }

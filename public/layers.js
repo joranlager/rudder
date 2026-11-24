@@ -81,7 +81,7 @@ export function buildStyle(settings) {
 }
 
 export function defaultSettings() {
-  return { basemap: 'sjokart', overlays: Object.fromEntries(OVERLAYS.map((o) => [o.id, { on: o.on, opacity: o.opacity }])) };
+  return { basemap: 'sjokart', terrain: false, overlays: Object.fromEntries(OVERLAYS.map((o) => [o.id, { on: o.on, opacity: o.opacity }])) };
 }
 
 /** Merge stored settings over the defaults, dropping anything unknown. */
@@ -89,6 +89,7 @@ export function mergeSettings(stored) {
   const d = defaultSettings();
   if (!stored || typeof stored !== 'object') return d;
   if (BASEMAPS.some((b) => b.id === stored.basemap)) d.basemap = stored.basemap;
+  if (typeof stored.terrain === 'boolean') d.terrain = stored.terrain;
   for (const o of OVERLAYS) {
     const s = stored.overlays?.[o.id];
     if (!s) continue;
