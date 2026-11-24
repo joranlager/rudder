@@ -90,6 +90,17 @@ ship's latest report from up to a day before, which says little about that time.
 The panel shows the ships tracked, positions stored, the span recorded, positions in the last hour,
 ships under way at the last poll and the storage used.
 
+**Export and import.** **Export recordings** saves everything recorded (positions, ship descriptions
+and when the recorder ran) as one file, `rudder-tracks-<date>.ndjson.gz`: gzip-compressed text with one
+JSON value per line, a header first, then the ships, then each position as a compact array
+`[mmsi, time, lat, lon, speed, course, heading]`. **Import recordings…** reads such a file back, on this
+or another device, a batch at a time with progress, and adds it to what is recorded: positions are
+stored once per ship and time, so importing a file twice (or one that overlaps the recording) adds
+only what is new, and the summary says how much was already there. Lines that are not sound
+positions are skipped and counted; a file that is not a Rudder tracks file is refused
+(`public/trackfile.js`). The recordings on the device were moved to this keying once, when Rudder
+first opened them after the change.
+
 **Playback.** Choose where to start, a while ago (hours:minutes, for example 1:30) or a date and
 time, and a speed (1x to 600x), and **Play back**. Live AIS pauses and the ships move as recorded:
 between two recorded positions each ship follows a smooth curve that leaves the first and reaches
