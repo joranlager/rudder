@@ -182,3 +182,19 @@ body.bridge-view .maplibregl-ctrl-top-left, body.bridge-view .search { display: 
   .bridge-bar { flex-wrap: wrap; justify-content: center; border-radius: 18px; gap: 8px; }
   .bridge-who { width: 100%; text-align: center; }
 }
+
+/* Ship search, next to "Ships" (shown while AIS works) */
+.ship-search { flex: 0 1 210px; min-width: 120px; }
+.ship-search[hidden] { display: none; }
+.ship-search input { padding-left: 34px; background-repeat: no-repeat; background-position: 11px 50%; background-size: 17px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235a6b78'%3E%3Cpath d='M11 2h2v3h4l1 6 3 1-3 7H6l-3-7 3-1 1-6h4V2Zm-2.3 5-.6 3.4L12 9l3.9 1.4L15.3 7H8.7Z'/%3E%3C/svg%3E"); }
+.ship-search .search-results { left: auto; min-width: 300px; }
+.search-results .hit-note { color: var(--muted); font-size: 13px; cursor: default; }
+.search-results .hit-note:hover { background: none; }
+@media (max-width: 640px) {
+  /* A second row under the top bar, so both search fields are wide enough to type in. */
+  .topbar { flex-wrap: wrap; }
+  .ship-search { order: 10; flex: 1 1 100%; max-width: none; }
+  .ship-search .search-results { left: 0; min-width: 0; }
+  body.ais-working .maplibregl-ctrl-top-left { top: calc(env(safe-area-inset-top) + 108px); }
+}

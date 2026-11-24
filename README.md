@@ -57,6 +57,17 @@ Tapping a point shows, for that position:
 
 The search box finds places, lights, skerries and harbours in Kartverket's place-name register.
 
+**Find a ship.** While the ships (AIS) are on and loading, a second search field, **Find a ship**,
+sits next to **Ships** in the top bar (on a phone, on its own row below it). It finds ships by name
+(Norwegian letters may be typed plainly, so *vedero* finds VEDERØY), MMSI, IMO number or call sign,
+and lists each with its type, MMSI, call sign and when it was last heard. Choosing one flies close
+enough to see it as a 3D model and opens its card. It searches the ships already loaded around the
+map at once, and every ship heard in Norwegian waters in the last 24 hours: BarentsWatch has no
+search by name, but answers with all of them when asked for no particular area, so that list is
+fetched on the first search, kept for 10 minutes and searched on the device (`matchVessels` in
+`public/ais.js`). If that list cannot be fetched, the results say why and still show the ships
+near the map. The field is hidden while the ships are off or failing.
+
 ## Land heights in 3D
 
 Under the layers button, **Land heights in 3D** drapes the chart over Kartverket's terrain model

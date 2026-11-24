@@ -377,9 +377,70 @@ input.addEventListener('keydown', (e) => {
   }
 });
 $('#search').addEventListener('submit', (e) => { e.preventDefault(); const p = results[Math.max(active, 0)]; if (p) choose(p); });
-list.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li) choose(results[Number(li.dataset.i)]); });
+list.addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) choose(results[Number(li.dataset.i)]); });
 input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 150));
 input.addEventListener('focus', () => { list.hidden = !results.length; });
+
+// ---------- ship search (AIS) ----------
+// Its own field next to "Ships", shown while the AIS layer is on and working. It searches the ships
+// already loaded around the map and every ship heard in Norwegian waters in the last 24 hours
+// (aismap.js), by name, MMSI, IMO number or call sign. Choosing one flies to it and opens its card.
+const shipForm = $('#ship-search'), shipInput = $('#ship-search-input'), shipList = $('#ship-search-results');
+let shipTimer = 0, shipCtl = null, shipHits = [], shipActive = -1, shipNote = '';
+function renderShips() {
+  shipList.hidden = !shipHits.length && !shipNote;
+  shipList.innerHTML = shipHits.map((v, i) => {
+    const age = Math.max(0, Math.round(ageMinutes(v)));
+    const heard = age < 1 ? 'just now' : age < 120 ? `${age} min ago` : `${Math.round(age / 60)} h ago`;
+    return `<li role="option" data-i="${i}" aria-selected="${i === shipActive}">${esc((v.name || '').trim() || `MMSI ${v.mmsi}`)}
+      <small>${esc(typeName(v.shipType))} · MMSI ${v.mmsi}${v.callSign ? ` · ${esc(v.callSign)}` : ''} · heard ${heard}</small></li>`;
+  }).join('') + (shipNote ? `<li class="hit-note" aria-disabled="true">${esc(shipNote)}</li>` : '');
+}
+ais.onWorking((working) => {
+  shipForm.hidden = !working;
+  document.body.classList.toggle('ais-working', working);
+  if (!working) { shipHits = []; shipNote = ''; renderShips(); }
+});
+function chooseShip(v0) {
+  shipHits = []; shipNote = ''; renderShips(); shipInput.blur();
+  // Close enough that ships are drawn as 3D models (scale bar 200 m or less).
+  const v = ais.showShip(v0);
+  map.flyTo({ center: [v.longitude, v.latitude], zoom: Math.max(map.getZoom(), 15.5) });
+  map.once('moveend', () => showVessel(ais.vessel(v.mmsi) ?? v));
+}
+shipInput.addEventListener('input', () => {
+  clearTimeout(shipTimer);
+  const q = shipInput.value.trim();
+  if (q.length < 2) { shipHits = []; shipNote = ''; renderShips(); return; }
+  shipTimer = setTimeout(async () => {
+    shipCtl?.abort(); shipCtl = new AbortController();
+    const signal = shipCtl.signal;
+    if (!shipHits.length) { shipNote = 'Searching…'; renderShips(); }
+    try {
+      const { hits, error } = await ais.searchShips(q, signal);
+      if (signal.aborted) return;
+      shipHits = hits;
+      shipActive = -1;
+      shipNote = error || (hits.length ? '' : 'No ship by that name, MMSI or call sign heard in the last 24 hours.');
+    } catch (e) {
+      if (signal.aborted) return;
+      shipHits = [];
+      shipNote = `Ship search failed: ${e.message}`;
+    }
+    renderShips();
+  }, 250);
+});
+shipInput.addEventListener('keydown', (e) => {
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && shipHits.length) {
+    e.preventDefault();
+    shipActive = (shipActive + (e.key === 'ArrowDown' ? 1 : -1) + shipHits.length) % shipHits.length;
+    renderShips();
+  }
+});
+shipForm.addEventListener('submit', (e) => { e.preventDefault(); const v = shipHits[Math.max(shipActive, 0)]; if (v) chooseShip(v); });
+shipList.addEventListener('click', (e) => { const li = e.target.closest('li[data-i]'); if (li) chooseShip(shipHits[Number(li.dataset.i)]); });
+shipInput.addEventListener('blur', () => setTimeout(() => { shipList.hidden = true; }, 150));
+shipInput.addEventListener('focus', () => { shipList.hidden = !shipHits.length && !shipNote; });
 
 renderLayerPanel();
 

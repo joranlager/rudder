@@ -6,7 +6,7 @@
 
 import {
   TOKEN_URL, LATEST_URL, TYPE_GROUPS, tokenRequestBody, parseToken, pastedToken, latestRequest, bboxPolygon, bboxInside,
-  mergeVessels, pruneVessels, toGeoJson,
+  mergeVessels, pruneVessels, toGeoJson, directoryRequest, matchVessels,
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
 import { scaleBarMetres, modelsAtScale } from './scalebar.js';
@@ -179,6 +179,16 @@ export function createAisLayer(map) {
 
   // ---------- fetching ----------
 
+  // "Working": switched on and the last request for ships succeeded. The ship search field is shown
+  // only then (app.js), so it never offers a search that cannot work.
+  let working = false;
+  const workingListeners = new Set();
+  function setWorking(w) {
+    if (Boolean(w) === working) return;
+    working = Boolean(w);
+    for (const f of workingListeners) f(working);
+  }
+
   function setStatus(text, tone = '', action = '') {
     status = { text, tone, action };
     const el = panel?.querySelector('.ais-status');
@@ -249,10 +259,11 @@ export function createAisLayer(map) {
       lastFetch = started;
       draw();
       const n = [...vessels.values()].filter((v) => v.longitude >= view[0] && v.longitude <= view[2] && v.latitude >= view[1] && v.latitude <= view[3]).length;
+      setWorking(true);
       setStatus(`${n} ship${n === 1 ? '' : 's'} in view · updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`, 'ok');
     } catch (e) {
       setStatus(e.message, 'err', e.expired ? 'renew' : '');
-      if (e.fatal) stop();
+      if (e.fatal) { stop(); setWorking(false); }
     } finally {
       busy = false;
     }
@@ -263,7 +274,7 @@ export function createAisLayer(map) {
     timer = setInterval(() => fetchShips(), REFRESH_MS);
     fetchShips({ full: true });
   }
-  function stop() { clearInterval(timer); timer = 0; }
+  function stop() { clearInterval(timer); timer = 0; setWorking(false); }
 
   map.on('moveend', () => {
     if (!cfg.on || !timer) return;
@@ -346,6 +357,31 @@ export function createAisLayer(map) {
   if (map.isStyleLoaded()) addLayers(); else map.once('style.load', ensureLayers);
   if (cfg.on) setTimeout(start, 0);
 
+  // ---------- every ship, for the search box ----------
+  // BarentsWatch has no search by name, but answers with every ship heard in Norwegian waters in the
+  // last 24 hours when no area is given. That list is fetched on the first ship search and kept for
+  // DIRECTORY_MS; searching it happens here, on the device.
+  const DIRECTORY_MS = 10 * 60e3;
+  let directory = null, directoryAt = 0, directoryLoading = null;
+
+  async function shipDirectory() {
+    if (directory && Date.now() - directoryAt < DIRECTORY_MS) return directory;
+    directoryLoading ??= (async () => {
+      let t = await getToken();
+      const ask = (tok) => fetch(LATEST_URL, {
+        method: 'POST', headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' }, body: JSON.stringify(directoryRequest()),
+      });
+      let res = await ask(t);
+      if (res.status === 401) { t = await getToken(true); res = await ask(t); }
+      if (!res.ok) throw new Error(`AIS answered HTTP ${res.status}`);
+      const list = await res.json();
+      directory = Array.isArray(list) ? list : [];
+      directoryAt = Date.now();
+      return directory;
+    })().finally(() => { directoryLoading = null; });
+    return directoryLoading;
+  }
+
   /** Switch the layer on or off (as the checkbox does). */
   function setOn(on) {
     if (cfg.on === on) return;
@@ -373,6 +409,39 @@ export function createAisLayer(map) {
       return f ? vessels.get(Number(f.properties.mmsi)) ?? null : null;
     },
     vessel: (mmsi) => vessels.get(Number(mmsi)) ?? null,
+    /** Whether ships can be searched: BarentsWatch access is set up on this device. */
+    canSearch: () => Boolean(accessKind(loadCredentials())),
+    /** Whether the layer is on and its last request for ships succeeded. */
+    get working() { return working; },
+    /** Be told when that changes. */
+    onWorking(fn) { workingListeners.add(fn); fn(working); },
+    /**
+     * Ships matching `query`: those already loaded around the map at once, and every ship heard in
+     * Norwegian waters in the last 24 hours (fetched once, kept 10 minutes). If that list cannot be
+     * fetched, the loaded ones are still searched, and `error` says why.
+     */
+    async searchShips(query, signal) {
+      const local = [...vessels.values()];
+      let all = local, error = '';
+      if (accessKind(loadCredentials())) {
+        try {
+          creds = loadCredentials();
+          all = mergeVessels(new Map((await shipDirectory()).map((v) => [v.mmsi, v])), local);
+          all = [...all.values()];
+        } catch (e) {
+          error = `Only ships near the map could be searched: ${e.message}`;
+        }
+      }
+      if (signal?.aborted) return { hits: [], error: '' };
+      return { hits: matchVessels(all, query), error };
+    },
+    /** Put a ship found by search on the chart (the layer is switched on) and return its newest report. */
+    showShip(v) {
+      mergeVessels(vessels, [v]);
+      setOn(true);
+      draw();
+      return vessels.get(v.mmsi) ?? v;
+    },
     /** Where a ship is drawn now: moved on from its last report, as its 3D model is. */
     shownShip: (v) => models.shown(v),
     /** The bridge view is from this ship (or none): keep it, and the 3D models, drawn whatever the scale. */

@@ -228,3 +228,47 @@ export function hullFromAis(v) {
   params.seed = v.mmsi % 100000;
   return { params, sources };
 }
+
+// ---------- searching ships by name, MMSI, IMO number or call sign ----------
+
+/** Text for comparing names: lower case, Norwegian letters spelt out, accents and punctuation dropped. */
+export function foldName(s) {
+  return String(s ?? '').toLowerCase()
+    .replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/** Body for POST latest/combined asking for every ship heard in the last 24 hours (no area). */
+export const directoryRequest = () => ({ modelType: 'Full', modelFormat: 'Json' });
+
+/**
+ * Ships matching what was typed, best first: a whole name, a name starting with it, a word of the
+ * name starting with it, then anywhere in the name; numbers match MMSI and IMO numbers from the
+ * start, and call signs match from the start too. At most `max`.
+ */
+export function matchVessels(list, query, max = 6) {
+  const q = foldName(query);
+  if (q.length < 2) return [];
+  const digits = /^\d{3,}$/.test(q) ? q : null;
+  const sign = String(query).trim().toUpperCase().replace(/\s+/g, '');
+  const scored = [];
+  for (const v of list) {
+    if (!v?.mmsi || !Number.isFinite(v.latitude) || !Number.isFinite(v.longitude)) continue;
+    const name = foldName(v.name);
+    let score = 0;
+    if (name === q) score = 100;
+    else if (name.startsWith(q)) score = 80;
+    else if (name.split(' ').some((w) => w.startsWith(q))) score = 60;
+    else if (q.length >= 3 && name.includes(q)) score = 40;
+    if (digits) {
+      if (String(v.mmsi) === digits || String(v.imoNumber ?? '') === digits) score = Math.max(score, 100);
+      else if (String(v.mmsi).startsWith(digits) || String(v.imoNumber ?? '').startsWith(digits)) score = Math.max(score, 50);
+    }
+    const cs = String(v.callSign ?? '').toUpperCase();
+    if (cs && sign.length >= 3 && cs.startsWith(sign)) score = Math.max(score, cs === sign ? 90 : 45);
+    if (score) scored.push([score, Date.parse(v.msgtime) || 0, v]);
+  }
+  // Best match first; among equals, the most recently heard.
+  return scored.sort((a, b) => b[0] - a[0] || b[1] - a[1]).slice(0, max).map(([, , v]) => v);
+}
