@@ -135,3 +135,16 @@ test('AIS becomes hull parameters, with AIS values marked as such', () => {
   assert.deepEqual(sources, { length: 'ais', beam: 'ais', draft: 'ais', airDraft: 'estimated' });
   assert.equal(hullFromAis(report({ draught: 0 })).sources.draft, 'estimated');
 });
+
+test('chart symbols are moved to where the ship is drawn now, keeping the report time', async () => {
+  const { movedReport, toGeoJson } = await import('../public/ais.js');
+  const v = { mmsi: 1, latitude: 59, longitude: 10, trueHeading: 90, speedOverGround: 10, msgtime: '2026-11-25T12:00:00Z' };
+  const moved = movedReport(v, { lat: 59.001, lon: 10.002, heading: 91 });
+  assert.deepEqual([moved.latitude, moved.longitude, moved.trueHeading, moved.msgtime], [59.001, 10.002, 91, v.msgtime]);
+  assert.equal(movedReport(v, { lat: 59, lon: 10, heading: 90 }), v, 'unmoved: the same report');
+  assert.equal(movedReport(v, { lat: 59.001, lon: 10, heading: null }).trueHeading, 90, 'no heading: the reported one');
+  assert.equal(movedReport(v, null), v);
+  const { points } = toGeoJson([moved], Date.parse('2026-11-25T12:20:00Z'));
+  assert.deepEqual(points.features[0].geometry.coordinates, [10.002, 59.001]);
+  assert.equal(points.features[0].properties.stale, true, 'still fades by the report age');
+});

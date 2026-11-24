@@ -13,7 +13,9 @@ const bytes = (n) => (n == null ? '—' : n > 1e9 ? `${(n / 1e9).toFixed(1)} GB`
 /** A time as the value of a datetime-local input (local time, to the minute). */
 const localInput = (t) => { const d = new Date(t - new Date(t).getTimezoneOffset() * 60e3); return d.toISOString().slice(0, 16); };
 
-export function createTracker(el, { recorder, playback, storePromise, canRecord }) {
+export function createTracker(el, { recorder, playback, liveTraces, storePromise, canRecord }) {
+  /** The traces being shown: those of playback while it plays, else those behind live ships. */
+  const traceSet = () => (playback.active ? playback : liveTraces);
   let stats = { count: 0, ships: 0, first: null, last: null, lastHour: 0, usage: null };
   let msg = { text: '', tone: '' };
   let mode = 'ago';
@@ -101,11 +103,13 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
       </section>
       <section class="set-section">
         <h3>Traces</h3>
-        ${pb.traces.size ? `<ul class="tk-traces">${[...pb.traces].map(([m, tr]) => `<li data-m="${m}">
-            ${colorPicker(m, tr.color)}<span class="tk-name">${esc(pb.shipName(m))}</span>
+        <p class="fine">${pb.active ? 'Traces in this playback.' : 'Traces behind live ships.'}</p>
+        ${traceSet().traces.size ? `<ul class="tk-traces">${[...traceSet().traces].map(([m, tr]) => `<li data-m="${m}">
+            ${colorPicker(m, tr.color)}<span class="tk-name">${esc(traceSet().shipName(m))}</span>
             <label class="tk-show"><input type="checkbox" data-trace="on" ${tr.on ? 'checked' : ''}> Show</label>
-            <button type="button" class="link-btn" data-trace="remove" aria-label="Remove trace">✕</button></li>`).join('')}</ul>`
-          : '<p class="fine">During playback, tap a ship and give it a trace: a coloured line of where it has been.</p>'}
+            <button type="button" class="link-btn" data-trace="clear" title="Empty the line and start again from here">Clear</button>
+            <button type="button" class="link-btn" data-trace="remove" aria-label="Stop tracing">✕</button></li>`).join('')}</ul>`
+          : '<p class="fine">Tap a ship and choose Track this ship: a coloured line of where it sails, live or in playback.</p>'}
       </section>`;
   }
 
@@ -134,8 +138,8 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
     else if (t.dataset.pb === 'slider') playback.seek(Number(t.value));
     else if (t.dataset.trace) {
       const m = Number(t.closest('[data-m]').dataset.m);
-      if (t.dataset.trace === 'on') playback.showTrace(m, t.checked);
-      if (t.dataset.trace === 'color') { playback.setTrace(m, t.value); render(); }
+      if (t.dataset.trace === 'on') traceSet().showTrace(m, t.checked);
+      if (t.dataset.trace === 'color') { traceSet().setTrace(m, t.value); render(); }
     }
   });
   // Dragging the slider moves playback as it goes (a few times a second).
@@ -149,7 +153,16 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
   el.addEventListener('click', async (e) => {
     const b = e.target.closest('button');
     if (!b) return;
-    const act = b.dataset.pb ?? b.dataset.rec ?? b.dataset.trace;
+    // Trace buttons and recording buttons are told apart by their attribute, never by the action's
+    // name alone: a trace's Clear must never reach Clear recordings.
+    if (b.dataset.trace) {
+      const m = Number(b.closest('[data-m]').dataset.m);
+      if (b.dataset.trace === 'remove') traceSet().removeTrace(m);
+      else if (b.dataset.trace === 'clear') traceSet().clearTrace(m);
+      render();
+      return;
+    }
+    const act = b.dataset.pb ?? b.dataset.rec;
     try {
       if (act === 'begin') {
         // Start inside the recording: before it began (or in a pause) there are no ships to show.
@@ -161,13 +174,13 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
       else if (act === 'play') playback.play();
       else if (act === 'pause') playback.pause();
       else if (act === 'live') playback.stop();
-      else if (act === 'clear') {
+      else if (b.dataset.rec === 'clear') {
         if (!confirm('Delete every recorded position and ship from this device? This cannot be undone.')) return;
         const s = await storePromise;
         await s.clear();
         recorder.clearSessions();
         await refreshStats();
-      } else if (act === 'remove') playback.removeTrace(Number(b.closest('[data-m]').dataset.m));
+      }
     } catch (err) {
       msg = { text: err.message, tone: 'err' };
     }
@@ -194,14 +207,16 @@ export function createTracker(el, { recorder, playback, storePromise, canRecord 
       if (play && (play.dataset.pb === 'pause') !== playback.playing) render();
     },
     /** Trace controls in a ship's card during playback. */
+    traceSet,
+    /** Trace controls in a ship's card: live, or in playback. */
     cardHtml(v) {
-      if (!playback.active) return '';
-      const tr = playback.traces.get(v.mmsi);
+      const tr = traceSet().traces.get(v.mmsi);
       return `<div class="tk-card" data-m="${v.mmsi}">
         <span class="tk-card-label">Trace</span>
         ${tr ? `${colorPicker(v.mmsi, tr.color)}<label class="tk-show"><input type="checkbox" data-trace="on" ${tr.on ? 'checked' : ''}> Show</label>
-          <button type="button" class="link-btn" data-trace="remove">Remove</button>`
-          : '<button type="button" class="info-btn" data-trace="add">Give it a trace</button>'}
+          <button type="button" class="link-btn" data-trace="clear" title="Empty the line and start again from here">Clear trace</button>
+          <button type="button" class="link-btn" data-trace="remove">Stop</button>`
+          : `<button type="button" class="info-btn" data-trace="add">${playback.active ? 'Give it a trace' : 'Track this ship'}</button>`}
       </div>`;
     },
   };

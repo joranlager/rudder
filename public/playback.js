@@ -205,6 +205,8 @@ export function createPlayback(map, { ais, storePromise, onTick = () => {}, onEn
       return fresh;
     },
     showTrace(m, on) { const tr = traces.get(m); if (tr) { tr.on = on; drawTraces(); } },
+    /** Empty the line and start it again from the clock (recordings are not touched). */
+    clearTrace(m) { const tr = traces.get(m); if (tr) { tr.from = t; tr.until = t; tr.coords = []; drawTraces(); } },
     removeTrace(m) { traces.delete(m); drawTraces(); },
     shipName: (m) => (ships.get(m)?.name || '').trim() || `MMSI ${m}`,
     /** Ships with positions in the loaded window. */

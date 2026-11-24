@@ -7,6 +7,7 @@ import { openTrackStore } from './trackstore.js';
 import { createRecorder } from './recorder.js';
 import { createPlayback } from './playback.js';
 import { createTracker } from './tracker.js';
+import { createLiveTraces } from './livetraces.js';
 import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
 import { createFarView } from './farview.js';
 import { DEM_MIN_ZOOM } from './terrain.js';
@@ -81,7 +82,9 @@ const playback = createPlayback(map, {
   onTick: () => tracker?.tick(),
   onEnd: () => tracker?.render(),
 });
-tracker = createTracker($('#tracker-body'), { recorder, playback, storePromise: trackStore, canRecord: () => ais.canSearch() });
+// Traces behind live ships (livetraces.js), rebuilt from the recording after a reload when there is one.
+const liveTraces = createLiveTraces(map, { ais, storePromise: trackStore });
+tracker = createTracker($('#tracker-body'), { recorder, playback, liveTraces, storePromise: trackStore, canRecord: () => ais.canSearch() });
 // Taking the helm of a ship: the bridge console (helm.js).
 helm = createHelm(map, { ais, bridge, el: $('#helm'), onStatus: (m) => console.info(m) });
 document.addEventListener('click', (e) => {
@@ -369,11 +372,12 @@ function showVessel(v) {
   togglePanel('info', true);
 }
 $('#info-body').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-trace="add"], [data-trace="remove"]');
+  const b = e.target.closest('[data-trace="add"], [data-trace="remove"], [data-trace="clear"]');
   const card = b?.closest('[data-m]');
   if (!card) return;
   const m = Number(card.dataset.m);
-  if (b.dataset.trace === 'add') playback.setTrace(m); else playback.removeTrace(m);
+  const set = tracker.traceSet();
+  if (b.dataset.trace === 'add') set.setTrace(m); else if (b.dataset.trace === 'clear') set.clearTrace(m); else set.removeTrace(m);
   const v = ais.vessel(m);
   if (v) showVessel(v);
   tracker.render();
@@ -382,8 +386,8 @@ $('#info-body').addEventListener('change', (e) => {
   const t = e.target, card = t.closest('[data-m]');
   if (!t.dataset.trace || !card) return;
   const m = Number(card.dataset.m);
-  if (t.dataset.trace === 'on') playback.showTrace(m, t.checked);
-  if (t.dataset.trace === 'color') { playback.setTrace(m, t.value); t.style.background = t.value; }
+  if (t.dataset.trace === 'on') tracker.traceSet().showTrace(m, t.checked);
+  if (t.dataset.trace === 'color') { tracker.traceSet().setTrace(m, t.value); t.style.background = t.value; }
   tracker.render();
 });
 $('#info-body').addEventListener('click', async (e) => {
@@ -504,4 +508,4 @@ if (handoff) {
 }
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
-window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge, helm, recorder, playback, trackStore };
+window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge, helm, recorder, playback, trackStore, liveTraces };

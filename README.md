@@ -24,7 +24,9 @@ browsers keep files for 10 minutes. Code: `public/reload.js`.
 
 `.github/workflows/pages.yml` tests, builds and deploys **every branch** to GitHub Pages on each
 push. All branches share one Pages site, so **the last deploy wins**: a newer run cancels one still
-in progress. The footer shows which branch and commit is live.
+in progress. The footer shows which branch and commit is live. Every script and stylesheet the page
+loads is stamped with that commit (`?v=<commit>`, `scripts/versioning.mjs`), so a browser never mixes
+files from two deploys (GitHub Pages lets browsers keep files for ten minutes).
 
 ## Map
 
@@ -97,9 +99,15 @@ more than 30 minutes waits at its last place for 15 minutes (two hours if it was
 the live chart) and is then gone until it reports again. The 3D ships, the bridge view and tapping work as with live ships. The slider moves to any
 point in the recording; Pause, Play and **Back to live** do what they say (`public/playback.js`).
 
-**Traces.** During playback, tap a ship and **Give it a trace**: a coloured line of where it has
-been since playback began, growing along the same smooth path as it sails. Each trace's colour can
-be changed and the trace shown or hidden, in the ship's card or under Traces in the panel.
+**Traces.** Tap a ship and **Track this ship** (live) or **Give it a trace** (in playback): a
+coloured line of where it sails, growing as it goes. Live, the line follows the ship where it is
+drawn (between reports by dead reckoning, as the 3D ships), sampled every second; in playback it
+follows the same smooth path as the ship. Each trace's colour can be changed and the line shown or
+hidden, in the ship's card or under Traces in the panel; **Clear trace** empties the line and starts
+it again from where the ship is now (recorded positions are not touched), and **Stop** ends the
+trace. The ships tracked live, their colours and whether each line is shown are remembered on the
+device, so tracking goes on after a reload; if positions are being recorded, the line is rebuilt
+from the recording then (`public/livetraces.js`).
 
 ## Taking the helm
 
@@ -248,6 +256,11 @@ The models are drawn with three.js in a MapLibre custom layer sharing the map's 
 (`public/shipmodels.js`), at most the 40 ships nearest the middle of the view; each is built once
 (5–15 ms) and only moved after that, with its hull painting reduced to 1024 px for the chart.
 three.js is loaded the first time models are needed.
+
+**Ships move by themselves, at every scale.** The chart's symbols (arrows, dots and outlines) are
+redrawn a few times a second where each ship is drawn now, the same as the 3D models below, so ships
+under way glide across the chart between AIS reports instead of jumping every 30 seconds. Ships
+lying still are not redrawn.
 
 **The models move by themselves.** Between AIS reports each modelled ship is moved by dead reckoning
 from its last report (`public/motion.js`): along its course over ground at its speed over ground,
