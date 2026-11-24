@@ -294,3 +294,29 @@ body.bridge-view .maplibregl-canvas-container { cursor: grab; }
 
 /* With the helm console open, the map ends where the console begins (helm.js sets --helm-room). */
 body.helm-on #map { bottom: var(--helm-room, 0px); }
+
+/* ---------- Ships tracker (tracker.js) ---------- */
+.tracker { width: 340px; }
+.tk-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+.tk-stats div { background: color-mix(in srgb, var(--muted) 10%, transparent); border-radius: 8px; padding: 6px 8px; }
+.tk-stats dt { font-size: 11px; color: var(--muted); }
+.tk-stats dd { margin: 0; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tk-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.tk-row select, .tk-speed select, .tk-from input { font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink); }
+.tk-from { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin: 6px 0 10px; }
+.tk-from input:disabled { opacity: .5; }
+.tk-speed { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.tk-clock { display: grid; margin: 4px 0; }
+.tk-clock b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.tk-clock span { font-size: 12px; color: var(--muted); }
+.tk-slider { width: 100%; accent-color: var(--accent); margin: 6px 0 0; }
+.tk-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.tk-traces { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.tk-traces li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; }
+.tk-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-color { width: 34px; height: 22px; border-radius: 6px; border: 1px solid var(--line); color: transparent; cursor: pointer; padding: 0; }
+.tk-color option { color: #000; }
+.tk-show { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
+.tk-card { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.tk-card-label { font-weight: 600; }

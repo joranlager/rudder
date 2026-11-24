@@ -3,6 +3,10 @@ import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
 import { createBridgeView } from './pov.js';
 import { createHelm } from './helm.js';
+import { openTrackStore } from './trackstore.js';
+import { createRecorder } from './recorder.js';
+import { createPlayback } from './playback.js';
+import { createTracker } from './tracker.js';
 import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
 import { createFarView } from './farview.js';
 import { DEM_MIN_ZOOM } from './terrain.js';
@@ -67,6 +71,17 @@ const bridge = createBridgeView(map, {
   onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); land.setTrueScale(true); far.setLand(land.on); },
   onExit: (message) => { land.setTrueScale(false); if (message && !helm?.active) alert(message); },
 });
+// The Ships tracker: every ship's positions recorded on this device, and played back (tracker.js).
+const trackStore = openTrackStore();
+trackStore.catch((e) => console.warn('track store:', e.message));
+let tracker = null;
+const recorder = createRecorder({ ais, storePromise: trackStore, onChange: () => tracker?.render() });
+const playback = createPlayback(map, {
+  ais, storePromise: trackStore,
+  onTick: () => tracker?.tick(),
+  onEnd: () => tracker?.render(),
+});
+tracker = createTracker($('#tracker-body'), { recorder, playback, storePromise: trackStore, canRecord: () => ais.canSearch() });
 // Taking the helm of a ship: the bridge console (helm.js).
 helm = createHelm(map, { ais, bridge, el: $('#helm'), onStatus: (m) => console.info(m) });
 document.addEventListener('click', (e) => {
@@ -157,14 +172,17 @@ function togglePanel(id, open) {
   const el = $(`#${id}`);
   el.hidden = open === undefined ? !el.hidden : !open;
   if (!el.hidden) closeShips(); // a chart panel brings the chart back
-  // Layers and Settings share the same corner: one at a time.
-  if (!el.hidden && (id === 'layers' || id === 'settings')) togglePanel(id === 'layers' ? 'settings' : 'layers', false);
+  // Layers, Settings and the tracker share the same corner: one at a time.
+  const corner = ['layers', 'settings', 'tracker'];
+  if (!el.hidden && corner.includes(id)) for (const other of corner) if (other !== id && !$(`#${other}`).hidden) togglePanel(other, false);
+  if (id === 'tracker') { $('#tracker-btn').setAttribute('aria-expanded', String(!el.hidden)); tracker?.setOpen(!el.hidden); }
   if (id === 'layers') $('#layers-btn').setAttribute('aria-expanded', String(!el.hidden));
   if (id === 'settings') $('#settings-btn').setAttribute('aria-expanded', String(!el.hidden));
   if (id === 'info' && el.hidden) clearClick();
 }
 $('#layers-btn').addEventListener('click', () => togglePanel('layers'));
 $('#settings-btn').addEventListener('click', () => togglePanel('settings'));
+$('#tracker-btn').addEventListener('click', () => togglePanel('tracker'));
 // Links between panels, e.g. "Set it up in Settings" in the layers panel.
 document.addEventListener('click', (e) => { const o = e.target.closest('[data-open]'); if (o) togglePanel(o.dataset.open, true); });
 // The "Rudder token" bookmark clicked here instead of on BarentsWatch (bwlogin.js): explain in Settings.
@@ -334,7 +352,8 @@ function showVessel(v) {
     ['MMSI', v.mmsi],
     ['IMO', v.imoNumber || null],
     ['Call sign', v.callSign || null],
-    ['Last report', age < 1 ? 'just now' : `${age} min ago`],
+    v.playback ? ['Played back at', new Date(Date.parse(v.msgtime)).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' })]
+      : ['Last report', age < 1 ? 'just now' : `${age} min ago`],
   ].filter(([, x]) => x != null && x !== '');
   $('#info-title').textContent = (v.name || '').trim() || `MMSI ${v.mmsi}`;
   $('#info-body').innerHTML = `<p class="pos">${formatPosition(v.latitude, v.longitude)}</p>
@@ -345,15 +364,34 @@ function showVessel(v) {
       <button type="button" class="info-btn" data-open3d="${v.mmsi}">Open 3D model</button>
       <button type="button" class="info-btn" data-sea-here="${v.mmsi}">Sea and weather here</button>
     </div>
-    <div class="src">AIS from Kystverket via BarentsWatch. Size and draught as the ship reports them.</div>`;
+    ${tracker.cardHtml(v)}
+    <div class="src">${v.playback ? 'Recorded on this device from Kystverket\'s AIS via BarentsWatch.' : 'AIS from Kystverket via BarentsWatch.'} Size and draught as the ship reports them.</div>`;
   togglePanel('info', true);
 }
+$('#info-body').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-trace="add"], [data-trace="remove"]');
+  const card = b?.closest('[data-m]');
+  if (!card) return;
+  const m = Number(card.dataset.m);
+  if (b.dataset.trace === 'add') playback.setTrace(m); else playback.removeTrace(m);
+  const v = ais.vessel(m);
+  if (v) showVessel(v);
+  tracker.render();
+});
+$('#info-body').addEventListener('change', (e) => {
+  const t = e.target, card = t.closest('[data-m]');
+  if (!t.dataset.trace || !card) return;
+  const m = Number(card.dataset.m);
+  if (t.dataset.trace === 'on') playback.showTrace(m, t.checked);
+  if (t.dataset.trace === 'color') { playback.setTrace(m, t.value); t.style.background = t.value; }
+  tracker.render();
+});
 $('#info-body').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere ?? b.dataset.bridge ?? b.dataset.helmTake);
   if (!v) return;
-  if (b.dataset.helmTake) helm.take(v);
+  if (b.dataset.helmTake) { if (ais.playingBack) { alert('Go back to live AIS (Ships tracker) to take the helm.'); return; } helm.take(v); }
   else if (b.dataset.bridge) bridge.enter(v);
   else if (b.dataset.open3d) { await openShips(); ships?.showAisVessel(v); }
   else showPoint({ lat: v.latitude, lng: v.longitude });
@@ -466,4 +504,4 @@ if (handoff) {
 }
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
-window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge, helm };
+window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge, helm, recorder, playback, trackStore };
