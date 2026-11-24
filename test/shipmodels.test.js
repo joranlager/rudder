@@ -102,3 +102,13 @@ test('ships float at their freeboard: the hull depth follows the beam and draugh
   assert.ok(ballast - 3.5 > loaded - 6.5, 'in ballast it floats higher');
   assert.ok(depthFor('tug', 10, 9) >= 10, 'always at least a metre above the waterline');
 });
+
+test('ferries and cruise ships stand higher out of the water than working ships', async () => {
+  const { hullFromAis } = await import('../public/ais.js');
+  const fb = (v) => { const p = hullFromAis(v).params; return p.depth - p.draft; };
+  const ferry = fb({ mmsi: 1, shipType: 60, dimensionA: 25, dimensionB: 25, dimensionC: 6, dimensionD: 6, draught: 30 });
+  const cargo = fb({ mmsi: 1, shipType: 70, dimensionA: 25, dimensionB: 25, dimensionC: 6, dimensionD: 6, draught: 30 });
+  assert.ok(ferry >= 4.5 && ferry > cargo, `ferry ${ferry.toFixed(1)} m, cargo ${cargo.toFixed(1)} m`);
+  const big = fb({ mmsi: 1, shipType: 60, dimensionA: 70, dimensionB: 69, dimensionC: 10, dimensionD: 11, draught: 55 });
+  assert.ok(big > 10 && big < 15, `a 139 m car ferry: ${big.toFixed(1)} m`);
+});

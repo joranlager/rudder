@@ -226,7 +226,7 @@ export function hullFromAis(v) {
   const t = draughtM(v);
   if (t && t < 30) { params.draft = t; sources.draft = 'ais'; }
   // AIS changed the beam and draught: the depth follows them, not the type's typical ship.
-  params.depth = depthFor(params.kind, params.beam, params.draft);
+  params.depth = depthFor(params.kind, params.beam, params.draft, params.length);
   params.seed = v.mmsi % 100000;
   return { params, sources };
 }

@@ -246,7 +246,7 @@ export function createShipInspector(root, { onClose } = {}) {
         sources[k] = 'ais';
       }
     }
-    params.depth = Math.max(params.depth, depthFor(params.kind, params.beam, params.draft));
+    params.depth = Math.max(params.depth, depthFor(params.kind, params.beam, params.draft, params.length));
     return { params, sources };
   }
 

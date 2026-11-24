@@ -29,10 +29,14 @@ const deg = (r) => (r * 180) / Math.PI;
 export function eyeHeight(v) {
   const { params } = hullFromAis(v);
   const freeboard = Math.max(0.5, params.depth - params.draft);
-  const fromDecks = freeboard + Math.max(0, params.decks - 1) * TIER_M + EYE_M;
-  // Bridges are set high enough to see over the bow and the cargo: on bigger ships about 8 % of the
-  // length above the deck, whatever the model's deck count (a 100 m tanker's is some 15 m up).
-  const toSeeOver = freeboard + 0.08 * params.length + 2.5;
+  // The bridge deck: on cruise ships and ferries part way up the superstructure (as the ship builder
+  // draws it, ships/ship.js), on others the top tier of the deckhouse.
+  const tiers = params.kind === 'cruise' ? Math.round(params.decks * 0.62)
+    : params.kind === 'ferry' ? Math.round(params.decks * 0.7) : params.decks - 1;
+  const fromDecks = freeboard + Math.max(0, tiers) * TIER_M + EYE_M;
+  // And high enough to see over the bow and the cargo: on long ships with low hulls (tankers,
+  // container ships) about 13 % of the length up (a 100 m tanker's bridge is some 14 m up).
+  const toSeeOver = Math.max(freeboard + 0.05 * params.length + 2, 0.13 * params.length + 1);
   return Math.max(2.5, fromDecks, toSeeOver);
 }
 
