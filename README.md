@@ -120,6 +120,18 @@ The layer asks only for the area in view (plus 30 %), from zoom 7, every 30 seco
 pan out of that area; later polls ask only for what changed (`since`). Code: `public/ais.js`
 (requests, decoding, shapes; tested) and `public/aismap.js` (fetching, drawing, panel).
 
+**3D ships up close.** When the metric scale bar reads **200 m or less** (about zoom 14 and in), ships
+with a known size and heading are drawn as **3D models** on the chart instead of flat outlines: the
+same models as **Open 3D model** builds from AIS (type, length, beam, draught, name on the hull),
+turned to their heading and placed by their GPS antenna. Tilt the chart (two fingers, or right-drag)
+to see them from the side. Only the part above the waterline is drawn, since the chart is the sea.
+Their outlines stay, invisible, so hovering and tapping work as before; ships without a heading
+keep their dot. The scale reading is computed as MapLibre's scale bar does (`public/scalebar.js`).
+The models are drawn with three.js in a MapLibre custom layer sharing the map's WebGL context
+(`public/shipmodels.js`), at most the 40 ships nearest the middle of the view; each is built once
+(5–15 ms) and only moved after that, with its hull painting reduced to 1024 px for the chart.
+three.js is loaded the first time models are needed.
+
 ## Ships
 
 **Ships** in the top bar covers the chart with a 3D ship inspector (`public/ships/`). Close it with

@@ -9,6 +9,8 @@ import {
   mergeVessels, pruneVessels, toGeoJson,
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
+import { scaleBarMetres, modelsAtScale } from './scalebar.js';
+import { createShipModels, pickShips } from './shipmodels.js';
 
 const STORE_KEY = 'rudder.ais.v1';
 const MIN_ZOOM = 7; // wider views would ask for most of the coast at once
@@ -84,7 +86,37 @@ export function createAisLayer(map) {
 
   function setVisible(on) {
     for (const id of LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    updateModels();
   }
+
+  // ---------- 3D models when the scale bar reads 200 m or less (shipmodels.js) ----------
+
+  const models = createShipModels(map);
+  let modelled = []; // MMSIs drawn as models: their arrows and outlines step aside
+
+  function updateModels() {
+    const active = cfg.on && map.getSource('ais-points') && modelsAtScale(scaleBarMetres(map));
+    let list = [];
+    if (active) {
+      const b = map.getBounds(), c = map.getCenter();
+      const padX = (b.getEast() - b.getWest()) * 0.2, padY = (b.getNorth() - b.getSouth()) * 0.2;
+      list = pickShips(vessels.values(), [b.getWest() - padX, b.getSouth() - padY, b.getEast() + padX, b.getNorth() + padY], [c.lng, c.lat]);
+    }
+    const ids = list.map((v) => v.mmsi);
+    if (ids.join() !== modelled.join()) {
+      modelled = ids;
+      // Modelled ships keep an invisible outline, so they can still be hovered and tapped.
+      const isModel = ['in', ['get', 'mmsi'], ['literal', ids]];
+      const fade = ['case', ['get', 'stale'], 0.45, 1];
+      if (map.getLayer('ais-hull')) {
+        map.setPaintProperty('ais-hull', 'fill-opacity', ['case', isModel, 0, ['*', 0.45, fade]]);
+        map.setPaintProperty('ais-hull-line', 'line-opacity', ['case', isModel, 0, fade]);
+        map.setFilter('ais-arrow', ['all', ['get', 'hasHeading'], ['!', isModel]]);
+      }
+    }
+    models.setShips(list).catch((e) => setStatus(`3D ships could not load (${e.message}).`, 'err'));
+  }
+  map.on('moveend', updateModels);
 
   /** The AIS sources and layers exist; if the map cannot take them yet, try again when it is idle. */
   function ensureLayers() {
@@ -103,6 +135,7 @@ export function createAisLayer(map) {
     const { points, outlines } = toGeoJson([...vessels.values()]);
     map.getSource('ais-points').setData(points);
     map.getSource('ais-hulls').setData(outlines);
+    updateModels();
   }
 
   // Ship name under the pointer (the chart has no font server, so no map labels).
