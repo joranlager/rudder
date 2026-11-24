@@ -178,6 +178,16 @@ export function pruneVessels(byMmsi, now = Date.now(), maxMinutes = 120) {
   return byMmsi;
 }
 
+/**
+ * A report moved to where the ship is drawn now (aismap.js: dead reckoning between reports, as the
+ * 3D ships), for the chart's symbols. The report's time stays, so a ship long unheard still fades.
+ */
+export function movedReport(v, at) {
+  if (!at || !Number.isFinite(at.lat) || !Number.isFinite(at.lon)) return v;
+  if (at.lat === v.latitude && at.lon === v.longitude && (at.heading == null || at.heading === v.trueHeading)) return v;
+  return { ...v, latitude: at.lat, longitude: at.lon, trueHeading: at.heading ?? v.trueHeading };
+}
+
 /** GeoJSON for the map: one point per vessel (symbol and label) and one outline per vessel with a known size. */
 export function toGeoJson(vessels, now = Date.now(), staleMinutes = 15) {
   const points = [], outlines = [];

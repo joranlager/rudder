@@ -6,7 +6,7 @@
 
 import {
   TOKEN_URL, LATEST_URL, TYPE_GROUPS, tokenRequestBody, parseToken, pastedToken, latestRequest, bboxPolygon, bboxInside,
-  mergeVessels, pruneVessels, toGeoJson, directoryRequest, matchVessels,
+  mergeVessels, pruneVessels, toGeoJson, directoryRequest, matchVessels, movedReport,
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
 import { scaleBarMetres, modelsAtScale } from './scalebar.js';
@@ -145,11 +145,40 @@ export function createAisLayer(map) {
 
   function draw(now = playback ? playback.now : Date.now()) {
     if (!ensureLayers()) return;
-    const { points, outlines } = toGeoJson([...vessels.values()], now);
-    map.getSource('ais-points').setData(points);
-    map.getSource('ais-hulls').setData(outlines);
+    drawSymbols(now);
     updateModels();
   }
+
+  /**
+   * The chart's symbols, each where its ship is drawn now: between reports a ship under way moves on
+   * by dead reckoning (the same as its 3D model), so ships move at every scale, not only up close.
+   * Returns how many are under way. In playback the ships handed over are already where they are.
+   */
+  function drawSymbols(now = playback ? playback.now : Date.now()) {
+    if (!map.getSource('ais-points')) return 0;
+    let moving = 0;
+    const list = [];
+    for (const v of vessels.values()) {
+      if (playback) { list.push(v); continue; }
+      const at = models.shown(v);
+      if (at.moving) moving++;
+      list.push(movedReport(v, at));
+    }
+    const { points, outlines } = toGeoJson(list, now);
+    map.getSource('ais-points').setData(points);
+    map.getSource('ais-hulls').setData(outlines);
+    return moving;
+  }
+
+  // Keep the symbols moving a few times a second while any ship is under way (less often when a
+  // great many ships are loaded, so the chart stays quick).
+  let anyMoving = true;
+  setInterval(() => {
+    if (!cfg.on || playback || document.hidden || !map.getSource('ais-points')) return;
+    if (vessels.size > 1500 && (Date.now() / 300 | 0) % 2) return; // every other tick
+    if (!anyMoving) { anyMoving = [...vessels.values()].some((v) => (v.speedOverGround ?? 0) > 0.5); if (!anyMoving) return; }
+    anyMoving = drawSymbols() > 0;
+  }, 300);
 
   // Ship name under the pointer (the chart has no font server, so no map labels).
   const tip = document.createElement('div');

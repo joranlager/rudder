@@ -255,6 +255,11 @@ The models are drawn with three.js in a MapLibre custom layer sharing the map's 
 (5–15 ms) and only moved after that, with its hull painting reduced to 1024 px for the chart.
 three.js is loaded the first time models are needed.
 
+**Ships move by themselves, at every scale.** The chart's symbols (arrows, dots and outlines) are
+redrawn a few times a second where each ship is drawn now, the same as the 3D models below, so ships
+under way glide across the chart between AIS reports instead of jumping every 30 seconds. Ships
+lying still are not redrawn.
+
 **The models move by themselves.** Between AIS reports each modelled ship is moved by dead reckoning
 from its last report (`public/motion.js`): along its course over ground at its speed over ground,
 on an arc while it reports a rate of turn (for at most a minute, then straight on), with the bow on
