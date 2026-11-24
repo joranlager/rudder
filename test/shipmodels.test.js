@@ -90,3 +90,15 @@ test('from a bridge, the ships around it are picked by distance, whatever the ca
   const picked = pickShips([far, ahead, own], boxAround(59.43, 10.53, POV_RADIUS_M), [10.53, 59.43]).map((v) => v.mmsi);
   assert.deepEqual(picked, [1, 2]);
 });
+
+test('ships float at their freeboard: the hull depth follows the beam and draught AIS reports', async () => {
+  const { hullFromAis } = await import('../public/ais.js');
+  const { depthFor } = await import('../public/ships/presets.js');
+  const ferry = hullFromAis({ mmsi: 1, shipType: 60, dimensionA: 25, dimensionB: 25, dimensionC: 6, dimensionD: 6, draught: 30 }).params;
+  assert.equal(ferry.beam, 12);
+  assert.ok(ferry.depth - ferry.draft > 3, `a 50 m ferry 12 m wide shows ${ (ferry.depth - ferry.draft).toFixed(1) } m of hull`);
+  const loaded = depthFor('tanker', 20, 6.5), ballast = depthFor('tanker', 20, 3.5);
+  assert.equal(loaded, ballast, 'the hull is the same, loaded or not');
+  assert.ok(ballast - 3.5 > loaded - 6.5, 'in ballast it floats higher');
+  assert.ok(depthFor('tug', 10, 9) >= 10, 'always at least a metre above the waterline');
+});

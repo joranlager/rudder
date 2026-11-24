@@ -32,7 +32,7 @@ export function eyeHeight(v) {
   const fromDecks = freeboard + Math.max(0, params.decks - 1) * TIER_M + EYE_M;
   // Bridges are set high enough to see over the bow and the cargo: on bigger ships about 8 % of the
   // length above the deck, whatever the model's deck count (a 100 m tanker's is some 15 m up).
-  const toSeeOver = freeboard + 0.08 * params.length + 4;
+  const toSeeOver = freeboard + 0.08 * params.length + 2.5;
   return Math.max(2.5, fromDecks, toSeeOver);
 }
 

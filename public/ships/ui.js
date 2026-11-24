@@ -11,7 +11,7 @@ import { searchShips, fetchShipFacts, findByImo } from './wikidata.js';
 import { hullFromAis, typeName, navStatusText, draughtM, ageMinutes } from '../ais.js';
 import { shipImages } from './commons.js';
 import { extractPalette, loadImage, suggestLivery, NOT_A_PHOTO } from './livery.js';
-import { DEFAULT_LIVERY, KIND_PRESETS, defaultParams, liveryFromFacts, paramsFromFacts } from './presets.js';
+import { DEFAULT_LIVERY, KIND_PRESETS, defaultParams, depthFor, liveryFromFacts, paramsFromFacts } from './presets.js';
 import { HULL_FONTS } from './hullText.js';
 import { fmtLen } from './callouts.js';
 import { exportOBJ, downloadText, downloadCanvas, downloadBlob } from './objExport.js';
@@ -246,7 +246,7 @@ export function createShipInspector(root, { onClose } = {}) {
         sources[k] = 'ais';
       }
     }
-    params.depth = Math.max(params.depth, params.draft + 1);
+    params.depth = Math.max(params.depth, depthFor(params.kind, params.beam, params.draft));
     return { params, sources };
   }
 

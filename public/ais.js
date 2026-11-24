@@ -6,7 +6,7 @@
 // are typed into the layers panel and kept only on this device. Checked against the API's own
 // OpenAPI document (live.ais.barentswatch.no/live/openapi/ais/openapi.json) on 2026-11-23.
 
-import { defaultParams } from './ships/presets.js';
+import { defaultParams, depthFor } from './ships/presets.js';
 
 export const TOKEN_URL = 'https://id.barentswatch.no/connect/token';
 export const LATEST_URL = 'https://live.ais.barentswatch.no/live/v1/latest/combined';
@@ -225,7 +225,8 @@ export function hullFromAis(v) {
   if (beam > 1) { params.beam = beam; sources.beam = 'ais'; }
   const t = draughtM(v);
   if (t && t < 30) { params.draft = t; sources.draft = 'ais'; }
-  params.depth = Math.max(params.depth, params.draft + 1);
+  // AIS changed the beam and draught: the depth follows them, not the type's typical ship.
+  params.depth = depthFor(params.kind, params.beam, params.draft);
   params.seed = v.mmsi % 100000;
   return { params, sources };
 }

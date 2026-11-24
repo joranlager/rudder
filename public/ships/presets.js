@@ -228,6 +228,16 @@ export function decksFor(kind, length) {
   const n = kind === 'ferry' ? 1 + (L - 30) / 40 : p.decks * (L / p.length);
   return Math.max(1, Math.min(p.decks, Math.round(n)));
 }
+/**
+ * Depth from keel to deck for a ship of this kind with this beam and draught (metres). The hull is
+ * built for the deeper of the draught its beam implies for its kind (its design draught) and the
+ * draught it reports, so a lightly loaded ship floats high and none is sunk to its deck.
+ */
+export function depthFor(kind, beam, draft) {
+  const p = KIND_PRESETS[kind] ?? KIND_PRESETS.cargo;
+  const design = Math.max(beam / p.bt, draft || 0);
+  return Math.max(design * p.dt, (draft || 0) + 1);
+}
 export function defaultParams(kind, length) {
   const p = KIND_PRESETS[kind];
   const L = length ?? p.length;
