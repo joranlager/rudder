@@ -121,6 +121,10 @@ $('#layers-btn').addEventListener('click', () => togglePanel('layers'));
 $('#settings-btn').addEventListener('click', () => togglePanel('settings'));
 // Links between panels, e.g. "Set it up in Settings" in the layers panel.
 document.addEventListener('click', (e) => { const o = e.target.closest('[data-open]'); if (o) togglePanel(o.dataset.open, true); });
+// The "Rudder token" bookmark clicked here instead of on BarentsWatch (bwlogin.js): explain in Settings.
+window.addEventListener('rudder-bookmark', () => settingsPanel.bookmarkClickedHere());
+// A banner left by the first version of the bookmark, which had no way to close: a click removes it.
+document.addEventListener('click', (e) => { if (e.target.closest('#rudder-bw')) e.target.closest('#rudder-bw').remove(); }, true);
 document.addEventListener('click', (e) => { const c = e.target.closest('[data-close]'); if (c) togglePanel(c.dataset.close, false); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;

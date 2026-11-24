@@ -90,7 +90,7 @@ for the client ID and secret, posts them to `/connect/token`, sends the answer b
 window. Rudder keeps the token, tests it and switches the ships on. The bookmark holds no secret,
 Rudder answers only the window it opened and only while it shows `id.barentswatch.no` or
 `www.barentswatch.no`, and the bookmark only talks to Rudder's origin. The login pages are
-sandboxed without dialogs, so the bookmark reports in a banner at the top of the page. On Android
+sandboxed without dialogs, so the bookmark reports in a banner at the top of the page, closed by a click (messages about using it in the wrong place also close by themselves). Clicked on Rudder itself, it opens Settings and points to **Get token from BarentsWatch** instead. On Android
 Chrome, run it by typing its name in the address bar. Checked 2026-11-24: from that page the login
 server answers (BarentsWatch's real `invalid_client` for a made-up client).
 

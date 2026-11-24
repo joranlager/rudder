@@ -12,8 +12,15 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 /** Run the bookmarklet as if clicked on a page at `origin`, opened by `opener`. */
 function runBookmarklet(url, { origin = BW_ORIGIN, opener, fetchImpl }) {
   const listeners = new Set();
-  const banner = { style: {}, textContent: '' };
-  const document = { getElementById: () => (banner.added ? banner : null), createElement: () => banner, body: { appendChild: () => { banner.added = true; } } };
+  const events = [];
+  const timers = [];
+  let shown = null; // the banner on the page, if any
+  const el = () => {
+    const e = { style: {}, text: '', id: '', append: (...p) => { e.text = p.map((x) => (typeof x === 'string' ? x : x.textContent)).join(''); },
+      remove: () => { if (shown === e) shown = null; } };
+    return e;
+  };
+  const document = { getElementById: (id) => (shown?.id === id ? shown : null), createElement: el, body: { appendChild: (e) => { shown = e; } } };
   let closed = false;
   const g = {
     location: { origin },
@@ -21,14 +28,22 @@ function runBookmarklet(url, { origin = BW_ORIGIN, opener, fetchImpl }) {
     document,
     addEventListener: (t, f) => listeners.add(f),
     removeEventListener: (t, f) => listeners.delete(f),
+    dispatchEvent: (e) => events.push(e.type),
+    CustomEvent: class { constructor(type) { this.type = type; } },
     fetch: fetchImpl,
     close: () => { closed = true; },
-    setTimeout: (f) => f(),
+    setTimeout: (f, ms) => timers.push([f, ms]),
     URLSearchParams,
   };
   const src = decodeURIComponent(url.slice('javascript:'.length));
   new Function(...Object.keys(g), src)(...Object.values(g));
-  return { banner: () => banner.textContent, dispatch: (e) => [...listeners].forEach((f) => f(e)), isClosed: () => closed, listeners };
+  return {
+    banner: () => shown?.text ?? '',
+    clickBanner: () => shown?.onclick(),
+    runTimers: () => timers.splice(0).forEach(([f]) => f()),
+    timers, events,
+    dispatch: (e) => [...listeners].forEach((f) => f(e)), isClosed: () => closed, listeners,
+  };
 }
 
 test('the bookmarklet is one javascript: link naming only Rudder\'s origin', () => {
@@ -59,9 +74,27 @@ test('the bookmarklet asks Rudder for the client, gets the token and sends it ba
   const body = new URLSearchParams(request.init.body);
   assert.deepEqual(Object.fromEntries(body), { grant_type: 'client_credentials', client_id: 'me@x.no:rudder', client_secret: 's3cret', scope: 'ais' });
   assert.deepEqual(sent[1], [{ rudderBw: 1, result: JSON.stringify({ access_token: JWT }) }, RUDDER]);
-  assert.equal(run.isClosed(), true);
   assert.match(run.banner(), /done/);
+  run.runTimers();
+  assert.equal(run.isClosed(), true);
   assert.equal(run.listeners.size, 0);
+});
+
+test('clicked on Rudder itself, the bookmark tells Rudder instead of showing a banner', () => {
+  const here = runBookmarklet(bookmarkletUrl(RUDDER), { origin: RUDDER, opener: null });
+  assert.deepEqual(here.events, ['rudder-bookmark']);
+  assert.equal(here.banner(), '');
+});
+
+test('banners close on a click, and wrong-place ones by themselves', () => {
+  const elsewhere = runBookmarklet(bookmarkletUrl(RUDDER), { origin: 'https://example.com', opener: null });
+  assert.match(elsewhere.banner(), /BarentsWatch/);
+  assert.ok(elsewhere.timers[0][1] >= 5000, 'stays long enough to read');
+  elsewhere.runTimers();
+  assert.equal(elsewhere.banner(), '', 'gone after a while');
+  const notOpened = runBookmarklet(bookmarkletUrl(RUDDER), { opener: null });
+  notOpened.clickBanner();
+  assert.equal(notOpened.banner(), '', 'gone when clicked');
 });
 
 test('the bookmarklet explains itself when used in the wrong place', () => {

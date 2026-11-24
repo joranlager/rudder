@@ -262,5 +262,15 @@ export function createSettings(el, { ais, openPanel = () => {} }) {
 
   render();
   refreshStorage();
-  return { render, renew, bookmarkLogin, fromToken, device };
+  /** The bookmark was clicked on Rudder itself: point to the button that opens BarentsWatch. */
+  function bookmarkClickedHere() {
+    openPanel();
+    const c = loadCredentials();
+    say(accessKind(c) === 'client'
+      ? `The "${BOOKMARK_NAME}" bookmark works on BarentsWatch, not here. Tap Get token from BarentsWatch, then click the bookmark in the window that opens.`
+      : `The "${BOOKMARK_NAME}" bookmark is set up. Save your BarentsWatch client in step 1, then tap Get token from BarentsWatch and click the bookmark in the window that opens.`);
+    el.querySelector('[data-bwlogin]:not(:disabled)')?.focus();
+  }
+
+  return { render, renew, bookmarkLogin, bookmarkClickedHere, fromToken, device };
 }

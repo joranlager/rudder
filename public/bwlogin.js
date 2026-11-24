@@ -31,11 +31,16 @@ export const BOOKMARK_NAME = 'Rudder token';
 /** The bookmarklet for a copy of Rudder served from `rudderOrigin` (for example https://joranlager.github.io). */
 export function bookmarkletUrl(rudderOrigin) {
   const R = JSON.stringify(new URL(rudderOrigin).origin);
-  const src = `(()=>{const R=${R},o=window.opener,say=m=>{let b=document.getElementById('rudder-bw');if(!b){b=document.createElement('div');b.id='rudder-bw';
-b.style.cssText='position:fixed;z-index:2147483647;top:0;left:0;right:0;padding:14px 18px;background:#0b2236;color:#fff;font:16px/1.4 system-ui,sans-serif';
-document.body.appendChild(b)}b.textContent='Rudder token: '+m};
-if(!${JSON.stringify(BW_ORIGINS)}.includes(location.origin))return say('click this on BarentsWatch, in the window Rudder opened.');
-if(!o||o.closed)return say('open BarentsWatch from Rudder (Settings, Get token from BarentsWatch), then click this bookmark there.');
+  // say(): a banner at the top of the page (the login pages block alert()). Click it, or its ×, to
+  // close it; messages about using the bookmark in the wrong place also close by themselves.
+  const src = `(()=>{const R=${R},o=window.opener,say=(m,ms)=>{let b=document.getElementById('rudder-bw');if(b)b.remove();
+b=document.createElement('div');b.id='rudder-bw';b.title='Close';b.onclick=()=>b.remove();
+b.style.cssText='position:fixed;z-index:2147483647;top:0;left:0;right:0;padding:14px 48px 14px 18px;background:#0b2236;color:#fff;font:16px/1.4 system-ui,sans-serif;cursor:pointer';
+const x=document.createElement('span');x.textContent='×';x.style.cssText='position:absolute;right:18px;top:8px;font-size:26px';
+b.append('Rudder token: '+m,x);document.body.appendChild(b);if(ms)setTimeout(()=>b.remove(),ms)};
+if(location.origin===R){dispatchEvent(new CustomEvent('rudder-bookmark'));return}
+if(!${JSON.stringify(BW_ORIGINS)}.includes(location.origin))return say('click this on BarentsWatch, in the window Rudder opened.',8e3);
+if(!o||o.closed)return say('open BarentsWatch from Rudder (Settings, Get token from BarentsWatch), then click this bookmark there.',12e3);
 const send=m=>o.postMessage(Object.assign({rudderBw:1},m),R);
 say('asking BarentsWatch for a token…');
 const h=async e=>{if(e.origin!==R||e.source!==o||!e.data||!e.data.rudderCreds)return;removeEventListener('message',h);
