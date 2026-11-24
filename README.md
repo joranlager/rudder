@@ -57,6 +57,28 @@ Tapping a point shows, for that position:
 
 The search box finds places, lights, skerries and harbours in Kartverket's place-name register.
 
+## Land heights in 3D
+
+Under the layers button, **Land heights in 3D** drapes the chart over Kartverket's terrain model
+(hoydedata.no), with a light hillshade, as Rope does: the chart tilts to 50° when it is switched on
+from a flat view, and lies flat again when it is switched off. The choice is remembered. MapLibre
+draws 3D terrain from height tiles; no public service offers them for the Norwegian model, so each
+tile is made on demand from Kartverket's elevation service (WCS `wcs.hoyde-dtm-nhm-25833`, coverage
+`nhm_dtm_topo_25833`): a 128 x 128 GeoTIFF of heights is fetched, decoded, resampled to the map's
+projection and written as a "Terrarium" picture (`public/terrain.js`, `public/demprotocol.js`, both
+from Rope with their tests). Heights are drawn 1.5 times taller than true on the chart, and true from
+a ship's bridge. Sea is height 0, so the ships stay on the water (the ship layer allows for the
+ground height MapLibre lowers the world by when the middle of the view is on land).
+Code: `public/landheights.js`.
+
+**From the bridge.** MapLibre 4 stops drawing the ground a little below the horizon; from a bridge
+some 15 m up that is only about a kilometre. So the bridge view adds a far view
+(`public/farview.js`): drawn with three.js under everything else, it shows the land for 20 km
+around the ship (one 384 x 384 height grid, about 105 m between samples, from the same service,
+fetched again after 6 km) and the sea out to 40 km, with MapLibre's camera made to see 60 km. Up
+close MapLibre's own chart, terrain and ships draw over it as usual, and its ground is drawn nearer
+the true horizon while the view is on. The land is shown when the land heights are on; the sea always.
+
 ## Ships on the chart (AIS)
 
 Under the layers button, **Ships (AIS)** (once access is set up in Settings) shows live ship positions from Kystverket's AIS, served by

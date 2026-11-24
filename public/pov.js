@@ -57,7 +57,7 @@ export function bridgeLine(v, heading) {
  * The bridge view on `map`. `ais` (aismap.js) gives the newest report of a ship, where it is shown
  * now, and keeps its model drawn while the view is on. `onExit` is told when the view ends by itself.
  */
-export function createBridgeView(map, { ais, bar, onEnter = () => {}, onExit = () => {} }) {
+export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}, onExit = () => {} }) {
   let mmsi = null;
   let look = 0;
   let saved = null;
@@ -75,6 +75,7 @@ export function createBridgeView(map, { ais, bar, onEnter = () => {}, onExit = (
     const heading = at.heading ?? lastHeading;
     lastHeading = heading;
     const cam = bridgeCamera(at, heading, eyeHeight(v), look);
+    far?.update(at.lat, at.lon); // land and sea beyond what MapLibre draws (farview.js)
     const o = map.calculateCameraOptionsFromTo(
       new maplibregl.LngLat(...cam.from), cam.eye, new maplibregl.LngLat(...cam.to), 0,
     );
@@ -124,6 +125,7 @@ export function createBridgeView(map, { ais, bar, onEnter = () => {}, onExit = (
     bar.hidden = false;
     document.addEventListener('keydown', onKey);
     onEnter(v);
+    far?.start().then(() => map.triggerRepaint());
     frame = requestAnimationFrame(step);
   }
 
@@ -133,6 +135,7 @@ export function createBridgeView(map, { ais, bar, onEnter = () => {}, onExit = (
     frame = 0;
     mmsi = null;
     ais.setPov(null);
+    far?.stop();
     document.removeEventListener('keydown', onKey);
     document.body.classList.remove('bridge-view');
     bar.hidden = true;

@@ -163,7 +163,10 @@ export function createShipModels(map) {
         m.lastHeading = heading;
         m.root.rotation.y = Math.PI / 2 - (heading * Math.PI) / 180;
       }
-      const frame = new THREE.Matrix4().makeTranslation(o.x, o.y, o.z)
+      // With land heights on, MapLibre lowers the world by the ground height at the middle of the view
+      // (Transform.elevation); its custom layer matrix does not, so it is done here: ships stay on the sea.
+      const elevation = map.transform.elevation ?? 0;
+      const frame = new THREE.Matrix4().makeTranslation(o.x, o.y, -elevation * s)
         .scale(new THREE.Vector3(s, -s, s))
         .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
       camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix).multiply(frame);
