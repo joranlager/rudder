@@ -7,6 +7,7 @@
 // are told which one records). Old positions are dropped after the chosen number of days.
 
 import { toRecord, staticOf, sameStatic, shouldKeep, addPoll, pruneSessions } from './track.js';
+import { mergeSessions } from './trackfile.js';
 
 const STORE_KEY = 'rudder.recorder.v1';
 export const POLL_MS = 60_000;
@@ -104,6 +105,8 @@ export function createRecorder({ ais, storePromise, onChange = () => {} }) {
     get sessions() { return cfg.sessions; },
     /** Forget them (with the recorded positions). */
     clearSessions() { cfg.sessions = []; save(); },
+    /** Add stretches recorded elsewhere (an imported file). */
+    addSessions(list) { cfg.sessions = mergeSessions(cfg.sessions, list); save(); onChange(); },
     setKeepDays(d) { if (KEEP_DAYS.includes(d)) { cfg.keepDays = d; save(); lastPrune = 0; onChange(); } },
     pollNow: poll,
   };

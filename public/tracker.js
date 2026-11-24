@@ -4,12 +4,14 @@
 
 import { SPEEDS, TRACE_COLORS, parseAgo, formatSpan, clampToCoverage, coveredMs } from './track.js';
 import { KEEP_DAYS, POLL_MS } from './recorder.js';
+import { writeTracksFile, readTracksFile, exportName } from './trackfile.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const nf = new Intl.NumberFormat('en-GB');
 const when = (t) => (t ? new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—');
 const clock = (t) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const bytes = (n) => (n == null ? '—' : n > 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} kB`);
+const bytes = (n) => (n == null ? '—' : n > 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} kB` : `${n} bytes`);
+const plural = (n, one, many = `${one}s`) => `${nf.format(n)} ${n === 1 ? one : many}`;
 /** A time as the value of a datetime-local input (local time, to the minute). */
 const localInput = (t) => { const d = new Date(t - new Date(t).getTimezoneOffset() * 60e3); return d.toISOString().slice(0, 16); };
 
@@ -23,6 +25,53 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
   let atValue = '';
   let seekTimer = 0;
   let open = false;
+  let busy = false; // exporting or importing
+
+  async function exportFile() {
+    const s = await storePromise;
+    const st = await s.stats();
+    msg = { text: `Exporting ${nf.format(st.count)} positions…`, tone: '' };
+    busy = true;
+    render();
+    const blob = await writeTracksFile({ positions: s.batches(), ships: [...(await s.ships()).values()], sessions: recorder.sessions, count: st.count });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = exportName();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    msg = { text: `Exported ${plural(st.count, 'position')} of ${plural(st.ships, 'ship')} (${bytes(blob.size)}) as ${a.download}.`, tone: 'ok' };
+  }
+
+  async function importFile(file) {
+    const s = await storePromise;
+    const before = (await s.stats()).count;
+    busy = true;
+    msg = { text: `Reading ${file.name}…`, tone: '' };
+    render();
+    let read = 0;
+    const r = await readTracksFile(file, {
+      onShips: (list) => s.putShips(list),
+      onPositions: async (list) => {
+        await s.add(list);
+        read += list.length;
+        msg = { text: `Importing… ${nf.format(read)} positions`, tone: '' };
+        const line = el.querySelector('.set-msg');
+        if (line) line.textContent = msg.text;
+      },
+    });
+    recorder.addSessions(r.header.sessions ?? []);
+    const after = (await s.stats()).count;
+    const added = after - before;
+    const already = r.positions - added;
+    msg = {
+      text: `Imported ${plural(added, 'new position')} of ${plural(r.ships, 'ship')} from ${file.name}`
+        + (already > 0 ? ` (${nf.format(already)} were already here)` : '')
+        + (r.bad ? `; ${nf.format(r.bad)} unreadable lines skipped` : '') + '.',
+      tone: 'ok',
+    };
+  }
 
   async function refreshStats() {
     try {
@@ -52,7 +101,8 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
     const line = recordingLine();
     const sessions = recorder.sessions;
     const recFrom = sessions[0]?.from ?? null, recTo = sessions.at(-1)?.to ?? null;
-    const span = sessions.length ? formatSpan(coveredMs(sessions)) : '—';
+    // Without notes of when it ran (positions imported from an older file), the positions' own times.
+    const span = sessions.length ? formatSpan(coveredMs(sessions)) : stats.first && stats.last ? formatSpan(stats.last - stats.first) : '—';
     const pb = playback;
     const sliderMin = pb.active ? pb.floor : recFrom ?? stats.first ?? 0, sliderMax = (pb.active ? pb.end : stats.last) ?? 0;
     if (!atValue && recTo) atValue = localInput(Math.max(recFrom, recTo - 3600e3));
@@ -71,10 +121,15 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
           <div><dt>Under way now</dt><dd>${recorder.stats.lastPoll ? nf.format(recorder.stats.moving) : '—'}</dd></div>
           <div><dt>Storage used</dt><dd>${bytes(stats.usage)}</dd></div>
         </dl>
-        <p class="fine">${sessions.length ? `Recorded from ${esc(when(recFrom))}<br>to ${esc(when(recTo))}${sessions.length > 1 ? ` (${sessions.length} stretches, with pauses while Rudder was closed)` : ''}` : 'Nothing recorded yet.'}</p>
+        <p class="fine">${sessions.length ? `Recorded from ${esc(when(recFrom))}<br>to ${esc(when(recTo))}${sessions.length > 1 ? ` (${sessions.length} stretches, with pauses while Rudder was closed)` : ''}` : stats.count ? `Positions from ${esc(when(stats.first))}<br>to ${esc(when(stats.last))}` : 'Nothing recorded yet.'}</p>
         <div class="tk-row">
           <label>Keep for <select data-rec="keep">${KEEP_DAYS.map((d) => `<option value="${d}" ${d === recorder.keepDays ? 'selected' : ''}>${d} day${d > 1 ? 's' : ''}</option>`).join('')}</select></label>
           <button type="button" class="set-btn danger" data-rec="clear" ${stats.count ? '' : 'disabled'}>Clear recordings</button>
+        </div>
+        <div class="set-buttons tk-files">
+          <button type="button" class="set-btn" data-rec="export" ${stats.count && !busy ? '' : 'disabled'} title="Save everything recorded as a file">Export recordings</button>
+          <button type="button" class="set-btn" data-rec="import" ${busy ? 'disabled' : ''} title="Add positions from a Rudder tracks file">Import recordings…</button>
+          <input type="file" data-rec="file" accept=".gz,.ndjson,.json,application/gzip,application/x-ndjson" hidden>
         </div>
       </section>
       <section class="set-section">
@@ -129,6 +184,14 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
 
   el.addEventListener('change', async (e) => {
     const t = e.target;
+    if (t.dataset.rec === 'file') {
+      const file = t.files?.[0];
+      t.value = '';
+      if (!file) return;
+      try { await importFile(file); } catch (err) { msg = { text: `Import failed: ${err.message}`, tone: 'err' }; } finally { busy = false; }
+      await refreshStats();
+      return;
+    }
     if (t.dataset.rec === 'on') { recorder.setOn(t.checked); refreshStats(); }
     else if (t.dataset.rec === 'keep') recorder.setKeepDays(Number(t.value));
     else if (t.name === 'tk-mode') { mode = t.value; render(); }
@@ -174,6 +237,8 @@ export function createTracker(el, { recorder, playback, liveTraces, storePromise
       else if (act === 'play') playback.play();
       else if (act === 'pause') playback.pause();
       else if (act === 'live') playback.stop();
+      else if (b.dataset.rec === 'export') { try { await exportFile(); } finally { busy = false; } await refreshStats(); return; }
+      else if (b.dataset.rec === 'import') { el.querySelector('[data-rec="file"]').click(); return; }
       else if (b.dataset.rec === 'clear') {
         if (!confirm('Delete every recorded position and ship from this device? This cannot be undone.')) return;
         const s = await storePromise;

@@ -1,13 +1,17 @@
 // Recorded AIS tracks, kept on this device in IndexedDB (the browser's database for Rudder).
 //
-//   positions: { m, t, la, lo, s?, c?, h? } (track.js toRecord), indexed by time and by ship + time
+//   positions: { m, t, la, lo, s?, c?, h? } (track.js toRecord), one per ship and time (key [m, t]),
+//              indexed by time; the same position stored twice (an import of a file already
+//              imported, say) is kept once
 //   ships:     the ship's description (name, type, size), one per MMSI
+//
+// Version 1 numbered the positions instead; opening it as version 2 moves them across once.
 //
 // Nothing leaves the device. The browser may clear it to free space unless it is asked to keep
 // Rudder's data (Settings does that), and it is gone with "clear site data".
 
 const DB = 'rudder-tracks';
-const VERSION = 1;
+const VERSION = 2;
 
 const req = (r) => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
 const done = (tx) => new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); });
@@ -15,12 +19,24 @@ const done = (tx) => new Promise((resolve, reject) => { tx.oncomplete = () => re
 export async function openTrackStore(idb = globalThis.indexedDB) {
   if (!idb) throw new Error('This browser cannot store data (no IndexedDB).');
   const open = idb.open(DB, VERSION);
-  open.onupgradeneeded = () => {
+  open.onupgradeneeded = (e) => {
     const db = open.result;
-    const pos = db.createObjectStore('positions', { autoIncrement: true });
+    if (!db.objectStoreNames.contains('ships')) db.createObjectStore('ships', { keyPath: 'm' });
+    // Version 1's positions (numbered) are renamed, copied into the new store by [m, t], then dropped.
+    let old = null;
+    if (e.oldVersion >= 1 && db.objectStoreNames.contains('positions')) {
+      old = open.transaction.objectStore('positions');
+      old.name = 'positions-v1';
+    }
+    const pos = db.createObjectStore('positions', { keyPath: ['m', 't'] });
     pos.createIndex('t', 't');
-    pos.createIndex('mt', ['m', 't']);
-    db.createObjectStore('ships', { keyPath: 'm' });
+    if (old) {
+      const cur = old.openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (c) { pos.put(c.value); c.continue(); } else db.deleteObjectStore('positions-v1');
+      };
+    }
   };
   const db = await req(open);
 
@@ -31,13 +47,27 @@ export async function openTrackStore(idb = globalThis.indexedDB) {
   }
 
   return {
-    /** Add records (one transaction). */
+    /** Add records (one transaction); a position already stored for that ship and time is replaced. */
     async add(records) {
       if (!records.length) return;
       const tx = db.transaction('positions', 'readwrite');
       const s = tx.objectStore('positions');
-      for (const r of records) s.add(r);
+      for (const r of records) s.put(r);
       await done(tx);
+    },
+    /** Every position, a batch at a time, in ship and time order (for export). */
+    async *batches(size = 20000) {
+      let after = null;
+      for (;;) {
+        const tx = db.transaction('positions');
+        const range = after ? IDBKeyRange.lowerBound(after, true) : null;
+        const list = await req(tx.objectStore('positions').getAll(range, size));
+        if (!list.length) return;
+        yield list;
+        const last = list.at(-1);
+        after = [last.m, last.t];
+        if (list.length < size) return;
+      }
     },
     /** Store ship descriptions (one transaction). */
     async putShips(ships) {
@@ -51,7 +81,7 @@ export async function openTrackStore(idb = globalThis.indexedDB) {
     /** One ship's records with time in [t0, t1], oldest first. */
     async ofShip(m, t0, t1) {
       const tx = db.transaction('positions');
-      return req(tx.objectStore('positions').index('mt').getAll(IDBKeyRange.bound([m, t0], [m, t1])));
+      return req(tx.objectStore('positions').getAll(IDBKeyRange.bound([m, t0], [m, t1])));
     },
     /** All ship descriptions as a Map by MMSI. */
     async ships() {
