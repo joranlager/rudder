@@ -2,6 +2,7 @@ import { BASEMAPS, OVERLAYS, buildStyle, mergeSettings } from './layers.js';
 import { formatPosition, compassPoint, msToKnots } from './nav.js';
 import { createAisLayer } from './aismap.js';
 import { createBridgeView } from './pov.js';
+import { createHelm } from './helm.js';
 import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
 import { createFarView } from './farview.js';
 import { DEM_MIN_ZOOM } from './terrain.js';
@@ -58,12 +59,22 @@ const land = createLandHeights(map, { basemapIds: BASEMAPS.map((b) => b.id), onE
 if (settings.terrain) land.setOn(true);
 // View from the bridge of a ship (pov.js), from its card.
 const far = createFarView(map);
+let helm = null; // the helm of a ship, once taken (helm.js); created below, after the bridge view
 const bridge = createBridgeView(map, {
   ais,
   bar: $('#bridge-bar'),
   far,
+  bottomInset: () => (helm?.active ? $('#helm').offsetHeight : 0),
   onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); land.setTrueScale(true); far.setLand(land.on); },
-  onExit: (message) => { land.setTrueScale(false); if (message) alert(message); },
+  onExit: (message) => { land.setTrueScale(false); if (message && !helm?.active) alert(message); },
+});
+// Taking the helm of a ship: the bridge console (helm.js).
+helm = createHelm(map, { ais, bridge, el: $('#helm'), onStatus: (m) => console.info(m) });
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-bridge-helm]') && bridge.mmsi !== null) {
+    const v = ais.vessel(bridge.mmsi);
+    if (v) helm.take(v);
+  }
 });
 // Settings: BarentsWatch access, kept on this device.
 const settingsPanel = createSettings($('#settings-body'), { ais, openPanel: () => togglePanel('settings', true) });
@@ -331,6 +342,7 @@ function showVessel(v) {
     <dl class="rows">${rows.map(([k, x]) => `<dt>${k}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
     <div class="info-actions">
       <button type="button" class="info-btn primary" data-bridge="${v.mmsi}" ${bridgeOk(v) ? '' : 'disabled title="Needs a size and heading from AIS"'}>View from the bridge</button>
+      <button type="button" class="info-btn" data-helm-take="${v.mmsi}" ${bridgeOk(v) ? '' : 'disabled title="Needs a size and heading from AIS"'}>Take the helm</button>
       <button type="button" class="info-btn" data-open3d="${v.mmsi}">Open 3D model</button>
       <button type="button" class="info-btn" data-sea-here="${v.mmsi}">Sea and weather here</button>
     </div>
@@ -340,9 +352,10 @@ function showVessel(v) {
 $('#info-body').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
-  const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere ?? b.dataset.bridge);
+  const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere ?? b.dataset.bridge ?? b.dataset.helmTake);
   if (!v) return;
-  if (b.dataset.bridge) bridge.enter(v);
+  if (b.dataset.helmTake) helm.take(v);
+  else if (b.dataset.bridge) bridge.enter(v);
   else if (b.dataset.open3d) { await openShips(); ships?.showAisVessel(v); }
   else showPoint({ lat: v.latitude, lng: v.longitude });
 });
@@ -454,4 +467,4 @@ if (handoff) {
 }
 
 // The simulator (vessel, controls) builds on this map; expose it for development in the console.
-window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge };
+window.rudder = { map, settings, showPoint, showVessel, openShips, closeShips, ais, bridge, helm };

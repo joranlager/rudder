@@ -94,6 +94,7 @@ export function createAisLayer(map) {
   const models = createShipModels(map);
   let modelled = []; // MMSIs drawn as models: their arrows and outlines step aside
   let pov = null; // MMSI of the ship whose bridge the view is from (pov.js): always modelled
+  let controlled = null; // MMSI of the ship the user has the helm of (helm.js): its AIS reports are ignored
 
   function updateModels() {
     // From the bridge the chart is tilted far over, so the scale bar says little: models stay on.
@@ -253,7 +254,7 @@ export function createAisLayer(map) {
       if (!res.ok) throw new Error(`AIS request failed (HTTP ${res.status}).`);
       const list = await res.json();
       if (mySeq !== seq) return;
-      mergeVessels(vessels, Array.isArray(list) ? list : []);
+      mergeVessels(vessels, (Array.isArray(list) ? list : []).filter((v) => v?.mmsi !== controlled));
       pruneVessels(vessels);
       if (needArea) fetched = box;
       lastFetch = started;
@@ -441,6 +442,24 @@ export function createAisLayer(map) {
       setOn(true);
       draw();
       return vessels.get(v.mmsi) ?? v;
+    },
+    /**
+     * The user has the helm of this ship (or none): its real AIS reports are ignored and its model is
+     * drawn where `where()` says each frame. Handing it back drops the simulated report, so the next
+     * real one puts the ship back where it really is.
+     */
+    setControlled(mmsi, where = null) {
+      const was = controlled;
+      controlled = mmsi === null ? null : Number(mmsi);
+      models.setOverride(controlled, where);
+      if (was !== null && controlled === null) { lastFetch = 0; fetchShips({ full: true }); } // its simulated report gives way to the next real one
+      updateModels();
+    },
+    /** The simulation's report for the ship under command: the chart symbols, card and search follow it. */
+    setReport(v) {
+      if (v.mmsi !== controlled) return;
+      vessels.set(v.mmsi, v);
+      draw();
     },
     /** Where a ship is drawn now: moved on from its last report, as its 3D model is. */
     shownShip: (v) => models.shown(v),

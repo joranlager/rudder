@@ -102,6 +102,7 @@ export function createShipModels(map) {
   const motion = createMotion();
   let frameTimer = 0;
   let own = null; // MMSI of the ship the view is from: its superstructure is hidden
+  let override = null; // { mmsi, where } for the ship under the user's command (helm.js)
 
   /** Show or hide a model's superstructure (hidden on the ship the view is from). */
   function dress(mmsi) {
@@ -153,7 +154,9 @@ export function createShipModels(map) {
       const now = Date.now();
       let moving = false;
       for (const m of models.values()) {
-        const at = motion.show(m.v, now);
+        // The ship under command is where the simulation says, every frame; others by dead reckoning.
+        const ov = override && m.v.mmsi === override.mmsi ? override.where() : null;
+        const at = ov ? { ...ov, moving: true } : motion.show(m.v, now);
         m.shown = at;
         moving ||= at.moving;
         const merc = maplibregl.MercatorCoordinate.fromLngLat([at.lon, at.lat], 0);
@@ -276,7 +279,14 @@ export function createShipModels(map) {
       map.triggerRepaint();
     },
     /** Where ship `v` is drawn now (its model's position, or dead reckoning from `v` when it has none). */
+    /** Draw this ship where `where()` says (the simulation), or stop doing so (null). */
+    setOverride(mmsi, where) {
+      if (override && override.mmsi !== mmsi) motion.forget(override.mmsi); // its next real report shows at once
+      override = mmsi === null || !where ? null : { mmsi, where };
+      map.triggerRepaint();
+    },
     shown(v) {
+      if (override && v.mmsi === override.mmsi) return { ...override.where(), moving: true };
       const m = models.get(v.mmsi);
       const at = motion.show(m?.v ?? v, Date.now());
       return { ...at, heading: at.heading ?? m?.lastHeading ?? m?.place?.heading ?? null };

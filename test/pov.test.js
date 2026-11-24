@@ -52,3 +52,16 @@ test('from its own bridge a ship shows its hull, deck and cargo, not the deckhou
   for (const n of ['deckhouse', 'windows', 'wheelhouse', 'funnel', 'mast', 'radar', '', undefined]) assert.equal(hiddenFromBridge(n), true, n);
   for (const n of ['hull', 'deck', 'bulbous_bow', 'transom', 'containers', 'hatch_cover', 'crane']) assert.equal(hiddenFromBridge(n), false, n);
 });
+
+test('dragging looks around and up or down, within limits; the wheel zooms within limits', async () => {
+  const { dragLook, zoomFov, PITCH_RANGE, FOV_RANGE } = await import('../public/pov.js');
+  const right = dragLook({ look: 0, pitch: 82 }, 100, 0);
+  assert.equal(right.look, 20, 'drag right turns the view to the right');
+  assert.equal(dragLook({ look: 170, pitch: 82 }, 100, 0).look, -170, 'all the way round');
+  assert.ok(dragLook({ look: 0, pitch: 82 }, 0, 100).pitch < 82, 'drag down looks down');
+  assert.equal(dragLook({ look: 0, pitch: 82 }, 0, -1000).pitch, PITCH_RANGE[1]);
+  assert.equal(dragLook({ look: 0, pitch: 82 }, 0, 10000).pitch, PITCH_RANGE[0]);
+  assert.ok(zoomFov(36.87, 2) < 20);
+  assert.equal(zoomFov(36.87, 100), FOV_RANGE[0]);
+  assert.equal(zoomFov(36.87, 0.01), FOV_RANGE[1]);
+});

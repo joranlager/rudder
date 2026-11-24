@@ -14,6 +14,10 @@ export const LOOK_PITCH = 82; // degrees from straight down: the horizon sits in
 export const POV_MAX_PITCH = 85; // MapLibre's limit
 export const POV_MAX_ZOOM = 22;
 export const LOOKS = { port: -90, ahead: 0, starboard: 90, astern: 180 };
+export const PITCH_RANGE = [55, POV_MAX_PITCH]; // looking down at the foredeck .. at the horizon
+export const FOV_RANGE = [10, 60]; // degrees: zoomed in (binoculars) .. wide
+export const DEFAULT_FOV = 36.87; // MapLibre's
+const DRAG_DEG_PER_PX = 0.2;
 const TIER_M = 2.7; // a superstructure deck, as the ship builder draws them
 const EYE_M = 1.7; // eye above the bridge deck
 
@@ -38,10 +42,22 @@ export function ahead([lon, lat], bearing, m) {
  * Where the eye is and what it looks at: the ship's shown position at `eye` metres, looking along
  * heading + `look` at the sea, far enough ahead that the view is pitched LOOK_PITCH from straight down.
  */
-export function bridgeCamera(at, heading, eye, look = 0) {
+export function bridgeCamera(at, heading, eye, look = 0, pitch = LOOK_PITCH) {
   const bearing = (((heading + look) % 360) + 360) % 360;
   const from = [at.lon, at.lat];
-  return { from, to: ahead(from, bearing, eye * Math.tan(rad(LOOK_PITCH))), eye, bearing };
+  return { from, to: ahead(from, bearing, eye * Math.tan(rad(pitch))), eye, bearing };
+}
+
+/** Looking around by dragging: right turns the view to the right, up looks up (towards the horizon). */
+export function dragLook({ look, pitch }, dx, dy) {
+  const [lo, hi] = PITCH_RANGE;
+  return { look: (((look + dx * DRAG_DEG_PER_PX) % 360) + 540) % 360 - 180, pitch: Math.min(hi, Math.max(lo, pitch - dy * DRAG_DEG_PER_PX * 0.6)) };
+}
+
+/** Zooming: a narrower field of view by a factor (> 1 zooms in), within FOV_RANGE. */
+export function zoomFov(fov, factor) {
+  const [lo, hi] = FOV_RANGE;
+  return Math.min(hi, Math.max(lo, fov / factor));
 }
 
 /** Speed and heading as the bridge bar shows them. */
@@ -57,9 +73,11 @@ export function bridgeLine(v, heading) {
  * The bridge view on `map`. `ais` (aismap.js) gives the newest report of a ship, where it is shown
  * now, and keeps its model drawn while the view is on. `onExit` is told when the view ends by itself.
  */
-export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}, onExit = () => {} }) {
+export function createBridgeView(map, { ais, bar, far = null, bottomInset = () => 0, onEnter = () => {}, onExit = () => {} }) {
   let mmsi = null;
   let look = 0;
+  let pitch = LOOK_PITCH;
+  const pointers = new Map(); // pointerId -> { x, y } while dragging or pinching
   let saved = null;
   let frame = 0;
   let lastText = '';
@@ -74,12 +92,13 @@ export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}
     const at = ais.shownShip(v);
     const heading = at.heading ?? lastHeading;
     lastHeading = heading;
-    const cam = bridgeCamera(at, heading, eyeHeight(v), look);
+    const cam = bridgeCamera(at, heading, eyeHeight(v), look, pitch);
     far?.update(at.lat, at.lon); // land and sea beyond what MapLibre draws (farview.js)
     const o = map.calculateCameraOptionsFromTo(
       new maplibregl.LngLat(...cam.from), cam.eye, new maplibregl.LngLat(...cam.to), 0,
     );
-    map.jumpTo(o);
+    // Whatever covers the bottom of the screen (the helm console) is left out: the view is centred above it.
+    map.jumpTo({ ...o, padding: { top: 0, left: 0, right: 0, bottom: bottomInset() } });
     const text = `${(v.name || '').trim() || `MMSI ${v.mmsi}`}|${bridgeLine(v, heading)}`;
     if (text !== lastText) {
       lastText = text;
@@ -89,6 +108,47 @@ export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}
     }
     frame = requestAnimationFrame(step);
   }
+
+  // ---------- looking around: drag (mouse or one finger), zoom (wheel or pinch) ----------
+  const surface = map.getCanvasContainer();
+  function onDown(e) {
+    if (mmsi === null || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    surface.setPointerCapture?.(e.pointerId);
+    surface.classList.add('looking');
+  }
+  function onMove(e) {
+    const p = pointers.get(e.pointerId);
+    if (mmsi === null || !p) return;
+    if (pointers.size === 2) {
+      // Pinch: the change in distance between the two fingers zooms.
+      const [a, b] = [...pointers.values()];
+      const before = Math.hypot(a.x - b.x, a.y - b.y);
+      p.x = e.clientX; p.y = e.clientY;
+      const [a2, b2] = [...pointers.values()];
+      const after = Math.hypot(a2.x - b2.x, a2.y - b2.y);
+      if (before > 10) map.transform.fov = zoomFov(map.transform.fov, after / before);
+      return;
+    }
+    const next = dragLook({ look, pitch }, e.clientX - p.x, e.clientY - p.y);
+    p.x = e.clientX; p.y = e.clientY;
+    pitch = next.pitch;
+    setLook(next.look);
+  }
+  function onUp(e) {
+    pointers.delete(e.pointerId);
+    if (!pointers.size) surface.classList.remove('looking');
+  }
+  function onWheel(e) {
+    if (mmsi === null) return;
+    e.preventDefault();
+    map.transform.fov = zoomFov(map.transform.fov, Math.exp(-e.deltaY * 0.0015));
+  }
+  surface.addEventListener('pointerdown', onDown);
+  surface.addEventListener('pointermove', onMove);
+  surface.addEventListener('pointerup', onUp);
+  surface.addEventListener('pointercancel', onUp);
+  surface.addEventListener('wheel', onWheel, { passive: false });
 
   function setLook(name) {
     look = typeof name === 'number' ? name : LOOKS[name] ?? 0;
@@ -120,6 +180,7 @@ export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}
     lastText = '';
     lastHeading = v.trueHeading < 360 ? v.trueHeading : v.courseOverGround < 360 ? v.courseOverGround : 0;
     setLook('ahead');
+    pitch = LOOK_PITCH;
     ais.setPov(mmsi);
     document.body.classList.add('bridge-view');
     bar.hidden = false;
@@ -139,9 +200,12 @@ export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}
     document.removeEventListener('keydown', onKey);
     document.body.classList.remove('bridge-view');
     bar.hidden = true;
+    pointers.clear();
+    surface.classList.remove('looking');
+    map.transform.fov = DEFAULT_FOV;
     map.setMaxZoom(saved.maxZoom);
     map.setMaxPitch(saved.maxPitch);
-    map.jumpTo({ center: saved.center, zoom: Math.min(saved.zoom, saved.maxZoom), pitch: Math.min(saved.pitch, saved.maxPitch), bearing: saved.bearing });
+    map.jumpTo({ padding: { top: 0, left: 0, right: 0, bottom: 0 }, center: saved.center, zoom: Math.min(saved.zoom, saved.maxZoom), pitch: Math.min(saved.pitch, saved.maxPitch), bearing: saved.bearing });
     for (const h of saved.handlers) map[h].enable();
     saved = null;
     onExit(message);
@@ -150,7 +214,7 @@ export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.dataset.look) setLook(b.dataset.look);
+    if (b.dataset.look) { setLook(b.dataset.look); pitch = LOOK_PITCH; map.transform.fov = DEFAULT_FOV; }
     else if (b.hasAttribute('data-bridge-exit')) exit();
   });
 

@@ -166,7 +166,8 @@ export function mergeVessels(byMmsi, batch) {
   for (const v of batch) {
     if (!v?.mmsi || !Number.isFinite(v.latitude) || !Number.isFinite(v.longitude)) continue;
     const old = byMmsi.get(v.mmsi);
-    if (!old || Date.parse(v.msgtime) >= Date.parse(old.msgtime)) byMmsi.set(v.mmsi, { ...old, ...v });
+    // A simulated report (the user had the helm) gives way to the first real one, however old.
+    if (!old || old.simulated || Date.parse(v.msgtime) >= Date.parse(old.msgtime)) byMmsi.set(v.mmsi, { ...old, ...v, simulated: false });
   }
   return byMmsi;
 }
