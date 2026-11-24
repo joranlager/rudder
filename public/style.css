@@ -320,3 +320,5 @@ body.helm-on #map { bottom: var(--helm-room, 0px); }
 .tk-show { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
 .tk-card { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; padding-top: 8px; border-top: 1px solid var(--line); }
 .tk-card-label { font-weight: 600; }
+.tk-card { flex-wrap: wrap; }
+.tk-traces li { grid-template-columns: auto 1fr auto auto auto; }

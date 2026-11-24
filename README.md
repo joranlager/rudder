@@ -97,9 +97,15 @@ more than 30 minutes waits at its last place for 15 minutes (two hours if it was
 the live chart) and is then gone until it reports again. The 3D ships, the bridge view and tapping work as with live ships. The slider moves to any
 point in the recording; Pause, Play and **Back to live** do what they say (`public/playback.js`).
 
-**Traces.** During playback, tap a ship and **Give it a trace**: a coloured line of where it has
-been since playback began, growing along the same smooth path as it sails. Each trace's colour can
-be changed and the trace shown or hidden, in the ship's card or under Traces in the panel.
+**Traces.** Tap a ship and **Track this ship** (live) or **Give it a trace** (in playback): a
+coloured line of where it sails, growing as it goes. Live, the line follows the ship where it is
+drawn (between reports by dead reckoning, as the 3D ships), sampled every second; in playback it
+follows the same smooth path as the ship. Each trace's colour can be changed and the line shown or
+hidden, in the ship's card or under Traces in the panel; **Clear trace** empties the line and starts
+it again from where the ship is now (recorded positions are not touched), and **Stop** ends the
+trace. The ships tracked live, their colours and whether each line is shown are remembered on the
+device, so tracking goes on after a reload; if positions are being recorded, the line is rebuilt
+from the recording then (`public/livetraces.js`).
 
 ## Taking the helm
 
