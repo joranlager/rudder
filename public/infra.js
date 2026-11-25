@@ -68,7 +68,7 @@ export function infraLayers() {
     // The bridge's own outline (man_made=bridge) on the ground: the deck's shadow on the water.
     { id: `${PREFIX}bridge-shadow`, type: 'fill', source: SOURCE, 'source-layer': 'transportation', minzoom: BRIDGE_MIN_ZOOM,
       filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['==', ['get', 'class'], 'bridge']],
-      paint: { 'fill-color': '#0b1a24', 'fill-opacity': 0.22 } },
+      paint: { 'fill-color': '#0b1a24', 'fill-opacity': 0.1 } },
     { id: `${PREFIX}ferry`, type: 'line', source: SOURCE, 'source-layer': 'transportation', minzoom: 7,
       filter: ['==', ['get', 'class'], 'ferry'],
       paint: { 'line-color': '#3c6fb4', 'line-width': 1.2, 'line-dasharray': [3, 2], 'line-opacity': 0.8 } },

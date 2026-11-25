@@ -203,14 +203,17 @@ the land from OpenStreetMap, over any background and under the ships (`public/in
   how many pylons: a bridge with one, like Grenlandsbrua, still gets two); an arch bridge an arch
   under its main span; others piers at the main span's ends and along the approaches. Breviksbrua
   (suspension, 676 m, main span 272 m) comes out with its deck at 48.7 m and its towers at 81 m.
-  NVDB is asked for the map in cells of about 1 km, each once a visit.
+  The deck's line runs along the road over the bridge (the outline gives its direction and ends).
+  Every part stands on the ground under it: the ground's height along the bridge (41 points, from
+  Kartverket's terrain model, `ws.geonorge.no/hoydedata`, 0 on the sea) is taken off, so a bridge over
+  a street on a hill is as tall as it really is above the street, with or without land heights on.
+  NVDB is asked for the map in cells of about 1 km, each once a visit; the ground once per bridge.
 - other bridges (railways, private roads, and where NVDB has no heights) from OpenStreetMap: a deck
   that rises from its ends and stands over the water, on piers, with two towers on long spans, and
   its outline on the water as a shadow. OpenStreetMap does not give a bridge's height, so it is
   estimated from its length (about 3 m + 2.6 % of the length, at most 70 m). A bridge cut into
   several tiles is put together by its OpenStreetMap id, so it is built as one.
-- With land heights on, MapLibre stands extruded shapes on the ground, so a deck over a valley (not
-  over the sea) is drawn that much too high.
+- Towers get a crossbeam at the top (and under the deck on suspension bridges), as portal towers have.
 
 Switching it on tilts the chart to show the heights. Best on the Satellite background with land
 heights on.

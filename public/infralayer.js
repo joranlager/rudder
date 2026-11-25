@@ -4,7 +4,20 @@
 
 import { styleReady, whenStyleReady } from './mapready.js';
 import { TILEJSON, ATTRIBUTION, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, PREFIX, infraLayers, buildBridges } from './infra.js';
-import { bridgesUrl, roadsUrl, bridgeFromNvdb, roadsFromNvdb, buildNvdbBridge, onBridge, CLIENT, ATTRIBUTION as NVDB_ATTRIBUTION } from './nvdbbridges.js';
+import { bridgesUrl, roadsUrl, bridgeFromNvdb, roadsFromNvdb, buildNvdbBridge, onBridge, groundPoints, parseGround, CLIENT, ATTRIBUTION as NVDB_ATTRIBUTION } from './nvdbbridges.js';
+import { seabedUrl } from './contact.js';
+
+// The ground under each NVDB bridge (Kartverket's terrain model), asked once per bridge.
+const grounds = new Map(); // bridge id -> Promise<number[] | null>
+function groundOf(id, points) {
+  if (!grounds.has(id)) {
+    grounds.set(id, fetch(seabedUrl(points))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`heights ${r.status}`))))
+      .then((j) => { const g = parseGround(j); return g.length === points.length ? g : null; })
+      .catch((e) => { console.warn('ground under bridge', id, e.message); grounds.delete(id); return null; }));
+  }
+  return grounds.get(id);
+}
 
 // NVDB's bridges and roads are asked for in cells of the map (about 1 x 1 km), each once a visit.
 const CELL_LON = 0.02, CELL_LAT = 0.01, MAX_CELLS = 24;
@@ -34,10 +47,15 @@ async function nvdbBridges(map) {
   const byId = new Map(), roads = [];
   for (const g of got) { for (const br of g.bridges) byId.set(br.id, br); roads.push(...g.roads); }
   const built = [], parts = [];
-  for (const br of byId.values()) {
-    const f = buildNvdbBridge(br, roads);
+  await Promise.all([...byId.values()].map(async (br) => {
+    const pts = groundPoints(br, roads);
+    if (!pts) return;
+    // Built on the ground under it: without, a bridge over a street on a hill would stand a hill too high.
+    const ground = await groundOf(br.id, pts);
+    if (!ground) return; // OpenStreetMap's estimate stands in for it
+    const f = buildNvdbBridge(br, roads, ground.map((g) => g ?? 0));
     if (f.length) { built.push(br); parts.push(...f); }
-  }
+  }));
   return { built, parts };
 }
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  bridgesUrl, roadsUrl, parseWkt, bridgeKind, bridgeFromNvdb, roadsFromNvdb, deckProfile, heightAt, buildNvdbBridge, onBridge, inside,
+  bridgesUrl, roadsUrl, parseWkt, bridgeKind, bridgeFromNvdb, roadsFromNvdb, deckProfile, heightAt, buildNvdbBridge, onBridge, inside, groundPoints, parseGround,
 } from '../public/nvdbbridges.js';
 import { toLonLat } from '../public/infra.js';
 
@@ -67,11 +67,13 @@ test("a suspension bridge: towers at the main span's ends, cables, no piers unde
   const b = bridgeFromNvdb(nvdbBridge());
   const parts = buildNvdbBridge(b, roadsFromNvdb(roads));
   const of = (k) => parts.filter((f) => f.properties.part === k);
-  assert.equal(of('tower').length, 4, 'two towers of two legs');
+  const legs = of('tower').filter((f) => f.properties.base === 0);
+  assert.equal(legs.length, 4, 'two towers of two legs');
+  assert.ok(of('tower').length > 4, 'and crossbeams');
   assert.ok(of('cable').length > 100);
   const deckTop = Math.max(...of('deck').map((f) => f.properties.top));
   assert.ok(deckTop > 47 && deckTop < 50, `deck ${deckTop}`);
-  const towerTop = of('tower')[0].properties.top;
+  const towerTop = legs[0].properties.top;
   assert.ok(towerTop > deckTop + 25, `towers ${towerTop}`);
   // no pier within the main span (centred where the deck is highest: 165..435 m)
   const xOf = (f) => { const c = f.geometry.coordinates[0][0]; return (c[0] - o[0]) * 111320 * Math.cos((o[1] * Math.PI) / 180); };
@@ -82,7 +84,7 @@ test("a suspension bridge: towers at the main span's ends, cables, no piers unde
 test('other kinds: pylons and stays, an arch, piers', () => {
   const r = roadsFromNvdb(roads);
   const cs = buildNvdbBridge(bridgeFromNvdb(nvdbBridge('Skråstagbru (752)', 300)), r);
-  assert.equal(cs.filter((f) => f.properties.part === 'tower').length, 4);
+  assert.equal(cs.filter((f) => f.properties.part === 'tower' && f.properties.base === 0).length, 4);
   assert.ok(cs.filter((f) => f.properties.part === 'cable').length > 50);
   const arch = buildNvdbBridge(bridgeFromNvdb(nvdbBridge('Bue/hvelv (5)', 200)), r);
   assert.ok(arch.some((f) => f.properties.part === 'arch'));
@@ -96,4 +98,33 @@ test('OpenStreetMap pieces on an NVDB bridge are known, others not', () => {
   assert.equal(onBridge(P(300, 2), [b]), true);
   assert.equal(onBridge(P(300, 60), [b]), false);
   assert.equal(inside([1, 1], [[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]), true);
+});
+
+test('parts stand on the ground under them: a bridge over a street on a hill is not a hill too tall', () => {
+  const b = bridgeFromNvdb(nvdbBridge('Platebru (210)', 20));
+  // road deck 35 m above the sea, over ground at 30 m: the bridge is 5 m tall there
+  const r = roadsFromNvdb({ objekter: [{ typeVeg: 'Enkel bilveg', geometri: { wkt: `LINESTRING Z (${wkt(Array.from({ length: 13 }, (_, i) => [...P(i * 50, 0), 35]))})` } }] });
+  const flat = buildNvdbBridge(b, r);
+  const hill = buildNvdbBridge(b, r, Array(41).fill(30));
+  const top = (fs) => Math.max(...fs.filter((f) => f.properties.part === 'deck').map((f) => f.properties.top));
+  assert.ok(top(flat) > 35, 'above the sea');
+  assert.ok(Math.abs(top(hill) - 5.4) < 0.5, `above the ground: ${top(hill)}`);
+  const piers = hill.filter((f) => f.properties.part === 'pier');
+  assert.ok(piers.every((f) => f.properties.top < 5), 'short piers on the hill');
+  assert.ok(flat.filter((f) => f.properties.part === 'pier').length > 0);
+  assert.deepEqual(parseGround({ punkter: [{ z: 25.4 }, { terreng: 'Havflate', z: -18 }, { z: null }] }), [25.4, 0, null]);
+  const pts = groundPoints(b, r);
+  assert.equal(pts.length, 41);
+});
+
+test('the deck lies on the road, not on the outline\'s edge', () => {
+  const b = bridgeFromNvdb(nvdbBridge());
+  // the road runs 3 m north of the outline's middle
+  const r = roadsFromNvdb({ objekter: [{ typeVeg: 'Enkel bilveg', geometri: { wkt: `LINESTRING Z (${wkt(Array.from({ length: 13 }, (_, i) => [...P(i * 50, 3), 40]))})` } }] });
+  const pf = deckProfile(b, r);
+  assert.ok(Math.abs(pf.ax[1]) < 0.01, 'east-west');
+  for (const p of pf.profile) {
+    const off = -(p.x - pf.a[0]) * pf.ax[1] + (p.y - pf.a[1]) * pf.ax[0];
+    assert.ok(Math.abs(off) < 0.5, `the road is on the deck's line: ${off}`);
+  }
 });
