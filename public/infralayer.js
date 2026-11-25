@@ -2,6 +2,7 @@
 // The vector tiles come from OpenFreeMap; the 3D bridges are built from the bridge roads in the tiles
 // loaded, again whenever the map stops moving or new tiles arrive.
 
+import { styleReady, whenStyleReady } from './mapready.js';
 import { TILEJSON, ATTRIBUTION, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, PREFIX, infraLayers, buildBridges } from './infra.js';
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
@@ -29,9 +30,7 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
   const onData = (e) => { if (e.sourceId === SOURCE && e.isSourceLoaded) rebuild(); };
 
   function apply() {
-    // Only the style must be there; map.isStyleLoaded() also waits for every tile, which can be a
-    // long time while the land heights load (or never, while one keeps failing).
-    if (!map.style?._loaded) { map.once('style.load', apply); return; }
+    if (!styleReady(map)) { whenStyleReady(map, apply); return; } // not isStyleLoaded(): mapready.js
     if (on) {
       if (!map.getSource(SOURCE)) map.addSource(SOURCE, { type: 'vector', url: TILEJSON, attribution: ATTRIBUTION });
       if (!map.getSource(BRIDGE_SOURCE)) map.addSource(BRIDGE_SOURCE, { type: 'geojson', data: EMPTY });
