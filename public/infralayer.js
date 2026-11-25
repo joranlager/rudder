@@ -36,6 +36,19 @@ function cell(i, j) {
 }
 
 /**
+ * Where to look for bridges: the view, but not more than about 3 km round its middle. Looking nearly
+ * level (the view from a ship's bridge, pov.js), MapLibre's bounds shrink to a few metres, so then
+ * the whole 3 km round the middle (the point looked at, ahead of the ship).
+ */
+export function nearbyBox(map) {
+  const c = map.getCenter();
+  const box = { w: c.lng - 0.06, e: c.lng + 0.06, s: c.lat - 0.03, n: c.lat + 0.03 };
+  if (map.getPitch() > 60) return box;
+  const b = map.getBounds();
+  return { w: Math.max(b.getWest(), box.w), e: Math.min(b.getEast(), box.e), s: Math.max(b.getSouth(), box.s), n: Math.min(b.getNorth(), box.n) };
+}
+
+/**
  * NVDB's bridges around the view, each ready to raise the road layer's road over it: { br, pf (its
  * deck's line and heights), top(lonlat) (the deck's top there, as MapLibre should extrude it), parts
  * (its towers, cables, arch or piers, and a deck of its own for when the road layer has no road on it) }.
@@ -44,11 +57,7 @@ function cell(i, j) {
  * ends meet the land as drawn; without, on Kartverket's ground under them (the map is flat).
  */
 async function nvdbBridges(map, { terrain = null } = {}) {
-  const b = map.getBounds();
-  const c = map.getCenter();
-  // the view, but not more than a few kilometres of it (a tilted view reaches far)
-  const w = Math.max(b.getWest(), c.lng - 0.06), e = Math.min(b.getEast(), c.lng + 0.06);
-  const s = Math.max(b.getSouth(), c.lat - 0.03), n = Math.min(b.getNorth(), c.lat + 0.03);
+  const { w, s, e, n } = nearbyBox(map);
   const keys = [];
   for (let i = Math.floor(w / CELL_LON); i <= Math.floor(e / CELL_LON); i++) for (let j = Math.floor(s / CELL_LAT); j <= Math.floor(n / CELL_LAT); j++) keys.push([i, j]);
   const got = await Promise.all(keys.slice(0, MAX_CELLS).map(([i, j]) => cell(i, j)));
