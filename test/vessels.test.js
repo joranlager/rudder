@@ -1,0 +1,201 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import {
+  normalizeEntry, parseIndex, matchVessel, matchName, axisRotation, fitPlacement, buildIndex, formatOf, loadIndex,
+} from '../public/vesselcatalog.js';
+import { libraryEntry } from '../public/vessellibrary.js';
+import { modelKey, fileFit } from '../public/shipmodels.js';
+import { writeVesselIndex } from '../scripts/vessels.mjs';
+import {
+  openverseUrl, parseOpenverse, matchPolyhaven, polyhavenDiffuse, pictureUrl,
+} from '../public/ships/texturesources.js';
+
+test('model formats come from the file name', () => {
+  assert.equal(formatOf('Color Magic.GLB'), 'glb');
+  assert.equal(formatOf('boat.obj'), 'obj');
+  assert.equal(formatOf('boat.mtl'), null);
+  assert.equal(formatOf('readme'), null);
+});
+
+test('an entry is checked and filled in', () => {
+  const e = normalizeEntry({ file: 'color-magic.glb', mmsi: 257123000, imo: 'IMO 9349863', callSign: 'lagv7' });
+  assert.equal(e.id, 'color-magic');
+  assert.equal(e.name, 'color magic');
+  assert.equal(e.format, 'glb');
+  assert.deepEqual(e.mmsi, ['257123000']);
+  assert.equal(e.imo, '9349863');
+  assert.equal(e.callSign, 'LAGV7');
+  assert.equal(e.up, '+y');
+  assert.equal(e.forward, '+x');
+  assert.equal(e.scale, 'length');
+  assert.equal(e.waterline, 'keel');
+  assert.equal(normalizeEntry({ file: 'x.fbx' }), null, 'not a format Rudder reads');
+  assert.equal(normalizeEntry({ file: '../secret.glb' }), null, 'stays in the folder');
+  assert.equal(normalizeEntry({ file: 'https://example.com/x.glb' }), null, 'stays in the folder');
+  assert.deepEqual([normalizeEntry({ file: 'a.glb', up: '+z', forward: '-z' }).up, normalizeEntry({ file: 'a.glb', up: '+z', forward: '-z' }).forward], ['+y', '+x'], 'up and bow on one axis is nonsense');
+  assert.equal(normalizeEntry({ file: 'a.glb', scale: 0.01 }).scale, 0.01);
+});
+
+test('an index lists each model once', () => {
+  const list = parseIndex({ vessels: [{ file: 'a.glb' }, { file: 'a.glb' }, { file: 'b.stl' }, { nothing: 1 }] });
+  assert.deepEqual(list.map((e) => e.id), ['a', 'b']);
+  assert.deepEqual(parseIndex(null), []);
+});
+
+test('ship names match without prefixes, accents or case', () => {
+  assert.equal(matchName('MS Color Magic'), 'color magic');
+  assert.equal(matchName('M/S Vederøy'), 'vederoy');
+  assert.equal(matchName('MV  Ever-Given'), 'ever given');
+  assert.equal(matchName('Statsraad Lehmkuhl'), 'statsraad lehmkuhl');
+});
+
+test('a ship is matched by MMSI, then IMO, then call sign, then name', () => {
+  const entries = parseIndex([
+    { id: 'byname', file: 'a.glb', name: 'Color Magic' },
+    { id: 'bycall', file: 'b.glb', callSign: 'LAGV7' },
+    { id: 'byimo', file: 'c.glb', imo: '9349863' },
+    { id: 'bymmsi', file: 'd.glb', mmsi: ['257123000'] },
+    { id: 'other', file: 'e.glb', name: 'Nordlys', mmsi: ['259000000'] },
+  ]);
+  assert.equal(matchVessel(entries, { mmsi: 257123000, imoNumber: 9349863, callSign: 'LAGV7', name: 'COLOR MAGIC' }).id, 'bymmsi');
+  assert.equal(matchVessel(entries, { mmsi: 111111111, imoNumber: 9349863, name: 'COLOR MAGIC' }).id, 'byimo');
+  assert.equal(matchVessel(entries, { mmsi: 111111111, callSign: 'lagv7 ' }).id, 'bycall');
+  assert.equal(matchVessel(entries, { label: 'MS Color Magic', imo: '' }).id, 'byname', 'Wikidata facts');
+  assert.equal(matchVessel(entries, { mmsi: 258000000, name: 'NORDLYS' }), null, 'same name, another ship');
+  assert.equal(matchVessel(entries, { name: '' }), null);
+});
+
+test('a model is turned upright with the bow to +x', () => {
+  const apply = (r, v) => r.map((row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]);
+  assert.deepEqual(axisRotation('+y', '+x'), [[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
+  // z-up, bow along -y (common in CAD): the model's up goes to y, its bow to x, rotation proper
+  const r = axisRotation('+z', '-y');
+  assert.deepEqual(apply(r, [0, 0, 1]), [0, 1, 0]);
+  assert.deepEqual(apply(r, [0, -1, 0]), [1, 0, 0]);
+  const det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) - r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0]) + r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
+  assert.equal(det, 1, 'a turn, not a mirror');
+  // glTF's own forward (+z): bow to x, starboard to -x... whatever: still a proper rotation
+  const g = axisRotation('+y', '+z');
+  assert.deepEqual(apply(g, [0, 0, 1]), [1, 0, 0]);
+});
+
+test('a model is scaled to the ship and put on the waterline', () => {
+  const box = { min: { x: 0, y: -1, z: -5 }, max: { x: 20, y: 9, z: 5 } };
+  const a = fitPlacement(box, { scale: 'length', length: 100, draft: 6 });
+  assert.equal(a.scale, 5);
+  assert.deepEqual(a.offset, { x: -50, y: -6 + 5, z: 0 }); // keel (-1 * 5) at -6
+  const b = fitPlacement(box, { scale: 1, waterline: 'origin' });
+  assert.deepEqual(b, { scale: 1, offset: { x: -10, y: 0, z: 0 } });
+  const c = fitPlacement(box, { scale: 'length' }); // no length known: its own units
+  assert.equal(c.scale, 1);
+  const keel = box.min.y * c.scale + c.offset.y;
+  assert.ok(keel < 0 && keel > -2, `some draught is guessed: keel at ${keel}`);
+});
+
+test('the folder index is made from the models and their sidecars', () => {
+  const idx = buildIndex([
+    { name: 'index.json', json: { vessels: [] } },
+    { name: 'color-magic.glb' },
+    { name: 'color-magic.json', json: { name: 'Color Magic', imo: '9349863' } },
+    { name: 'tug.obj' },
+    { name: 'tug.mtl' },
+    { name: 'skiff.stl' },
+    { name: 'renamed.json', json: { file: 'skiff.stl', name: 'Skiff' } },
+    { name: 'orphan.json', json: { name: 'No model' } },
+    { name: 'README.md' },
+  ]);
+  assert.deepEqual(idx.vessels.map((e) => [e.id, e.name, e.file]), [
+    ['color-magic', 'Color Magic', 'color-magic.glb'],
+    ['skiff', 'Skiff', 'skiff.stl'],
+    ['tug', 'tug', 'tug.obj'],
+  ]);
+});
+
+test('npm run vessels writes the index, and the committed one is up to date', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'vessels-'));
+  try {
+    await writeFile(path.join(dir, 'a.glb'), 'x');
+    await writeFile(path.join(dir, 'a.json'), JSON.stringify({ name: 'A', mmsi: ['257000001'] }));
+    const idx = await writeVesselIndex(dir);
+    assert.equal(idx.vessels[0].name, 'A');
+    const back = await loadIndex(`file://${dir}/`, async (u) => ({ ok: true, json: async () => JSON.parse(await readFile(new URL(u), 'utf8')) }));
+    assert.deepEqual(back.map((e) => e.mmsi), [['257000001']]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  const committed = JSON.parse(await readFile('public/vessels/index.json', 'utf8'));
+  const dir2 = await mkdtemp(path.join(tmpdir(), 'vessels-'));
+  try {
+    const { readdir, copyFile } = await import('node:fs/promises');
+    for (const f of await readdir('public/vessels')) await copyFile(path.join('public/vessels', f), path.join(dir2, f));
+    assert.deepEqual(await writeVesselIndex(dir2), committed, 'run npm run vessels');
+  } finally {
+    await rm(dir2, { recursive: true, force: true });
+  }
+});
+
+test('a missing index is an empty folder', async () => {
+  assert.deepEqual(await loadIndex('vessels/', async () => ({ ok: false })), []);
+  assert.deepEqual(await loadIndex('vessels/', async () => { throw new Error('offline'); }), []);
+});
+
+test('models saved on the device are matched like the folder\'s, in the ship\'s frame', () => {
+  const e = libraryEntry({ id: 'm1', name: 'Nordlys', mmsi: ['257000001'], blob: {}, size: 10 });
+  assert.equal(e.source, 'device');
+  assert.equal(e.waterline, 'origin');
+  assert.equal(e.id, 'm1');
+  assert.equal(matchVessel([e], { mmsi: 257000001 }).id, 'm1');
+});
+
+const ship = (o = {}) => ({
+  mmsi: 257000001, name: 'NORDLYS', shipType: 60, latitude: 59.0, longitude: 5.7, trueHeading: 90,
+  dimensionA: 100, dimensionB: 20, dimensionC: 5, dimensionD: 15, draught: 55, msgtime: new Date().toISOString(), ...o,
+});
+
+test('on the chart a ship\'s own model is rebuilt when it changes, and fitted to AIS', () => {
+  const f = { source: 'folder', id: 'nordlys', updated: undefined, length: 90, draft: 3 };
+  assert.notEqual(modelKey(ship(), f), modelKey(ship()), 'own model or built');
+  assert.notEqual(modelKey(ship(), { ...f, source: 'device', updated: 2 }), modelKey(ship(), { ...f, source: 'device', updated: 1 }));
+  const fit = fileFit(f, ship());
+  assert.equal(fit.length, 120, 'AIS length');
+  assert.equal(fit.draft, 5.5, 'AIS draught');
+  assert.equal(fileFit(f, ship({ dimensionA: 0, dimensionB: 0, draught: 0 })).length, 90, 'the model\'s own when AIS has none');
+});
+
+test('Openverse answers become pictures with credits', () => {
+  assert.match(openverseUrl('rust metal'), /^https:\/\/api\.openverse\.org\/v1\/images\/\?q=rust\+metal&page_size=24/);
+  const [p] = parseOpenverse({
+    results: [{ title: 'Rusty hull', url: 'https://live.staticflickr.com/1/2.jpg', thumbnail: 'https://api.openverse.org/v1/images/abc/thumb/', creator: 'Kari', license: 'by-sa', license_version: '2.0', foreign_landing_url: 'https://flickr.com/p/2' }, { title: 'no url' }],
+  });
+  assert.deepEqual(p, {
+    title: 'Rusty hull', thumb: 'https://api.openverse.org/v1/images/abc/thumb/', full: 'https://live.staticflickr.com/1/2.jpg',
+    alt: ['https://api.openverse.org/v1/images/abc/thumb/'], page: 'https://flickr.com/p/2', author: 'Kari', license: 'BY-SA 2.0', source: 'Openverse',
+  });
+});
+
+test('Poly Haven textures are found by name, tag or category, and their colour picture chosen', () => {
+  const list = {
+    rusty_metal_02: { name: 'Rusty Metal 02', categories: ['metal'], tags: ['rust', 'painted'], authors: { 'Rob Tuytel': 'All' } },
+    wood_planks: { name: 'Wood Planks', categories: ['wood'], tags: ['deck', 'boards'] },
+    painted_metal: { name: 'Painted Metal Shutter', categories: ['metal', 'man made'], tags: ['paint'] },
+  };
+  assert.deepEqual(matchPolyhaven(list, 'metal').map((x) => x.id), ['painted_metal', 'rusty_metal_02']);
+  assert.deepEqual(matchPolyhaven(list, 'deck').map((x) => x.id), ['wood_planks']);
+  const [r] = matchPolyhaven(list, 'rust');
+  assert.equal(r.author, 'Rob Tuytel');
+  assert.equal(r.license, 'CC0');
+  assert.match(r.thumb, /rusty_metal_02\.png/);
+  const files = { Diffuse: { '1k': { jpg: { url: 'https://dl.polyhaven.org/1k.jpg' } }, '2k': { jpg: { url: 'https://dl.polyhaven.org/2k.jpg' } } }, Rough: {} };
+  assert.equal(polyhavenDiffuse(files), 'https://dl.polyhaven.org/2k.jpg');
+  assert.equal(polyhavenDiffuse({ nor_gl: {} }), null);
+});
+
+test('a picture address is an http(s) address', () => {
+  assert.equal(pictureUrl(' upload.wikimedia.org/a.jpg '), 'https://upload.wikimedia.org/a.jpg');
+  assert.equal(pictureUrl('https://x.no/b.png?w=2'), 'https://x.no/b.png?w=2');
+  assert.equal(pictureUrl('javascript:alert(1)'), null);
+  assert.equal(pictureUrl(''), null);
+});

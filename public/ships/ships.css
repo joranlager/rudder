@@ -230,3 +230,26 @@
 .ship-callout em.estimated { color: #fcd34d; }
 .ship-callout em.manual { color: #7dd3fc; }
 .ship-callout em.ais { color: #c4b5fd; }
+
+/* ---------- models and textures ---------- */
+
+.ships-list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; min-height: 56px; }
+.ships-list li + li { border-top: 0.5px solid var(--separator); }
+.ships-list .ships-hit { flex: 1; }
+.ships-list .ships-hit b { font-size: 15px; }
+.ships-actions { display: flex; gap: 4px; flex: none; }
+.ships-actions button, .ships-list > li > button { min-height: 32px; padding: 0 10px; font-size: 14px; }
+.ships-dl {
+  display: inline-grid; place-items: center; min-height: 32px; min-width: 36px; border-radius: 10px;
+  background: var(--tint-bg); color: var(--blue); text-decoration: none; font-weight: 600;
+}
+.ships-fit { margin-bottom: 4px; }
+.ships-fit input[type="number"] {
+  appearance: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel); color: var(--ink); font: 400 15px var(--font);
+}
+.ships-chips .chip[aria-checked="true"] { background: var(--accent); color: #fff; }
+.ships .notice .ghost { display: block; margin-top: 8px; min-height: 32px; padding: 0 12px; }
+.ships-applied .ships-photo img { max-height: 120px; }
+.ships-save input { flex: none; }
+.ship-callout em.model { color: #fda4af; }

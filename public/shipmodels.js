@@ -9,10 +9,15 @@
 // AIS report puts it (motion.js), and new reports are eased in. While any ship is under way the map
 // is redrawn about 30 times a second; when all lie still, it is redrawn only when needed.
 //
+// A ship with a model of its own (the vessels folder, public/vessels/, or one saved on this device;
+// vessellibrary.js) is drawn with that instead, stretched to its AIS length. Until the file has
+// loaded, it is drawn as built.
+//
 // three.js (about 0.7 MB) and the builder are loaded the first time models are needed.
 
 import { drawHeading, vesselSize, hullFromAis } from './ais.js';
 import { createMotion, hitsShip, bowAndStern } from './motion.js';
+import { vesselModels, findIn, onModelsChanged, FOLDER_URL, modelBlob } from './vessellibrary.js';
 
 export const MAX_MODELS = 40;
 const FRAME_MS = 33; // about 30 frames a second while ships move: smooth, and kind to the battery // nearest to the middle of the view; a harbour seldom has more in view
@@ -72,11 +77,27 @@ function shrinkTexture(THREE, material) {
   src.width = src.height = 0; // let the big canvas go
 }
 
-/** A model is rebuilt only when what it is built from changes, not when the ship moves. */
-export function modelKey(v) {
+/**
+ * A model is rebuilt only when what it is built from changes, not when the ship moves. `file` is the
+ * ship's own model (a catalog entry) once it has loaded.
+ */
+export function modelKey(v, file = null) {
   const { params } = hullFromAis(v);
-  return [params.kind, params.length, params.beam, params.draft, (v.name || '').trim()].join('|');
+  const base = [params.kind, params.length, params.beam, params.draft, (v.name || '').trim()].join('|');
+  return file ? `${file.source}:${file.id}:${file.updated ?? ''}|${base}` : base;
 }
+
+/** How a ship's own model is fitted on the chart: to its AIS length and draught where it gives them. */
+export function fileFit(entry, v) {
+  const { params, sources } = hullFromAis(v);
+  return {
+    ...entry,
+    length: sources.length === 'ais' ? params.length : entry.length ?? params.length,
+    draft: sources.draft === 'ais' ? params.draft : entry.draft ?? params.draft,
+  };
+}
+
+export const MAX_FILE_MODELS = 12; // models from files kept loaded, the most recently used
 
 export const POV_RADIUS_M = 6000; // from a bridge: ships this close are modelled, nearest first
 
@@ -104,6 +125,9 @@ export function pickShips(vessels, [w, s, e, n], [cx, cy], max = MAX_MODELS) {
  */
 export function createShipModels(map) {
   let lib = null; // { THREE, buildShip, DEFAULT_LIVERY, HULL_FONTS } once loaded
+  let files = { folder: [], device: [] }; // ships with models of their own (vessellibrary.js)
+  const templates = new Map(); // catalog id -> { object, failed, loading } (loaded files, cloned per ship)
+  let vm = null; // ships/vesselmodel.js, loaded with the first file
   let loading = null;
   let scene = null, camera = null, renderer = null;
   const models = new Map(); // mmsi -> { key, root, model, v, place, shown }
@@ -118,7 +142,50 @@ export function createShipModels(map) {
     const m = models.get(mmsi);
     if (!m) return;
     const bare = mmsi === own;
+    if (m.model.imported) {
+      // A model from a file has its own names for its parts: hide those standing round the eye.
+      const hide = bare && m.place ? new Set(vm.meshesAroundEye(m.model, m.place.antenna.x, m.place.antenna.z)) : new Set();
+      m.model.group.traverse((o) => { if (o.isMesh || o.isLine) o.visible = !hide.has(o); });
+      return;
+    }
     m.model.group.traverse((o) => { if (o !== m.model.group && (o.isMesh || o.isLine)) o.visible = !(bare && hiddenFromBridge(o.name)); });
+  }
+
+  /** The loaded model of a catalog entry, or null (and its loading started, then the ships redone). */
+  function template(entry) {
+    const t = templates.get(entry.id);
+    if (t && t.updated === entry.updated) {
+      templates.delete(entry.id); // most recently used last
+      templates.set(entry.id, t);
+      return t.object;
+    }
+    if (t?.loading) return null;
+    const rec = { loading: true, object: null, updated: entry.updated };
+    templates.set(entry.id, rec);
+    (async () => {
+      vm ??= await import('./ships/vesselmodel.js');
+      return vm.loadEntry(entry, { folderUrl: FOLDER_URL, blobOf: modelBlob });
+    })().then((object) => {
+      rec.object = object;
+      if (t?.object) vm.disposeObject(t.object);
+    }).catch((e) => {
+      console.warn('vessel model', entry.id, e);
+      rec.failed = true;
+    }).finally(() => {
+      rec.loading = false;
+      // keep the last few, dropping those no ship on the chart uses now
+      const inUse = new Set([...models.values()].map((m) => m.fileId));
+      for (const [id, x] of templates) {
+        if (templates.size <= MAX_FILE_MODELS) break;
+        if (!inUse.has(id) && !x.loading) { if (x.object) vm.disposeObject(x.object); templates.delete(id); }
+      }
+      sync();
+    });
+    return null;
+  }
+
+  async function loadFiles() {
+    try { files = await vesselModels(); } catch { files = { folder: [], device: [] }; }
   }
   let wanted = []; // vessels to show
   let building = false, dirty = false;
@@ -126,8 +193,11 @@ export function createShipModels(map) {
   async function load() {
     loading ??= Promise.all([
       import('./vendor/three.js'), import('./ships/ship.js'), import('./ships/presets.js'), import('./ships/hullText.js'),
+      loadFiles(),
     ]).then(([THREE, ship, presets, text]) => {
       lib = { THREE, buildShip: ship.buildShip, DEFAULT_LIVERY: presets.DEFAULT_LIVERY, HULL_FONTS: text.HULL_FONTS };
+      // A model saved or deleted in the inspector shows on the chart at once.
+      onModelsChanged(async () => { await loadFiles(); sync(); });
     });
     return loading;
   }
@@ -209,9 +279,20 @@ export function createShipModels(map) {
     const { THREE, buildShip, DEFAULT_LIVERY, HULL_FONTS } = lib;
     const p = modelPlacement(v);
     if (!p) { drop(v.mmsi); return false; }
-    const key = modelKey(v);
+    const entry = findIn(files, v);
+    const object = entry ? template(entry) : null;
+    const key = modelKey(v, object ? entry : null);
     let m = models.get(v.mmsi);
-    if (!m || m.key !== key) {
+    if (object && (!m || m.key !== key)) {
+      drop(v.mmsi);
+      // Clones share the loaded file's geometry and pictures; the model only fits and places them.
+      const model = vm.fitModel(object.clone(true), fileFit(entry, v), { shared: true });
+      const root = new THREE.Group();
+      root.add(model.group);
+      scene.add(root);
+      m = { key, root, model, fileId: entry.id };
+      models.set(v.mmsi, m);
+    } else if (!m || m.key !== key) {
       drop(v.mmsi);
       const { params } = hullFromAis(v);
       const text = {
@@ -226,12 +307,13 @@ export function createShipModels(map) {
       scene.add(root);
       m = { key, root, model };
       models.set(v.mmsi, m);
-      dress(v.mmsi);
     }
     // The newest report; the position and heading are worked out each frame from it (render).
     m.v = v;
+    const fresh = !m.place;
     m.place = p;
     m.model.group.position.set(-p.antenna.x, 0, -p.antenna.z); // the antenna on the ship's position
+    if (fresh || v.mmsi === own) dress(v.mmsi);
   }
 
   /** Bring the models in line with `wanted`, building a few new models per frame. */
@@ -280,6 +362,11 @@ export function createShipModels(map) {
       sync();
     },
     get count() { return models.size; },
+    /** What a ship is drawn with: 'folder' or 'device' (its own model), 'built', or null (no model). */
+    sourceOf(mmsi) {
+      const m = models.get(mmsi);
+      return m ? (m.model.imported ? m.key.slice(0, m.key.indexOf(':')) : 'built') : null;
+    },
     /** The view is from this ship's bridge (or none): hide its superstructure, show the last one's again. */
     setOwn(mmsi) {
       const was = own;

@@ -2,9 +2,12 @@
 import { cp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { versionScript, versionHtml } from './versioning.mjs';
+import { writeVesselIndex } from './vessels.mjs';
 
 await rm('dist', { recursive: true, force: true });
 await cp('public', 'dist', { recursive: true });
+// The vessels folder's index lists what is really there (public/vessels, scripts/vessels.mjs).
+await writeVesselIndex('dist/vessels');
 // Stops Pages from running Jekyll, which would hide files starting with an underscore.
 await writeFile('dist/.nojekyll', '');
 
@@ -26,7 +29,9 @@ async function scripts(dir) {
   return out;
 }
 for (const f of await scripts('dist')) {
-  if (f.includes(`${path.sep}vendor${path.sep}`)) continue; // bundled libraries import nothing of ours
+  // Bundled libraries import nothing of ours, but three-io.js imports ./three.js, which must be the very
+  // file the app's scripts import (stamped), or the page would hold two copies of three.js.
+  if (f.includes(`${path.sep}vendor${path.sep}`) && !f.endsWith('three-io.js')) continue;
   await writeFile(f, versionScript(await readFile(f, 'utf8'), sha));
 }
 

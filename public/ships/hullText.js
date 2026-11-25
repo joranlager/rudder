@@ -24,6 +24,46 @@ export function hullCanvasSize(L, texH) {
   return { w, sideH };
 }
 /**
+ * A picture on one side's topsides, from the top of the hull down to the boot-top.
+ * `pic`: { img, mode: 'stretch' | 'tile', tile (metres a repeat is wide), opacity (0-1),
+ * blend: 'normal' | 'multiply' (keeps the hull's colour under it), flip (the picture's bow is on
+ * its left) }. Stretched, the picture runs the ship's length with its right-hand end at the bow, so
+ * on the port side it is mirrored, as a ship's own paint would be.
+ */
+export function paintHullImage(ctx, pic, { top, w, yBoot, pxPerM, vScale, port }) {
+  const img = pic.img;
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  if (!iw || !ih || yBoot <= top) return;
+  const h = yBoot - top;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, top, w, h);
+  ctx.clip();
+  ctx.globalAlpha = Math.max(0, Math.min(1, pic.opacity ?? 1));
+  ctx.globalCompositeOperation = pic.blend === 'multiply' ? 'multiply' : 'source-over';
+  const mirror = port !== Boolean(pic.flip);
+  if (mirror) {
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+  }
+  if (pic.mode === 'tile') {
+    // the side is drawn stretched (vScale px a metre up, pxPerM along): tiles keep their own shape
+    const tw = Math.max(4, (pic.tile > 0 ? pic.tile : 10) * pxPerM);
+    const th = Math.max(4, (pic.tile > 0 ? pic.tile : 10) * (ih / iw) * vScale);
+    const c = document.createElement('canvas');
+    c.width = Math.min(2048, Math.round(tw));
+    c.height = Math.min(2048, Math.round(th));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const pat = ctx.createPattern(c, 'repeat');
+    pat.setTransform?.(new DOMMatrix().translate(0, yBoot).scale(tw / c.width, th / c.height));
+    ctx.fillStyle = pat;
+    ctx.fillRect(0, top, w, h);
+  } else {
+    ctx.drawImage(img, 0, top, w, h);
+  }
+  ctx.restore();
+}
+/**
  * Paints the full hull livery (antifouling, boot-top, stripes, windows, lettering,
  * draft marks and Plimsoll line) for both sides into one canvas.
  */
@@ -73,6 +113,8 @@ export function paintHull(canvas, shape, texH, kind, livery, text) {
     ctx.fillRect(0, top, w, sideH);
     ctx.fillStyle = livery.bootTop;
     ctx.fillRect(0, Y(boot), w, top + sideH - Y(boot));
+    // a picture on the topsides (Texture tab), above the boot-top, under the stripe and lettering
+    if (livery.hullImage?.img) paintHullImage(ctx, livery.hullImage, { top, w, yBoot: Y(boot), pxPerM, vScale, port: bowDir === -1 });
     // thin waterline accent
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.fillRect(0, Y(boot) - 1, w, 2);
