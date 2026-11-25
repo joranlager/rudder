@@ -12,7 +12,8 @@
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.js",
     "vendor": "node scripts/vendor.mjs",
-    "vessels": "node scripts/vessels.mjs"
+    "vessels": "node scripts/vessels.mjs",
+    "webcams": "node scripts/webcams.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.10",

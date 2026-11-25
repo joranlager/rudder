@@ -1,0 +1,5897 @@
+{
+ "about": "Where each Statens vegvesen webcam looks, worked out from the place it says it looks towards (npm run webcams, scripts/webcams.mjs). bearing: degrees true; target: the place; distance: metres to it; quality: good (place within 15 km), rough, very rough; ground: metres above sea under the camera.",
+ "made": "2026-11-25",
+ "directions": {
+  "0129001_1": {
+   "ground": 67.6,
+   "bearing": 78,
+   "target": "Halden",
+   "distance": 6519,
+   "quality": "good"
+  },
+  "0129003_1": {
+   "ground": 50.9,
+   "bearing": 142.7,
+   "target": "Svinesund",
+   "distance": 34705,
+   "quality": "rough"
+  },
+  "0129004_1": {
+   "ground": 116.9,
+   "bearing": 219.7,
+   "target": "Halden",
+   "distance": 25458,
+   "quality": "rough"
+  },
+  "0129008_1": {
+   "ground": 159,
+   "bearing": 329.2,
+   "target": "Halden",
+   "distance": 17160,
+   "quality": "rough"
+  },
+  "0129010_1": {
+   "ground": 200.8
+  },
+  "0129011_1": {
+   "ground": 159.5,
+   "bearing": 122.6,
+   "target": "Ørje",
+   "distance": 13069,
+   "quality": "good"
+  },
+  "0129012_1": {
+   "ground": 126,
+   "bearing": 28.7,
+   "target": "Rakkestad",
+   "distance": 5848,
+   "quality": "good"
+  },
+  "0129013_1": {
+   "ground": 26.9,
+   "bearing": 238.1,
+   "target": "Moss",
+   "distance": 8792,
+   "quality": "good"
+  },
+  "0129014_1": {
+   "ground": 16.8,
+   "bearing": 336.2,
+   "target": "Sarpsborg",
+   "distance": 9632,
+   "quality": "good"
+  },
+  "0129015_1": {
+   "ground": 98.1,
+   "bearing": 157.4,
+   "target": "Elvestad",
+   "distance": 2935,
+   "quality": "good"
+  },
+  "0129016_1": {
+   "ground": 180.4,
+   "bearing": 338,
+   "target": "Fetsund",
+   "distance": 19927,
+   "quality": "rough"
+  },
+  "0129017_1": {
+   "ground": 118.6,
+   "bearing": 229.7,
+   "target": "Halden",
+   "distance": 22236,
+   "quality": "rough"
+  },
+  "0200030_1": {
+   "ground": 138.8,
+   "bearing": 302,
+   "target": "Skreia",
+   "distance": 13446,
+   "quality": "good"
+  },
+  "0229001_1": {
+   "ground": 93.5
+  },
+  "0229002_1": {
+   "ground": 25.4,
+   "bearing": 202.4,
+   "target": "Moss",
+   "distance": 10051,
+   "quality": "good"
+  },
+  "0229003_1": {
+   "ground": 140.7,
+   "bearing": 325.9,
+   "target": "Stange",
+   "distance": 31322,
+   "quality": "rough"
+  },
+  "0229004_1": {
+   "ground": 181.6,
+   "bearing": 21.1,
+   "target": "Minnesund",
+   "distance": 12944,
+   "quality": "good"
+  },
+  "0229005_1": {
+   "ground": 238.4,
+   "bearing": 230.5,
+   "target": "Oslo",
+   "distance": 13270,
+   "quality": "good"
+  },
+  "0229006_1": {
+   "ground": 225.2,
+   "bearing": 315.4,
+   "target": "Sollihøgda",
+   "distance": 2520,
+   "quality": "good"
+  },
+  "0229007_1": {
+   "ground": 131,
+   "bearing": 49.6,
+   "target": "Skarnes",
+   "distance": 14529,
+   "quality": "good"
+  },
+  "0229009_1": {
+   "ground": 3.7,
+   "bearing": 228.7,
+   "target": "Drammen",
+   "distance": 25003,
+   "quality": "rough"
+  },
+  "0229013_1": {
+   "ground": 55.1,
+   "bearing": 194,
+   "target": "Moss",
+   "distance": 18941,
+   "quality": "rough"
+  },
+  "0229017_1": {
+   "ground": 80.5,
+   "bearing": 169.5,
+   "target": "Vinterbro",
+   "distance": 3779,
+   "quality": "good"
+  },
+  "0229018_1": {
+   "ground": 188.1,
+   "bearing": 41.2,
+   "target": "Skedsmo",
+   "distance": 23520,
+   "quality": "rough"
+  },
+  "0229019_1": {
+   "ground": 202.7,
+   "bearing": 304.2,
+   "target": "Gardermoen",
+   "distance": 1513,
+   "quality": "good"
+  },
+  "0229020_1": {
+   "ground": 175.1,
+   "bearing": 296.4,
+   "target": "Bjørkelangen",
+   "distance": 9676,
+   "quality": "good"
+  },
+  "0229034_1": {
+   "ground": 147.7
+  },
+  "0329002_1": {
+   "ground": 2.4
+  },
+  "0329003_1": {
+   "ground": 145.6,
+   "bearing": 67.2,
+   "target": "Gjelleråsen",
+   "distance": 6790,
+   "quality": "good"
+  },
+  "0329004_1": {
+   "ground": 159.6,
+   "bearing": 251.3,
+   "target": "Alnabru",
+   "distance": 3682,
+   "quality": "good"
+  },
+  "0329007_1": {
+   "ground": 6.6
+  },
+  "0329031_1": {
+   "ground": 133.8
+  },
+  "0329034_1": {
+   "ground": 96.4,
+   "bearing": 96.6,
+   "target": "Tåsen",
+   "distance": 1074,
+   "quality": "good"
+  },
+  "0429001_1": {
+   "ground": 126.9,
+   "bearing": 313.5,
+   "target": "Brumunddal",
+   "distance": 11784,
+   "quality": "good"
+  },
+  "0429002_1": {
+   "ground": 228.1,
+   "bearing": 286.9,
+   "target": "Moelv",
+   "distance": 4922,
+   "quality": "good"
+  },
+  "0429003_1": {
+   "ground": 142.2,
+   "bearing": 89.9,
+   "target": "Moelv",
+   "distance": 1668,
+   "quality": "good"
+  },
+  "0429004_1": {
+   "ground": 186.5,
+   "bearing": 339.9,
+   "target": "Kongsvinger",
+   "distance": 10452,
+   "quality": "good"
+  },
+  "0429005_1": {
+   "ground": 272.8,
+   "bearing": 217.2,
+   "target": "Løten",
+   "distance": 5214,
+   "quality": "good"
+  },
+  "0429006_1": {
+   "ground": 390.2,
+   "bearing": 331.8,
+   "target": "Alvdal",
+   "distance": 30723,
+   "quality": "rough"
+  },
+  "0429007_1": {
+   "ground": 480.2,
+   "bearing": 39.3,
+   "target": "Tynset",
+   "distance": 13798,
+   "quality": "good"
+  },
+  "0429009_1": {
+   "ground": 691.8,
+   "bearing": 138.3,
+   "target": "Tynset",
+   "distance": 30797,
+   "quality": "rough"
+  },
+  "0429010_1": {
+   "ground": 168.3,
+   "bearing": 2.8,
+   "target": "Kirkenær",
+   "distance": 8726,
+   "quality": "good"
+  },
+  "0429011_1": {
+   "ground": 597.8,
+   "bearing": 78.6,
+   "target": "Os",
+   "distance": 857,
+   "quality": "good"
+  },
+  "0429012_1": {
+   "ground": 160.5,
+   "bearing": 187.9,
+   "target": "Minnesund",
+   "distance": 24839,
+   "quality": "rough"
+  },
+  "0429013_1": {
+   "ground": 229.6,
+   "bearing": 158,
+   "target": "Elverum",
+   "distance": 28725,
+   "quality": "rough"
+  },
+  "0429014_1": {
+   "ground": 578.6
+  },
+  "0429015_1": {
+   "ground": 202.2,
+   "bearing": 155,
+   "target": "Elverum",
+   "distance": 9227,
+   "quality": "good"
+  },
+  "0429016_1": {
+   "ground": 283.2,
+   "bearing": 146.4,
+   "target": "Rena",
+   "distance": 47218,
+   "quality": "rough"
+  },
+  "0429017_1": {
+   "ground": 578.5,
+   "bearing": 226,
+   "target": "Elverum",
+   "distance": 37787,
+   "quality": "rough"
+  },
+  "0429018_1": {
+   "ground": 744.9,
+   "bearing": 165,
+   "target": "Engerdal",
+   "distance": 66886,
+   "quality": "very rough"
+  },
+  "0429019_1": {
+   "ground": 170.2,
+   "bearing": 138.8,
+   "target": "Flisa",
+   "distance": 20583,
+   "quality": "rough"
+  },
+  "0429020_1": {
+   "ground": 135.8,
+   "bearing": 331.6,
+   "target": "Stange",
+   "distance": 45584,
+   "quality": "rough"
+  },
+  "0429021_1": {
+   "ground": 144,
+   "bearing": 182.4,
+   "target": "Minnesund",
+   "distance": 17173,
+   "quality": "rough"
+  },
+  "0429022_1": {
+   "ground": 177.5,
+   "bearing": 16.2,
+   "target": "Løten",
+   "distance": 13432,
+   "quality": "good"
+  },
+  "0429022_2": {
+   "ground": 177.5,
+   "bearing": 182.1,
+   "target": "Tangen",
+   "distance": 9512,
+   "quality": "good"
+  },
+  "0429023_1": {
+   "ground": 192.9,
+   "bearing": 330.6,
+   "target": "Hamar",
+   "distance": 25526,
+   "quality": "rough"
+  },
+  "0429025_1": {
+   "ground": 527.8
+  },
+  "0429026_1": {
+   "ground": 274.1
+  },
+  "0429027_1": {
+   "ground": 827.1
+  },
+  "0429028_1": {
+   "ground": 172.1
+  },
+  "0429029_1": {
+   "ground": 809,
+   "bearing": 111.4,
+   "target": "Folldal",
+   "distance": 15558,
+   "quality": "rough"
+  },
+  "0529001_1": {
+   "ground": 408.9,
+   "bearing": 9.4,
+   "target": "Gjøvik",
+   "distance": 20614,
+   "quality": "rough"
+  },
+  "0529002_1": {
+   "ground": 239,
+   "bearing": 358.2,
+   "target": "Harestua",
+   "distance": 4165,
+   "quality": "good"
+  },
+  "0529003_1": {
+   "ground": 190.2,
+   "bearing": 286.9,
+   "target": "Vinstra",
+   "distance": 17318,
+   "quality": "rough"
+  },
+  "0529004_1": {
+   "ground": 129.6,
+   "bearing": 58,
+   "target": "Lillehammer",
+   "distance": 1501,
+   "quality": "good"
+  },
+  "0529005_1": {
+   "ground": 177.6,
+   "bearing": 335.2,
+   "target": "Ringebu",
+   "distance": 30816,
+   "quality": "rough"
+  },
+  "0529006_1": {
+   "ground": 1025.6,
+   "bearing": 230.5,
+   "target": "Dombås",
+   "distance": 27269,
+   "quality": "rough"
+  },
+  "0529007_1": {
+   "ground": 931,
+   "bearing": 237.2,
+   "target": "Dombås",
+   "distance": 21496,
+   "quality": "rough"
+  },
+  "0529008_1": {
+   "ground": 617.7,
+   "bearing": 4,
+   "target": "Gjøvik",
+   "distance": 38029,
+   "quality": "rough"
+  },
+  "0529009_1": {
+   "ground": 169.1,
+   "bearing": 125.5,
+   "target": "Fagernes",
+   "distance": 5182,
+   "quality": "good"
+  },
+  "0529013_1": {
+   "ground": 383.6,
+   "bearing": 325.5,
+   "target": "Dovre",
+   "distance": 14736,
+   "quality": "good"
+  },
+  "0529014_1": {
+   "ground": 622.3,
+   "bearing": 110.5,
+   "target": "Dombås",
+   "distance": 23745,
+   "quality": "rough"
+  },
+  "0529015_1": {
+   "ground": 975.7,
+   "bearing": 48,
+   "target": "Hjerkinn",
+   "distance": 18515,
+   "quality": "rough"
+  },
+  "0529016_1": {
+   "ground": 415.9,
+   "bearing": 114.8,
+   "target": "Gardermoen",
+   "distance": 21459,
+   "quality": "rough"
+  },
+  "0529018_1": {
+   "ground": 424.5,
+   "bearing": 144.6,
+   "target": "Aurdal",
+   "distance": 387,
+   "quality": "good"
+  },
+  "0529019_1": {
+   "ground": 833.6,
+   "bearing": 27.2,
+   "target": "Valdres",
+   "distance": 13183,
+   "quality": "good"
+  },
+  "0529023_1": {
+   "ground": 380.6,
+   "bearing": 244.8,
+   "target": "Lom",
+   "distance": 972,
+   "quality": "good"
+  },
+  "0529024_1": {
+   "ground": 754.1,
+   "bearing": 312.4,
+   "target": "Aurdal",
+   "distance": 9846,
+   "quality": "good"
+  },
+  "0529025_1": {
+   "ground": 508.4,
+   "bearing": 88,
+   "target": "Gjøvik",
+   "distance": 15816,
+   "quality": "rough"
+  },
+  "0529026_1": {
+   "ground": 1010.5,
+   "bearing": 256.4,
+   "target": "Lærdal",
+   "distance": 37141,
+   "quality": "rough"
+  },
+  "0529027_1": {
+   "ground": 1087.2,
+   "bearing": 180,
+   "target": "Tyinkrysset",
+   "distance": 3256,
+   "quality": "good"
+  },
+  "0529027_2": {
+   "ground": 1087.2
+  },
+  "0529029_1": {
+   "ground": 1413.4,
+   "bearing": 44.5,
+   "target": "Lom",
+   "distance": 42708,
+   "quality": "rough"
+  },
+  "0629001_1": {
+   "ground": 201.6,
+   "bearing": 65.3,
+   "target": "Oslo",
+   "distance": 25058,
+   "quality": "rough"
+  },
+  "0629001_2": {
+   "ground": 201.6,
+   "bearing": 221.7,
+   "target": "Drammen",
+   "distance": 11217,
+   "quality": "good"
+  },
+  "0629004_1": {
+   "ground": 1035.7,
+   "bearing": 319.4,
+   "target": "Geilo",
+   "distance": 23479,
+   "quality": "rough"
+  },
+  "0629005_1": {
+   "ground": 393.4,
+   "bearing": 242.5,
+   "target": "Notodden",
+   "distance": 12461,
+   "quality": "good"
+  },
+  "0629006_1": {
+   "ground": 159.4,
+   "bearing": 127.5,
+   "target": "Flå",
+   "distance": 22946,
+   "quality": "rough"
+  },
+  "0629006_2": {
+   "ground": 159.4,
+   "bearing": 331.2,
+   "target": "Gol",
+   "distance": 18363,
+   "quality": "rough"
+  },
+  "0629007_1": {
+   "ground": 198.8,
+   "bearing": 65.5,
+   "target": "Sokna",
+   "distance": 4705,
+   "quality": "good"
+  },
+  "0629009_1": {
+   "ground": 135.3,
+   "bearing": 199.2,
+   "target": "Vikersund",
+   "distance": 9820,
+   "quality": "good"
+  },
+  "0629010_1": {
+   "ground": 679.5,
+   "bearing": 44.2,
+   "target": "Hagafoss",
+   "distance": 2261,
+   "quality": "good"
+  },
+  "0629015_1": {
+   "ground": 874.4,
+   "bearing": 1.3,
+   "target": "Bromma",
+   "distance": 13422,
+   "quality": "good"
+  },
+  "0629017_1": {
+   "ground": 336.3,
+   "bearing": 347.8,
+   "target": "Hønefoss",
+   "distance": 22949,
+   "quality": "rough"
+  },
+  "0629020_1": {
+   "ground": 976.2,
+   "bearing": 296.2,
+   "target": "Lærdal",
+   "distance": 42978,
+   "quality": "rough"
+  },
+  "0629020_2": {
+   "ground": 976.2,
+   "bearing": 121.8,
+   "target": "Gol",
+   "distance": 47798,
+   "quality": "rough"
+  },
+  "0629021_1": {
+   "ground": 993.2,
+   "bearing": 82.9,
+   "target": "Geilo",
+   "distance": 19675,
+   "quality": "rough"
+  },
+  "0629021_2": {
+   "ground": 993.2,
+   "bearing": 249.2,
+   "target": "Leiro",
+   "distance": 23040,
+   "quality": "rough"
+  },
+  "0629022_1": {
+   "ground": 212.2,
+   "bearing": 289.6,
+   "target": "Ørgenvika",
+   "distance": 9075,
+   "quality": "good"
+  },
+  "0629023_1": {
+   "ground": 568.7,
+   "bearing": 286.3,
+   "target": "Hemsedal",
+   "distance": 2965,
+   "quality": "good"
+  },
+  "0629024_1": {
+   "ground": 156.9,
+   "bearing": 44.3,
+   "target": "Hokksund",
+   "distance": 10599,
+   "quality": "good"
+  },
+  "0629026_1": {
+   "ground": 227.7,
+   "bearing": 130.4,
+   "target": "Rollag",
+   "distance": 9443,
+   "quality": "good"
+  },
+  "0629027_1": {
+   "ground": 69.1,
+   "bearing": 115.4,
+   "target": "Hvittingfoss",
+   "distance": 3143,
+   "quality": "good"
+  },
+  "0629028_1": {
+   "ground": 12.8,
+   "bearing": 190.5,
+   "target": "Tofte",
+   "distance": 10015,
+   "quality": "good"
+  },
+  "0729007_1": {
+   "ground": 12.5,
+   "bearing": 348,
+   "target": "Drammen",
+   "distance": 46968,
+   "quality": "rough"
+  },
+  "0729008_1": {
+   "ground": 46.9,
+   "bearing": 346.8,
+   "target": "Drammen",
+   "distance": 42257,
+   "quality": "rough"
+  },
+  "0729011_1": {
+   "ground": 64.7,
+   "bearing": 159,
+   "target": "Tønsberg",
+   "distance": 36970,
+   "quality": "rough"
+  },
+  "0729012_1": {
+   "ground": 92.5,
+   "bearing": 191,
+   "target": "Larvik",
+   "distance": 51839,
+   "quality": "rough"
+  },
+  "0729014_1": {
+   "ground": 94.7,
+   "bearing": 213.6,
+   "target": "Larvik",
+   "distance": 17784,
+   "quality": "rough"
+  },
+  "0729015_1": {
+   "ground": 3.4,
+   "bearing": 333,
+   "target": "Sande",
+   "distance": 6970,
+   "quality": "good"
+  },
+  "0729016_1": {
+   "ground": 109.2,
+   "bearing": 107.6,
+   "target": "Larvik",
+   "distance": 7176,
+   "quality": "good"
+  },
+  "0829001_1": {
+   "ground": 275.8,
+   "bearing": 28.9,
+   "target": "Siljan",
+   "distance": 4985,
+   "quality": "good"
+  },
+  "0829003_1": {
+   "ground": 126.5,
+   "bearing": 110.1,
+   "target": "Larvik",
+   "distance": 18234,
+   "quality": "rough"
+  },
+  "0829003_2": {
+   "ground": 126.5,
+   "bearing": 295.4,
+   "target": "Porsgrunn",
+   "distance": 5626,
+   "quality": "good"
+  },
+  "0829005_1": {
+   "ground": 9.5,
+   "bearing": 128.1,
+   "target": "Herre",
+   "distance": 3943,
+   "quality": "good"
+  },
+  "0829006_1": {
+   "ground": 92.7,
+   "bearing": 39.6,
+   "target": "Porsgrunn",
+   "distance": 29928,
+   "quality": "rough"
+  },
+  "0829007_1": {
+   "ground": 52,
+   "bearing": 110.5,
+   "target": "Skien",
+   "distance": 19979,
+   "quality": "rough"
+  },
+  "0829010_1": {
+   "ground": 199.3,
+   "bearing": 273.1,
+   "target": "Rjukan",
+   "distance": 18589,
+   "quality": "rough"
+  },
+  "0829011_1": {
+   "ground": 334.5,
+   "bearing": 68.6,
+   "target": "Hjartdal",
+   "distance": 4122,
+   "quality": "good"
+  },
+  "0829012_1": {
+   "ground": 346.9,
+   "bearing": 167.7,
+   "target": "Notodden",
+   "distance": 8100,
+   "quality": "good"
+  },
+  "0829013_1": {
+   "ground": 528.5,
+   "bearing": 124.8,
+   "target": "Drammen",
+   "distance": 46437,
+   "quality": "rough"
+  },
+  "0829013_2": {
+   "ground": 528.5,
+   "bearing": 124.8,
+   "target": "Drammen",
+   "distance": 46437,
+   "quality": "rough"
+  },
+  "0829014_1": {
+   "ground": 125.7,
+   "bearing": 205.6,
+   "target": "Notodden",
+   "distance": 14573,
+   "quality": "good"
+  },
+  "0829015_1": {
+   "ground": 462.8,
+   "bearing": 62.5,
+   "target": "Kongsberg",
+   "distance": 14526,
+   "quality": "good"
+  },
+  "0829016_1": {
+   "ground": 960.7,
+   "bearing": 64.3,
+   "target": "Rjukan",
+   "distance": 20754,
+   "quality": "rough"
+  },
+  "0829017_1": {
+   "ground": 690.1,
+   "bearing": 116.8,
+   "target": "Brunkeberg",
+   "distance": 23760,
+   "quality": "rough"
+  },
+  "0829018_1": {
+   "ground": 816.4,
+   "bearing": 55.2,
+   "target": "Dalen",
+   "distance": 19744,
+   "quality": "rough"
+  },
+  "0829019_1": {
+   "ground": 325.5,
+   "bearing": 22.5,
+   "target": "Krossli",
+   "distance": 9570,
+   "quality": "good"
+  },
+  "0929001_1": {
+   "ground": 61.5,
+   "bearing": 43.7,
+   "target": "Tvedestrand",
+   "distance": 7476,
+   "quality": "good"
+  },
+  "0929002_1": {
+   "ground": 84.2,
+   "bearing": 66.4,
+   "target": "Larvik",
+   "distance": 57119,
+   "quality": "rough"
+  },
+  "0929003_1": {
+   "ground": 72.8,
+   "bearing": 238.7,
+   "target": "Kristiansand",
+   "distance": 32028,
+   "quality": "rough"
+  },
+  "0929003_2": {
+   "ground": 72.8,
+   "bearing": 57.6,
+   "target": "Grimstad",
+   "distance": 9084,
+   "quality": "good"
+  },
+  "0929004_1": {
+   "ground": 36.4,
+   "bearing": 242.2,
+   "target": "Kristiansand",
+   "distance": 12663,
+   "quality": "good"
+  },
+  "0929004_2": {
+   "ground": 36.4,
+   "bearing": 56.4,
+   "target": "Grimstad",
+   "distance": 28492,
+   "quality": "rough"
+  },
+  "0929005_1": {
+   "ground": 914.5,
+   "bearing": 27,
+   "target": "Haukeli",
+   "distance": 12461,
+   "quality": "good"
+  },
+  "0929005_2": {
+   "ground": 914.5,
+   "bearing": 213.1,
+   "target": "Hovden",
+   "distance": 10502,
+   "quality": "good"
+  },
+  "0929006_1": {
+   "ground": 234.9,
+   "bearing": 300.8,
+   "target": "Hovden",
+   "distance": 7794,
+   "quality": "good"
+  },
+  "0929007_1": {
+   "ground": 164.6,
+   "bearing": 267,
+   "target": "Evje",
+   "distance": 34779,
+   "quality": "rough"
+  },
+  "0929008_1": {
+   "ground": 162.4,
+   "bearing": 349.6,
+   "target": "Treungen",
+   "distance": 13236,
+   "quality": "good"
+  },
+  "1029001_1": {
+   "ground": 207.1,
+   "bearing": 137.1,
+   "target": "Lyngdal",
+   "distance": 12465,
+   "quality": "good"
+  },
+  "1029002_1": {
+   "ground": 56.8,
+   "bearing": 80.4,
+   "target": "Kristiansand",
+   "distance": 3324,
+   "quality": "good"
+  },
+  "1029003_1": {
+   "ground": 283.2,
+   "bearing": 149.2,
+   "target": "Kristiansand",
+   "distance": 21003,
+   "quality": "rough"
+  },
+  "1029004_1": {
+   "ground": 62.9,
+   "bearing": 73,
+   "target": "Kristiansand",
+   "distance": 23066,
+   "quality": "rough"
+  },
+  "1029005_1": {
+   "ground": 150.7,
+   "bearing": 123,
+   "target": "Mandal",
+   "distance": 17158,
+   "quality": "rough"
+  },
+  "1029006_1": {
+   "ground": 151,
+   "bearing": 8.6,
+   "target": "Sira",
+   "distance": 4503,
+   "quality": "good"
+  },
+  "1029007_1": {
+   "ground": 471.5
+  },
+  "1029008_1": {
+   "ground": 656.1,
+   "bearing": 279.3,
+   "target": "Stavanger",
+   "distance": 54424,
+   "quality": "rough"
+  },
+  "1129001_1": {
+   "ground": 231.7,
+   "bearing": 335,
+   "target": "Stavanger",
+   "distance": 35065,
+   "quality": "rough"
+  },
+  "1129002_1": {
+   "ground": 170.5,
+   "bearing": 102.9,
+   "target": "Moi",
+   "distance": 8380,
+   "quality": "good"
+  },
+  "1129003_1": {
+   "ground": 32.4,
+   "bearing": 329.7,
+   "target": "Mekjarvik",
+   "distance": 3722,
+   "quality": "good"
+  },
+  "1129004_1": {
+   "ground": 35.7,
+   "bearing": 186.8,
+   "target": "Aksdal",
+   "distance": 8460,
+   "quality": "good"
+  },
+  "1129005_1": {
+   "ground": 27.1,
+   "bearing": 345.8,
+   "target": "Aksdal",
+   "distance": 678,
+   "quality": "good"
+  },
+  "1129006_1": {
+   "ground": 45.4,
+   "bearing": 65.3,
+   "target": "Ølen",
+   "distance": 5984,
+   "quality": "good"
+  },
+  "1129007_1": {
+   "ground": 11.1,
+   "bearing": 173.4,
+   "target": "Oanes",
+   "distance": 12269,
+   "quality": "good"
+  },
+  "1129008_1": {
+   "ground": 5.6,
+   "bearing": 237,
+   "target": "Tau",
+   "distance": 16945,
+   "quality": "rough"
+  },
+  "1129010_1": {
+   "ground": 10,
+   "bearing": 245.9,
+   "target": "Nesvik",
+   "distance": 8308,
+   "quality": "good"
+  },
+  "1129011_1": {
+   "ground": 382.6,
+   "bearing": 72.4,
+   "target": "Tonstad",
+   "distance": 13885,
+   "quality": "good"
+  },
+  "1129011_2": {
+   "ground": 382.6,
+   "bearing": 242.3,
+   "target": "Helleland",
+   "distance": 21970,
+   "quality": "rough"
+  },
+  "1129012_1": {
+   "ground": 8.5,
+   "bearing": 354.5,
+   "target": "Bryne",
+   "distance": 20643,
+   "quality": "rough"
+  },
+  "1129013_1": {
+   "ground": 203.9,
+   "bearing": 108.5,
+   "target": "Flekkefjord",
+   "distance": 28768,
+   "quality": "rough"
+  },
+  "1129014_1": {
+   "ground": 64.6,
+   "bearing": 124.1,
+   "target": "Byrkjedal",
+   "distance": 5395,
+   "quality": "good"
+  },
+  "1129015_1": {
+   "ground": 37.6,
+   "bearing": 135.9,
+   "target": "Skudeneshavn",
+   "distance": 6024,
+   "quality": "good"
+  },
+  "1129016_1": {
+   "ground": 16.9,
+   "bearing": 83.2,
+   "target": "Stavanger",
+   "distance": 6585,
+   "quality": "good"
+  },
+  "1129016_2": {
+   "ground": 16.9,
+   "bearing": 222.3,
+   "target": "Tananger",
+   "distance": 3465,
+   "quality": "good"
+  },
+  "1129017_1": {
+   "ground": 30.9,
+   "bearing": 161.4,
+   "target": "Tjelta",
+   "distance": 1224,
+   "quality": "good"
+  },
+  "1129018_1": {
+   "ground": 6.1,
+   "bearing": 170.7,
+   "target": "Stavanger",
+   "distance": 17263,
+   "quality": "rough"
+  },
+  "1129019_1": {
+   "ground": 48,
+   "bearing": 343.2,
+   "target": "Haugesund",
+   "distance": 4019,
+   "quality": "good"
+  },
+  "1129019_2": {
+   "ground": 48,
+   "bearing": 310,
+   "target": "Karmøy",
+   "distance": 3168,
+   "quality": "good"
+  },
+  "1129020_1": {
+   "ground": 165.2,
+   "bearing": 8.9,
+   "target": "Lauvik",
+   "distance": 7354,
+   "quality": "good"
+  },
+  "1129021_1": {
+   "ground": 233,
+   "bearing": 336.3,
+   "target": "Stavanger",
+   "distance": 36760,
+   "quality": "rough"
+  },
+  "1129021_2": {
+   "ground": 233,
+   "bearing": 125.7,
+   "target": "Vikeså",
+   "distance": 6416,
+   "quality": "good"
+  },
+  "1129022_1": {
+   "ground": 98.1,
+   "bearing": 336.4,
+   "target": "Stavanger",
+   "distance": 49638,
+   "quality": "rough"
+  },
+  "1129022_2": {
+   "ground": 98.1,
+   "bearing": 163.4,
+   "target": "Krossmoen",
+   "distance": 4431,
+   "quality": "good"
+  },
+  "1129023_1": {
+   "ground": 11.9,
+   "bearing": 6.8,
+   "target": "Stavanger",
+   "distance": 8326,
+   "quality": "good"
+  },
+  "1129023_2": {
+   "ground": 11.9,
+   "bearing": 159.5,
+   "target": "Sandnes",
+   "distance": 4907,
+   "quality": "good"
+  },
+  "1129024_1": {
+   "ground": 13.5,
+   "bearing": 3.9,
+   "target": "Stavanger",
+   "distance": 9445,
+   "quality": "good"
+  },
+  "1129024_2": {
+   "ground": 13.5,
+   "bearing": 158.7,
+   "target": "Sandnes",
+   "distance": 3687,
+   "quality": "good"
+  },
+  "1129025_1": {
+   "ground": 184.6,
+   "bearing": 204.5,
+   "target": "Ropeid",
+   "distance": 9320,
+   "quality": "good"
+  },
+  "1129026_1": {
+   "ground": 1.7
+  },
+  "1129026_2": {
+   "ground": 1.7
+  },
+  "1129027_1": {
+   "ground": 16.9,
+   "bearing": 339.8,
+   "target": "Byfjordtunnelen",
+   "distance": 384,
+   "quality": "good"
+  },
+  "1129027_2": {
+   "ground": 16.9,
+   "bearing": 132.1,
+   "target": "Stavanger",
+   "distance": 7229,
+   "quality": "good"
+  },
+  "1129028_1": {
+   "ground": 98.5,
+   "bearing": 163.7,
+   "target": "Flekkefjord",
+   "distance": 17071,
+   "quality": "rough"
+  },
+  "1129029_1": {
+   "ground": 207.7,
+   "bearing": 144.4,
+   "target": "Vikeså",
+   "distance": 1385,
+   "quality": "good"
+  },
+  "1129030_1": {
+   "ground": 320.6,
+   "bearing": 19.5,
+   "target": "Hjelmeland",
+   "distance": 5864,
+   "quality": "good"
+  },
+  "1129031_1": {
+   "ground": 369.3,
+   "bearing": 236.1,
+   "target": "Byrkjedal",
+   "distance": 9636,
+   "quality": "good"
+  },
+  "1129032_1": {
+   "ground": 12.5,
+   "bearing": 237.2,
+   "target": "Sola",
+   "distance": 1664,
+   "quality": "good"
+  },
+  "1129032_2": {
+   "ground": 12.5,
+   "bearing": 31.9,
+   "target": "Forus",
+   "distance": 707,
+   "quality": "good"
+  },
+  "1129033_1": {
+   "ground": 105.3,
+   "bearing": 142.4,
+   "target": "Vikeså",
+   "distance": 18602,
+   "quality": "rough"
+  },
+  "1129033_2": {
+   "ground": 105.3,
+   "bearing": 319.6,
+   "target": "Sandnes",
+   "distance": 12472,
+   "quality": "good"
+  },
+  "1129034_1": {
+   "ground": 2.6,
+   "bearing": 317,
+   "target": "Tananger",
+   "distance": 5424,
+   "quality": "good"
+  },
+  "1129036_1": {
+   "ground": 8.1
+  },
+  "1129036_2": {
+   "ground": 8.1,
+   "bearing": 157.2,
+   "target": "Stavanger",
+   "distance": 20277,
+   "quality": "rough"
+  },
+  "1129037_1": {
+   "ground": 8.2
+  },
+  "1129037_2": {
+   "ground": 8.2,
+   "bearing": 12.4,
+   "target": "Aksdal",
+   "distance": 5604,
+   "quality": "good"
+  },
+  "1129038_1": {
+   "ground": 35.6,
+   "bearing": 174.6,
+   "target": "Sandnes",
+   "distance": 11829,
+   "quality": "good"
+  },
+  "1129038_2": {
+   "ground": 35.6
+  },
+  "1209091_1": {
+   "ground": 298.5
+  },
+  "1209095_1": {
+   "ground": 180.9,
+   "bearing": 21.3,
+   "target": "Åkra",
+   "distance": 2824,
+   "quality": "good"
+  },
+  "1229001_1": {
+   "ground": 1232.3,
+   "bearing": 51.7,
+   "target": "Haugastøl",
+   "distance": 25713,
+   "quality": "rough"
+  },
+  "1229002_1": {
+   "ground": 185.9,
+   "bearing": 190.7,
+   "target": "Kløvet",
+   "distance": 2616,
+   "quality": "good"
+  },
+  "1229005_1": {
+   "ground": 485.8,
+   "bearing": 213.4,
+   "target": "Matre",
+   "distance": 9759,
+   "quality": "good"
+  },
+  "1229006_1": {
+   "ground": 249.1,
+   "bearing": 335.5,
+   "target": "Bergen",
+   "distance": 5707,
+   "quality": "good"
+  },
+  "1229007_1": {
+   "ground": 95.8
+  },
+  "1229008_1": {
+   "ground": 67.2,
+   "bearing": 312.8,
+   "target": "Vågsbotn",
+   "distance": 2480,
+   "quality": "good"
+  },
+  "1229009_1": {
+   "ground": 36,
+   "bearing": 264.4,
+   "target": "Flesland",
+   "distance": 5820,
+   "quality": "good"
+  },
+  "1229009_2": {
+   "ground": 36
+  },
+  "1229010_1": {
+   "ground": 47.7,
+   "bearing": 34.6,
+   "target": "Laksevåg",
+   "distance": 4571,
+   "quality": "good"
+  },
+  "1229012_1": {
+   "ground": 789.5,
+   "bearing": 74.7,
+   "target": "Røldal",
+   "distance": 4434,
+   "quality": "good"
+  },
+  "1229013_1": {
+   "ground": 91.2,
+   "bearing": 187.8,
+   "target": "Bergen",
+   "distance": 9381,
+   "quality": "good"
+  },
+  "1229013_2": {
+   "ground": 91.2,
+   "bearing": 129.8,
+   "target": "Arna",
+   "distance": 8733,
+   "quality": "good"
+  },
+  "1229015_1": {
+   "ground": 10.2,
+   "bearing": 37.2,
+   "target": "Knarvik",
+   "distance": 2290,
+   "quality": "good"
+  },
+  "1229015_2": {
+   "ground": 10.2,
+   "bearing": 167,
+   "target": "Bergen",
+   "distance": 15050,
+   "quality": "rough"
+  },
+  "1229017_1": {
+   "ground": 94.8,
+   "bearing": 54.7,
+   "target": "Granvin",
+   "distance": 16051,
+   "quality": "rough"
+  },
+  "1229019_1": {
+   "ground": 50.3
+  },
+  "1229020_1": {
+   "ground": 318.6,
+   "bearing": 214.3,
+   "target": "Knarvik",
+   "distance": 33112,
+   "quality": "rough"
+  },
+  "1229021_1": {
+   "ground": 1182.5,
+   "bearing": 47.2,
+   "target": "Haugastøl",
+   "distance": 18566,
+   "quality": "rough"
+  },
+  "1229022_1": {
+   "ground": 389.5,
+   "bearing": 127.1,
+   "target": "Røldal",
+   "distance": 16864,
+   "quality": "rough"
+  },
+  "1229023_1": {
+   "ground": 558.3,
+   "bearing": 126,
+   "target": "Røldal",
+   "distance": 13458,
+   "quality": "good"
+  },
+  "1229024_1": {
+   "ground": 863.2,
+   "bearing": 114.6,
+   "target": "Røldal",
+   "distance": 7331,
+   "quality": "good"
+  },
+  "1229025_1": {
+   "ground": 3.2,
+   "bearing": 5.7,
+   "target": "Utne",
+   "distance": 10537,
+   "quality": "good"
+  },
+  "1229026_1": {
+   "ground": 993.9,
+   "bearing": 263.2,
+   "target": "Røldal",
+   "distance": 15327,
+   "quality": "rough"
+  },
+  "1229027_1": {
+   "ground": 7.4
+  },
+  "1229028_1": {
+   "ground": 43.8,
+   "bearing": 75.8,
+   "target": "Føyno",
+   "distance": 1670,
+   "quality": "good"
+  },
+  "1229028_2": {
+   "ground": 43.8,
+   "bearing": 236,
+   "target": "Bømlo",
+   "distance": 14570,
+   "quality": "good"
+  },
+  "1229029_1": {
+   "ground": 14.6,
+   "bearing": 223.5,
+   "target": "Flesland",
+   "distance": 9296,
+   "quality": "good"
+  },
+  "1229029_2": {
+   "ground": 14.6
+  },
+  "1229030_1": {
+   "ground": 14.6
+  },
+  "1229031_1": {
+   "ground": 79.2,
+   "bearing": 27.2,
+   "target": "Straume",
+   "distance": 4746,
+   "quality": "good"
+  },
+  "1229032_1": {
+   "ground": 78.2,
+   "bearing": 210,
+   "target": "Storebotn",
+   "distance": 1530,
+   "quality": "good"
+  },
+  "1229033_1": {
+   "ground": 79.4,
+   "bearing": 207.4,
+   "target": "Voss",
+   "distance": 2040,
+   "quality": "good"
+  },
+  "1229034_1": {
+   "ground": 25.2,
+   "bearing": 191.6,
+   "target": "Haugesund",
+   "distance": 37811,
+   "quality": "rough"
+  },
+  "1229034_2": {
+   "ground": 25.2,
+   "bearing": 55.3,
+   "target": "Stord",
+   "distance": 6619,
+   "quality": "good"
+  },
+  "1229035_1": {
+   "ground": 47.9,
+   "bearing": 344,
+   "target": "Bergen",
+   "distance": 23208,
+   "quality": "rough"
+  },
+  "1229035_2": {
+   "ground": 47.9,
+   "bearing": 188.7,
+   "target": "Halhjem",
+   "distance": 4270,
+   "quality": "good"
+  },
+  "1229036_1": {
+   "ground": 839.8,
+   "bearing": 294,
+   "target": "Eidfjord",
+   "distance": 18009,
+   "quality": "rough"
+  },
+  "1229036_2": {
+   "ground": 839.8,
+   "bearing": 65.3,
+   "target": "Haugastøl",
+   "distance": 29581,
+   "quality": "rough"
+  },
+  "1229038_1": {
+   "ground": 43.4,
+   "bearing": 195.6,
+   "target": "Sotra",
+   "distance": 15618,
+   "quality": "rough"
+  },
+  "1229038_2": {
+   "ground": 43.4,
+   "bearing": 75.6,
+   "target": "Bergen",
+   "distance": 9582,
+   "quality": "good"
+  },
+  "1229039_1": {
+   "ground": 581.1,
+   "bearing": 174.2,
+   "target": "Vinje",
+   "distance": 12283,
+   "quality": "good"
+  },
+  "1229041_1": {
+   "ground": 40.1,
+   "bearing": 168.5,
+   "target": "Eikelandsosen",
+   "distance": 13899,
+   "quality": "good"
+  },
+  "1229042_1": {
+   "ground": 47.1,
+   "bearing": 207.6,
+   "target": "Haugesund",
+   "distance": 26483,
+   "quality": "rough"
+  },
+  "1229045_1": {
+   "ground": 115.1,
+   "bearing": 91,
+   "target": "Eidfjord",
+   "distance": 12739,
+   "quality": "good"
+  },
+  "1229046_1": {
+   "ground": 497,
+   "bearing": 215.4,
+   "target": "Nesheim",
+   "distance": 3041,
+   "quality": "good"
+  },
+  "1229046_2": {
+   "ground": 497,
+   "bearing": 220.7,
+   "target": "Nesheim",
+   "distance": 3273,
+   "quality": "good"
+  },
+  "1229047_1": {
+   "ground": 1081.2,
+   "bearing": 265.4,
+   "target": "Røldal",
+   "distance": 9391,
+   "quality": "good"
+  },
+  "1229047_2": {
+   "ground": 1081.2,
+   "bearing": 265.4,
+   "target": "Røldal",
+   "distance": 9391,
+   "quality": "good"
+  },
+  "1229047_3": {
+   "ground": 1081.2
+  },
+  "1229048_1": {
+   "ground": 569.8,
+   "bearing": 313.8,
+   "target": "Kløvet",
+   "distance": 3796,
+   "quality": "good"
+  },
+  "1229049_1": {
+   "ground": 552.9
+  },
+  "1229050_1": {
+   "ground": 78.6,
+   "bearing": 7.3,
+   "target": "Arna",
+   "distance": 7307,
+   "quality": "good"
+  },
+  "1229051_1": {
+   "ground": 241.6,
+   "bearing": 179.4,
+   "target": "Trengereid",
+   "distance": 2412,
+   "quality": "good"
+  },
+  "1229052_1": {
+   "ground": 216.3,
+   "bearing": 194.2,
+   "target": "Voss",
+   "distance": 18079,
+   "quality": "rough"
+  },
+  "1229053_1": {
+   "ground": 57.8,
+   "bearing": 306,
+   "target": "Sandvikvåg",
+   "distance": 10368,
+   "quality": "good"
+  },
+  "1229054_1": {
+   "ground": 88.7,
+   "bearing": 246.2,
+   "target": "Straume",
+   "distance": 1834,
+   "quality": "good"
+  },
+  "1229055_1": {
+   "ground": 43.8,
+   "bearing": 240.6,
+   "target": "Bergen",
+   "distance": 55172,
+   "quality": "rough"
+  },
+  "1229056_1": {
+   "ground": 448.1,
+   "bearing": 129.7,
+   "target": "Hardanger",
+   "distance": 31912,
+   "quality": "rough"
+  },
+  "1229057_1": {
+   "ground": 239.6,
+   "bearing": 137,
+   "target": "Granvin",
+   "distance": 9425,
+   "quality": "good"
+  },
+  "1229058_1": {
+   "ground": 96.5,
+   "bearing": 2.6,
+   "target": "Oppedal",
+   "distance": 47965,
+   "quality": "rough"
+  },
+  "1229059_1": {
+   "ground": 48.9,
+   "bearing": 290.4,
+   "target": "Austrheim",
+   "distance": 17856,
+   "quality": "rough"
+  },
+  "1229060_1": {
+   "ground": 27.4,
+   "bearing": 152.7,
+   "target": "Knarvik",
+   "distance": 31006,
+   "quality": "rough"
+  },
+  "1400224_1": {
+   "ground": 1080.9,
+   "bearing": 259.9,
+   "target": "Årdal",
+   "distance": 23761,
+   "quality": "rough"
+  },
+  "1400224_2": {
+   "ground": 1080.9,
+   "bearing": 147.8,
+   "target": "Tyinkrysset",
+   "distance": 9575,
+   "quality": "good"
+  },
+  "1429001_1": {
+   "ground": 3.9,
+   "bearing": 225.3,
+   "target": "Hyen",
+   "distance": 2341,
+   "quality": "good"
+  },
+  "1429003_1": {
+   "ground": 1162.6,
+   "bearing": 109.5,
+   "target": "Hol",
+   "distance": 41636,
+   "quality": "rough"
+  },
+  "1429004_1": {
+   "ground": 520.7,
+   "bearing": 138,
+   "target": "Sogndal",
+   "distance": 17651,
+   "quality": "rough"
+  },
+  "1429004_2": {
+   "ground": 520.7,
+   "bearing": 320.1,
+   "target": "Skei",
+   "distance": 32595,
+   "quality": "rough"
+  },
+  "1429005_1": {
+   "ground": 349.2,
+   "bearing": 304,
+   "target": "Skei",
+   "distance": 11225,
+   "quality": "good"
+  },
+  "1429006_1": {
+   "ground": 143,
+   "bearing": 181.5,
+   "target": "Fjærland",
+   "distance": 8462,
+   "quality": "good"
+  },
+  "1429006_2": {
+   "ground": 143,
+   "bearing": 306.3,
+   "target": "Skei",
+   "distance": 17272,
+   "quality": "rough"
+  },
+  "1429007_1": {
+   "ground": 184.2,
+   "bearing": 140.7,
+   "target": "Førde",
+   "distance": 16104,
+   "quality": "rough"
+  },
+  "1429008_1": {
+   "ground": 882.5,
+   "bearing": 212.2,
+   "target": "Grasdalen",
+   "distance": 2418,
+   "quality": "good"
+  },
+  "1429009_1": {
+   "ground": 15.8,
+   "bearing": 282,
+   "target": "Måløy",
+   "distance": 1039,
+   "quality": "good"
+  },
+  "1429011_1": {
+   "ground": 410.3,
+   "bearing": 276.2,
+   "target": "Lærdal",
+   "distance": 19822,
+   "quality": "rough"
+  },
+  "1429011_2": {
+   "ground": 410.3,
+   "bearing": 97.4,
+   "target": "Fagernes",
+   "distance": 75170,
+   "quality": "very rough"
+  },
+  "1429011_3": {
+   "ground": 410.3
+  },
+  "1429012_1": {
+   "ground": 506.9,
+   "bearing": 276.3,
+   "target": "Lærdal",
+   "distance": 25686,
+   "quality": "rough"
+  },
+  "1429013_1": {
+   "ground": 47.1,
+   "bearing": 219.6,
+   "target": "Årdalstangen",
+   "distance": 5211,
+   "quality": "good"
+  },
+  "1429013_2": {
+   "ground": 47.1,
+   "bearing": 25.7,
+   "target": "Øvre Årdal",
+   "distance": 4558,
+   "quality": "good"
+  },
+  "1429014_1": {
+   "ground": 418.4,
+   "bearing": 228.7,
+   "target": "Florø",
+   "distance": 11411,
+   "quality": "good"
+  },
+  "1429014_2": {
+   "ground": 418.4,
+   "bearing": 24.9,
+   "target": "Svelgen",
+   "distance": 12555,
+   "quality": "good"
+  },
+  "1429016_1": {
+   "ground": 730.6,
+   "bearing": 100.7,
+   "target": "Fagernes",
+   "distance": 66799,
+   "quality": "very rough"
+  },
+  "1429017_1": {
+   "ground": 209.5,
+   "bearing": 247.7,
+   "target": "Førde",
+   "distance": 17147,
+   "quality": "rough"
+  },
+  "1429018_1": {
+   "ground": 220.4,
+   "bearing": 3.2,
+   "target": "Oppedal",
+   "distance": 12901,
+   "quality": "good"
+  },
+  "1429019_1": {
+   "ground": 892.5,
+   "bearing": 178.8,
+   "target": "Vinje",
+   "distance": 19684,
+   "quality": "rough"
+  },
+  "1429020_1": {
+   "ground": 11.1,
+   "bearing": 42,
+   "target": "Aurland",
+   "distance": 6656,
+   "quality": "good"
+  },
+  "1429020_2": {
+   "ground": 11.1,
+   "bearing": 330.4,
+   "target": "Flenjatunnelen",
+   "distance": 4945,
+   "quality": "good"
+  },
+  "1429021_1": {
+   "ground": 352.8,
+   "bearing": 258.8,
+   "target": "Gudvangen",
+   "distance": 12155,
+   "quality": "good"
+  },
+  "1429021_2": {
+   "ground": 352.8,
+   "bearing": 143.6,
+   "target": "Flåm",
+   "distance": 5184,
+   "quality": "good"
+  },
+  "1429022_1": {
+   "ground": 879.5,
+   "bearing": 252.6,
+   "target": "Stryn",
+   "distance": 32607,
+   "quality": "rough"
+  },
+  "1429022_2": {
+   "ground": 879.5
+  },
+  "1429023_1": {
+   "ground": 837.7,
+   "bearing": 99.6,
+   "target": "Otta",
+   "distance": 75863,
+   "quality": "very rough"
+  },
+  "1429024_1": {
+   "ground": 6.2
+  },
+  "1429025_1": {
+   "ground": 9,
+   "bearing": 340.6,
+   "target": "Skei",
+   "distance": 1435,
+   "quality": "good"
+  },
+  "1429026_1": {
+   "ground": 54.1,
+   "bearing": 148,
+   "target": "Lærdal",
+   "distance": 6919,
+   "quality": "good"
+  },
+  "1429026_2": {
+   "ground": 54.1,
+   "bearing": 256,
+   "target": "Fodnes",
+   "distance": 2090,
+   "quality": "good"
+  },
+  "1429027_1": {
+   "ground": 36,
+   "bearing": 39.6,
+   "target": "Årdalstangen",
+   "distance": 6863,
+   "quality": "good"
+  },
+  "1429028_1": {
+   "ground": 2.6,
+   "bearing": 302.4,
+   "target": "Sogndal",
+   "distance": 14809,
+   "quality": "good"
+  },
+  "1429030_1": {
+   "ground": 253.4,
+   "bearing": 14.5,
+   "target": "Gaupne",
+   "distance": 6854,
+   "quality": "good"
+  },
+  "1429031_1": {
+   "ground": 21.4,
+   "bearing": 283.7,
+   "target": "Vadheim",
+   "distance": 21132,
+   "quality": "rough"
+  },
+  "1429032_1": {
+   "ground": 141.4,
+   "bearing": 5.3,
+   "target": "Førde",
+   "distance": 17644,
+   "quality": "rough"
+  },
+  "1429033_1": {
+   "ground": 222.5,
+   "bearing": 270.4,
+   "target": "Nordfjordeid",
+   "distance": 31367,
+   "quality": "rough"
+  },
+  "1429034_1": {
+   "ground": 172.1,
+   "bearing": 300,
+   "target": "Sogndal",
+   "distance": 6588,
+   "quality": "good"
+  },
+  "1429034_2": {
+   "ground": 172.1,
+   "bearing": 123.4,
+   "target": "Mannheller",
+   "distance": 8203,
+   "quality": "good"
+  },
+  "1429035_1": {
+   "ground": 189.4,
+   "bearing": 132.9,
+   "target": "Sogndal",
+   "distance": 24692,
+   "quality": "rough"
+  },
+  "1429035_2": {
+   "ground": 189.4,
+   "bearing": 325.4,
+   "target": "Skei",
+   "distance": 25845,
+   "quality": "rough"
+  },
+  "1429036_1": {
+   "ground": 4.2,
+   "bearing": 189.3,
+   "target": "Vinje",
+   "distance": 43165,
+   "quality": "rough"
+  },
+  "1429037_1": {
+   "ground": 636.9,
+   "bearing": 36.6,
+   "target": "Stryn",
+   "distance": 18779,
+   "quality": "rough"
+  },
+  "1429038_1": {
+   "ground": 8.7,
+   "bearing": 62.1,
+   "target": "Sogndal",
+   "distance": 12881,
+   "quality": "good"
+  },
+  "1429039_1": {
+   "ground": 3.8,
+   "bearing": 84.7,
+   "target": "Sogndal",
+   "distance": 26821,
+   "quality": "rough"
+  },
+  "1429040_1": {
+   "ground": 2.8,
+   "bearing": 269.4,
+   "target": "Vadheim",
+   "distance": 39662,
+   "quality": "rough"
+  },
+  "1429041_1": {
+   "ground": 939,
+   "bearing": 107.1,
+   "target": "Fagernes",
+   "distance": 67058,
+   "quality": "very rough"
+  },
+  "1429041_2": {
+   "ground": 939,
+   "bearing": 255.9,
+   "target": "Lærdal",
+   "distance": 31032,
+   "quality": "rough"
+  },
+  "1429042_1": {
+   "ground": 451.5,
+   "bearing": 266.2,
+   "target": "Eldalsosen",
+   "distance": 10219,
+   "quality": "good"
+  },
+  "1429043_1": {
+   "ground": 224.5,
+   "bearing": 186.5,
+   "target": "Sandane",
+   "distance": 18089,
+   "quality": "rough"
+  },
+  "1429043_2": {
+   "ground": 224.5,
+   "bearing": 211.1,
+   "target": "Skei",
+   "distance": 4910,
+   "quality": "good"
+  },
+  "1429044_1": {
+   "ground": 21.1,
+   "bearing": 267.3,
+   "target": "Måløy",
+   "distance": 14650,
+   "quality": "good"
+  },
+  "1429045_1": {
+   "ground": 246.9,
+   "bearing": 49.4,
+   "target": "Førde",
+   "distance": 1949,
+   "quality": "good"
+  },
+  "1429046_1": {
+   "ground": 70.5,
+   "bearing": 146.4,
+   "target": "Lote",
+   "distance": 4685,
+   "quality": "good"
+  },
+  "1429046_2": {
+   "ground": 70.5,
+   "bearing": 295.3,
+   "target": "Nordfjordeid",
+   "distance": 2327,
+   "quality": "good"
+  },
+  "1429047_1": {
+   "ground": 82.3,
+   "bearing": 166,
+   "target": "Skei",
+   "distance": 19221,
+   "quality": "rough"
+  },
+  "1429049_1": {
+   "ground": 61.3,
+   "bearing": 256.6,
+   "target": "Askvoll",
+   "distance": 5532,
+   "quality": "good"
+  },
+  "1529001_1": {
+   "ground": 8.7,
+   "bearing": 275.5,
+   "target": "Ålesund",
+   "distance": 2525,
+   "quality": "good"
+  },
+  "1529002_1": {
+   "ground": 4.1,
+   "bearing": 266.1,
+   "target": "Ålesund",
+   "distance": 29365,
+   "quality": "rough"
+  },
+  "1529003_1": {
+   "ground": 36.8,
+   "bearing": 220.2,
+   "target": "Molde",
+   "distance": 50435,
+   "quality": "rough"
+  },
+  "1529005_1": {
+   "ground": 132.3,
+   "bearing": 263.1,
+   "target": "Ulsteinvik",
+   "distance": 3418,
+   "quality": "good"
+  },
+  "1529005_2": {
+   "ground": 132.3,
+   "bearing": 66.1,
+   "target": "Hareid",
+   "distance": 6466,
+   "quality": "good"
+  },
+  "1529006_1": {
+   "ground": 52.2,
+   "bearing": 136.3,
+   "target": "Bjorli",
+   "distance": 33783,
+   "quality": "rough"
+  },
+  "1529007_1": {
+   "ground": 610
+  },
+  "1529007_2": {
+   "ground": 610,
+   "bearing": 158.3,
+   "target": "Geiranger",
+   "distance": 3638,
+   "quality": "good"
+  },
+  "1529008_1": {
+   "ground": 314.8,
+   "bearing": 34.3,
+   "target": "Vestnes",
+   "distance": 12522,
+   "quality": "good"
+  },
+  "1529009_1": {
+   "ground": 449.7,
+   "bearing": 122.5,
+   "target": "Bjorli",
+   "distance": 5338,
+   "quality": "good"
+  },
+  "1529009_2": {
+   "ground": 449.7,
+   "bearing": 323.6,
+   "target": "Åndalsnes",
+   "distance": 37823,
+   "quality": "rough"
+  },
+  "1529010_1": {
+   "ground": 73.8,
+   "bearing": 265.7,
+   "target": "Ålesund",
+   "distance": 16389,
+   "quality": "rough"
+  },
+  "1529013_1": {
+   "ground": 212,
+   "bearing": 246.4,
+   "target": "Molde",
+   "distance": 24777,
+   "quality": "rough"
+  },
+  "1529014_1": {
+   "ground": 36.5,
+   "bearing": 243.4,
+   "target": "Eidsvåg",
+   "distance": 5721,
+   "quality": "good"
+  },
+  "1529014_2": {
+   "ground": 36.5,
+   "bearing": 124.4,
+   "target": "Sunndal kommune",
+   "distance": 24492,
+   "quality": "rough"
+  },
+  "1529015_1": {
+   "ground": 317.6,
+   "bearing": 108.4,
+   "target": "Valldal",
+   "distance": 10703,
+   "quality": "good"
+  },
+  "1529015_2": {
+   "ground": 317.6,
+   "bearing": 325.3,
+   "target": "Stordal",
+   "distance": 7238,
+   "quality": "good"
+  },
+  "1529016_1": {
+   "ground": 94.7,
+   "bearing": 144.2,
+   "target": "Grodås",
+   "distance": 9415,
+   "quality": "good"
+  },
+  "1529017_1": {
+   "ground": 295.7,
+   "bearing": 89.9,
+   "target": "Storås",
+   "distance": 7382,
+   "quality": "good"
+  },
+  "1529018_1": {
+   "ground": 390.6,
+   "bearing": 48.4,
+   "target": "Hellesylt",
+   "distance": 9543,
+   "quality": "good"
+  },
+  "1529018_2": {
+   "ground": 390.6,
+   "bearing": 237.6,
+   "target": "Grodås",
+   "distance": 12304,
+   "quality": "good"
+  },
+  "1529019_1": {
+   "ground": 2.7,
+   "bearing": 265.4,
+   "target": "Åndalsnes",
+   "distance": 4936,
+   "quality": "good"
+  },
+  "1529019_2": {
+   "ground": 2.7,
+   "bearing": 304.2,
+   "target": "Åfarnes",
+   "distance": 17441,
+   "quality": "rough"
+  },
+  "1529020_1": {
+   "ground": 498.5,
+   "bearing": 149.9,
+   "target": "Visdal",
+   "distance": 100546,
+   "quality": "very rough"
+  },
+  "1529020_2": {
+   "ground": 498.5,
+   "bearing": 84.2,
+   "target": "Eresfjord",
+   "distance": 3462,
+   "quality": "good"
+  },
+  "1529022_1": {
+   "ground": 38,
+   "bearing": 99.1,
+   "target": "Åndalsnes",
+   "distance": 29811,
+   "quality": "rough"
+  },
+  "1529023_1": {
+   "ground": 504.9,
+   "bearing": 317,
+   "target": "Sykkylven",
+   "distance": 15957,
+   "quality": "rough"
+  },
+  "1529023_2": {
+   "ground": 504.9,
+   "bearing": 77.3,
+   "target": "Stranda",
+   "distance": 8150,
+   "quality": "good"
+  },
+  "1529024_1": {
+   "ground": 25.1,
+   "bearing": 71.8,
+   "target": "Vinjeøra",
+   "distance": 22395,
+   "quality": "rough"
+  },
+  "1529025_1": {
+   "ground": 50.3,
+   "bearing": 350.5,
+   "target": "Kristiansund",
+   "distance": 15694,
+   "quality": "rough"
+  },
+  "1629001_1": {
+   "ground": 423.1,
+   "bearing": 189.3,
+   "target": "Berkåk",
+   "distance": 3769,
+   "quality": "good"
+  },
+  "1629002_1": {
+   "ground": 71,
+   "bearing": 253.4,
+   "target": "Orkanger",
+   "distance": 7023,
+   "quality": "good"
+  },
+  "1629003_1": {
+   "ground": 153.9,
+   "bearing": 7.6,
+   "target": "Trondheim",
+   "distance": 9213,
+   "quality": "good"
+  },
+  "1629004_1": {
+   "ground": 17.8,
+   "bearing": 27.3,
+   "target": "Orkanger",
+   "distance": 9502,
+   "quality": "good"
+  },
+  "1629006_1": {
+   "ground": 314.8,
+   "bearing": 5.1,
+   "target": "Snilldal",
+   "distance": 6934,
+   "quality": "good"
+  },
+  "1629007_1": {
+   "ground": 554.6,
+   "bearing": 245.7,
+   "target": "Oppdal",
+   "distance": 1704,
+   "quality": "good"
+  },
+  "1629008_1": {
+   "ground": 41.8,
+   "bearing": 12.1,
+   "target": "Trondheim",
+   "distance": 33223,
+   "quality": "rough"
+  },
+  "1629009_1": {
+   "ground": 138.8,
+   "bearing": 69.8,
+   "target": "Stjørdal",
+   "distance": 13166,
+   "quality": "good"
+  },
+  "1629010_1": {
+   "ground": 941.7,
+   "bearing": 8.7,
+   "target": "Oppdal",
+   "distance": 35813,
+   "quality": "rough"
+  },
+  "1629011_1": {
+   "ground": 663,
+   "bearing": 175.5,
+   "target": "Røros",
+   "distance": 18269,
+   "quality": "rough"
+  },
+  "1629012_1": {
+   "ground": 868.6,
+   "bearing": 213.4,
+   "target": "Røros",
+   "distance": 39507,
+   "quality": "rough"
+  },
+  "1629013_1": {
+   "ground": 263.4,
+   "bearing": 353.7,
+   "target": "Osen",
+   "distance": 22285,
+   "quality": "rough"
+  },
+  "1629014_1": {
+   "ground": 332.2,
+   "bearing": 328.6,
+   "target": "Stjørdal",
+   "distance": 16803,
+   "quality": "rough"
+  },
+  "1629016_1": {
+   "ground": 157.3,
+   "bearing": 211.3,
+   "target": "Soknedalstunnelen",
+   "distance": 4234,
+   "quality": "good"
+  },
+  "1629017_1": {
+   "ground": 13,
+   "bearing": 266.1,
+   "target": "Orkanger",
+   "distance": 19038,
+   "quality": "rough"
+  },
+  "1629017_2": {
+   "ground": 13,
+   "bearing": 32.3,
+   "target": "Trondheim",
+   "distance": 14062,
+   "quality": "good"
+  },
+  "1629018_1": {
+   "ground": 463,
+   "bearing": 86.5,
+   "target": "Oppdal",
+   "distance": 24497,
+   "quality": "rough"
+  },
+  "1629019_1": {
+   "ground": 424.5,
+   "bearing": 5.3,
+   "target": "Berkåk",
+   "distance": 8350,
+   "quality": "good"
+  },
+  "1629020_1": {
+   "ground": 221.6,
+   "bearing": 125,
+   "target": "Berkåk",
+   "distance": 9798,
+   "quality": "good"
+  },
+  "1629023_1": {
+   "ground": 74.4,
+   "bearing": 148.6,
+   "target": "Sandstad",
+   "distance": 4043,
+   "quality": "good"
+  },
+  "1629024_1": {
+   "ground": 350.7,
+   "bearing": 69.2,
+   "target": "Orkanger",
+   "distance": 24864,
+   "quality": "rough"
+  },
+  "1729001_1": {
+   "ground": 64.6,
+   "bearing": 45.9,
+   "target": "Levanger",
+   "distance": 13485,
+   "quality": "good"
+  },
+  "1729002_1": {
+   "ground": 281.4
+  },
+  "1729003_1": {
+   "ground": 104.3,
+   "bearing": 69.9,
+   "target": "Snåsa",
+   "distance": 31847,
+   "quality": "rough"
+  },
+  "1729004_1": {
+   "ground": 212.5,
+   "bearing": 355.3,
+   "target": "Grong",
+   "distance": 14678,
+   "quality": "good"
+  },
+  "1729005_1": {
+   "ground": 429,
+   "bearing": 292.8,
+   "target": "Verdal",
+   "distance": 39309,
+   "quality": "rough"
+  },
+  "1729006_1": {
+   "ground": 696.7
+  },
+  "1729007_1": {
+   "ground": 66.8,
+   "bearing": 270.6,
+   "target": "Stjørdal",
+   "distance": 28967,
+   "quality": "rough"
+  },
+  "1729009_1": {
+   "ground": 37.5,
+   "bearing": 83,
+   "target": "Kolvereid",
+   "distance": 17240,
+   "quality": "rough"
+  },
+  "1729010_1": {
+   "ground": 66.3,
+   "bearing": 190,
+   "target": "Høylandet",
+   "distance": 7323,
+   "quality": "good"
+  },
+  "1729011_1": {
+   "ground": 37.9,
+   "bearing": 36.6,
+   "target": "Namsos",
+   "distance": 17415,
+   "quality": "rough"
+  },
+  "1729012_1": {
+   "ground": 225.3,
+   "bearing": 201.2,
+   "target": "Leksvik",
+   "distance": 13398,
+   "quality": "good"
+  },
+  "1729013_1": {
+   "ground": 119,
+   "bearing": 41.4,
+   "target": "Namsskogan",
+   "distance": 17193,
+   "quality": "rough"
+  },
+  "1729014_1": {
+   "ground": 469.6,
+   "bearing": 124.1,
+   "target": "Lierne",
+   "distance": 18708,
+   "quality": "rough"
+  },
+  "1800193_1": {
+   "ground": 534
+  },
+  "1800208_1": {
+   "ground": 35.9,
+   "bearing": 245.4,
+   "target": "Leknes",
+   "distance": 29196,
+   "quality": "rough"
+  },
+  "1800234_1": {
+   "ground": 2.9,
+   "bearing": 202.7,
+   "target": "Storjord",
+   "distance": 148214,
+   "quality": "very rough"
+  },
+  "1800319_1": {
+   "ground": 46.2,
+   "bearing": 45.8,
+   "target": "Andenes",
+   "distance": 4767,
+   "quality": "good"
+  },
+  "1800320_1": {
+   "ground": 10.1,
+   "bearing": 84.2,
+   "target": "Andenes",
+   "distance": 5256,
+   "quality": "good"
+  },
+  "1800326_1": {
+   "ground": 62.6,
+   "bearing": 355.3,
+   "target": "Våtvik",
+   "distance": 1930,
+   "quality": "good"
+  },
+  "1800428_1": {
+   "ground": 10.9,
+   "bearing": 34.7,
+   "target": "Hovden",
+   "distance": 4397,
+   "quality": "good"
+  },
+  "1800484_1": {
+   "ground": 47.5,
+   "bearing": 242.7,
+   "target": "Sandnessjøen",
+   "distance": 4101,
+   "quality": "good"
+  },
+  "1800515_1": {
+   "ground": 602.2,
+   "bearing": 253.8,
+   "target": "Storjord",
+   "distance": 5711,
+   "quality": "good"
+  },
+  "1800529_1": {
+   "ground": 603.8
+  },
+  "1800533_1": {
+   "ground": 23.6,
+   "bearing": 7.4,
+   "target": "Brønnøysund",
+   "distance": 22203,
+   "quality": "rough"
+  },
+  "1800569_1": {
+   "ground": 9.2,
+   "bearing": 207.5,
+   "target": "Bleik",
+   "distance": 2766,
+   "quality": "good"
+  },
+  "1800594_1": {
+   "ground": 9.3,
+   "bearing": 336.8,
+   "target": "Reipå",
+   "distance": 3428,
+   "quality": "good"
+  },
+  "1800595_1": {
+   "ground": 6.2,
+   "bearing": 128.6,
+   "target": "Fauske",
+   "distance": 12734,
+   "quality": "good"
+  },
+  "1800596_1": {
+   "ground": 156.6,
+   "bearing": 218.7,
+   "target": "Mosjøen",
+   "distance": 28873,
+   "quality": "rough"
+  },
+  "1800597_1": {
+   "ground": 92.8,
+   "bearing": 348.6,
+   "target": "Fauske",
+   "distance": 4150,
+   "quality": "good"
+  },
+  "1800598_1": {
+   "ground": 326.8,
+   "bearing": 1.6,
+   "target": "Innhavet",
+   "distance": 24173,
+   "quality": "rough"
+  },
+  "1800599_1": {
+   "ground": 37.6,
+   "bearing": 262.3,
+   "target": "Ballangen",
+   "distance": 15070,
+   "quality": "rough"
+  },
+  "1800599_2": {
+   "ground": 37.6,
+   "bearing": 262.3,
+   "target": "Ballangen",
+   "distance": 15070,
+   "quality": "rough"
+  },
+  "1829006_1": {
+   "ground": 674.6,
+   "bearing": 355.9,
+   "target": "Saltdalen",
+   "distance": 36912,
+   "quality": "rough"
+  },
+  "1829006_2": {
+   "ground": 674.6,
+   "bearing": 240.8,
+   "target": "Dunderlandsdalen",
+   "distance": 38568,
+   "quality": "rough"
+  },
+  "1829012_1": {
+   "ground": 4.3,
+   "bearing": 305.5,
+   "target": "Engeløya",
+   "distance": 9472,
+   "quality": "good"
+  },
+  "1829015_1": {
+   "ground": 23,
+   "bearing": 201.2,
+   "target": "Reine",
+   "distance": 10055,
+   "quality": "good"
+  },
+  "1829016_1": {
+   "ground": 400.3,
+   "bearing": 243.8,
+   "target": "Trældal",
+   "distance": 10327,
+   "quality": "good"
+  },
+  "1829016_2": {
+   "ground": 400.3,
+   "bearing": 135,
+   "target": "Riksgrensen",
+   "distance": 13275,
+   "quality": "good"
+  },
+  "1829017_1": {
+   "ground": 501,
+   "bearing": 187.8,
+   "target": "Riksgrensen",
+   "distance": 511,
+   "quality": "good"
+  },
+  "1829017_2": {
+   "ground": 501,
+   "bearing": 283.2,
+   "target": "Trældal",
+   "distance": 19221,
+   "quality": "rough"
+  },
+  "1829018_1": {
+   "ground": 143.5,
+   "bearing": 255.1,
+   "target": "Bogen",
+   "distance": 8847,
+   "quality": "good"
+  },
+  "1829018_2": {
+   "ground": 143.5,
+   "bearing": 84.2,
+   "target": "Bjerkvik",
+   "distance": 13979,
+   "quality": "good"
+  },
+  "1829020_1": {
+   "ground": 598.9
+  },
+  "1829020_2": {
+   "ground": 598.9,
+   "bearing": 41.1,
+   "target": "Vesterli",
+   "distance": 5075,
+   "quality": "good"
+  },
+  "1829022_1": {
+   "ground": 32.4
+  },
+  "1829023_1": {
+   "ground": 28.2,
+   "bearing": 266.5,
+   "target": "Bodø",
+   "distance": 9355,
+   "quality": "good"
+  },
+  "1829024_1": {
+   "ground": 25.9,
+   "bearing": 83.1,
+   "target": "Mørkved",
+   "distance": 1880,
+   "quality": "good"
+  },
+  "1829025_1": {
+   "ground": 48,
+   "bearing": 7.8,
+   "target": "Ramberg",
+   "distance": 14078,
+   "quality": "good"
+  },
+  "1829026_1": {
+   "ground": 254.5,
+   "bearing": 120.5,
+   "target": "Efjorden",
+   "distance": 11312,
+   "quality": "good"
+  },
+  "1829026_2": {
+   "ground": 254.3,
+   "bearing": 246.1,
+   "target": "Skarberget",
+   "distance": 7054,
+   "quality": "good"
+  },
+  "1829027_1": {
+   "ground": 92.5
+  },
+  "1829028_1": {
+   "ground": 405.1,
+   "bearing": 55,
+   "target": "Svenningdalen",
+   "distance": 13571,
+   "quality": "good"
+  },
+  "1900098_1": {
+   "ground": 4.7
+  },
+  "1900123_1": {
+   "ground": 5.4,
+   "bearing": 116,
+   "target": "Mefjordbotn",
+   "distance": 7558,
+   "quality": "good"
+  },
+  "1900163_1": {
+   "ground": 345,
+   "bearing": 230,
+   "target": "Bjerkvik",
+   "distance": 17451,
+   "quality": "rough"
+  },
+  "1900163_2": {
+   "ground": 345,
+   "bearing": 51.4,
+   "target": "Bardu",
+   "distance": 22562,
+   "quality": "rough"
+  },
+  "1900175_1": {
+   "ground": 73.4,
+   "bearing": 328.1,
+   "target": "Ramfjorden",
+   "distance": 14609,
+   "quality": "good"
+  },
+  "1900175_2": {
+   "ground": 73.4,
+   "bearing": 145.4,
+   "target": "Laksvatn",
+   "distance": 7807,
+   "quality": "good"
+  },
+  "1900176_1": {
+   "ground": 227.7,
+   "bearing": 66.3,
+   "target": "Nordkjosbotn",
+   "distance": 20307,
+   "quality": "rough"
+  },
+  "1900176_2": {
+   "ground": 227.7,
+   "bearing": 244.3,
+   "target": "Bardufoss",
+   "distance": 22666,
+   "quality": "rough"
+  },
+  "1900177_1": {
+   "ground": 4.9,
+   "bearing": 194.4,
+   "target": "Skibotn",
+   "distance": 16685,
+   "quality": "rough"
+  },
+  "1900178_1": {
+   "ground": 73.6
+  },
+  "1900179_1": {
+   "ground": 510.7,
+   "bearing": 322.4,
+   "target": "Skibotn",
+   "distance": 31327,
+   "quality": "rough"
+  },
+  "1900179_2": {
+   "ground": 510.7
+  },
+  "1900181_1": {
+   "ground": 8.1,
+   "bearing": 357.6,
+   "target": "Hessfjord",
+   "distance": 4734,
+   "quality": "good"
+  },
+  "1900182_1": {
+   "ground": 4.2,
+   "bearing": 13.1,
+   "target": "Skjervøy",
+   "distance": 11300,
+   "quality": "good"
+  },
+  "1900184_1": {
+   "ground": 30.7,
+   "bearing": 236,
+   "target": "Tjeldsundet",
+   "distance": 20624,
+   "quality": "rough"
+  },
+  "1900184_2": {
+   "ground": 30.7,
+   "bearing": 166.7,
+   "target": "Evenes",
+   "distance": 15618,
+   "quality": "rough"
+  },
+  "1900185_1": {
+   "ground": 271.4,
+   "bearing": 209.1,
+   "target": "Bjerkvik",
+   "distance": 5580,
+   "quality": "good"
+  },
+  "1901001_1": {
+   "ground": 11.2,
+   "bearing": 359.7,
+   "target": "Årvik",
+   "distance": 17429,
+   "quality": "rough"
+  },
+  "1929002_1": {
+   "ground": 9.6,
+   "bearing": 343.8,
+   "target": "Mjøsundbrua",
+   "distance": 2419,
+   "quality": "good"
+  },
+  "1929003_1": {
+   "ground": 172.8,
+   "bearing": 279.9,
+   "target": "Brøstadbotn",
+   "distance": 10911,
+   "quality": "good"
+  },
+  "1929004_1": {
+   "ground": 165.8,
+   "bearing": 316.3,
+   "target": "Sørreisa",
+   "distance": 8220,
+   "quality": "good"
+  },
+  "1929005_1": {
+   "ground": 56.4,
+   "bearing": 76.8,
+   "target": "Kåfjord",
+   "distance": 98808,
+   "quality": "very rough"
+  },
+  "2000004_1": {
+   "ground": 59.7,
+   "bearing": 20.8,
+   "target": "Kirkenes",
+   "distance": 4752,
+   "quality": "good"
+  },
+  "2000008_1": {
+   "ground": 10.8,
+   "bearing": 57,
+   "target": "Vardø",
+   "distance": 25761,
+   "quality": "rough"
+  },
+  "2000012_1": {
+   "ground": 282.4,
+   "bearing": 8.8,
+   "target": "Nordkapp",
+   "distance": 1388,
+   "quality": "good"
+  },
+  "2000013_1": {
+   "ground": 126.5,
+   "bearing": 227.2,
+   "target": "Storbukta",
+   "distance": 2763,
+   "quality": "good"
+  },
+  "2000039_1": {
+   "ground": 323.3,
+   "bearing": 229.1,
+   "target": "Kautokeino",
+   "distance": 61228,
+   "quality": "very rough"
+  },
+  "2000051_1": {
+   "ground": 318.9
+  },
+  "2000060_1": {
+   "ground": 25.2,
+   "bearing": 352.2,
+   "target": "Hammerfest",
+   "distance": 13178,
+   "quality": "good"
+  },
+  "2000061_1": {
+   "ground": 126.9,
+   "bearing": 218.2,
+   "target": "Karasjok",
+   "distance": 40058,
+   "quality": "rough"
+  },
+  "2000062_1": {
+   "ground": 12,
+   "bearing": 215.8,
+   "target": "Smørfjord",
+   "distance": 34279,
+   "quality": "rough"
+  },
+  "2000063_1": {
+   "ground": 222.7
+  },
+  "2000064_1": {
+   "ground": 38.6,
+   "bearing": 257.7,
+   "target": "Alta",
+   "distance": 8820,
+   "quality": "good"
+  },
+  "2000065_1": {
+   "ground": 237.7,
+   "bearing": 221.5,
+   "target": "Sennalandet",
+   "distance": 13733,
+   "quality": "good"
+  },
+  "2000065_2": {
+   "ground": 237.7,
+   "bearing": 41,
+   "target": "Skaidi",
+   "distance": 22774,
+   "quality": "rough"
+  },
+  "3000000_1": {
+   "ground": 12.4
+  },
+  "3000002_1": {
+   "ground": 228.9,
+   "bearing": 228.1,
+   "target": "Rissa",
+   "distance": 18773,
+   "quality": "rough"
+  },
+  "3000003_1": {
+   "ground": 20.7,
+   "bearing": 249.9,
+   "target": "Giske",
+   "distance": 1429,
+   "quality": "good"
+  },
+  "3000003_2": {
+   "ground": 20.7,
+   "bearing": 101.8,
+   "target": "Valderøy kyrkje",
+   "distance": 2814,
+   "quality": "good"
+  },
+  "3000004_1": {
+   "ground": 170,
+   "bearing": 33.3,
+   "target": "Rosten",
+   "distance": 148254,
+   "quality": "very rough"
+  },
+  "3000005_1": {
+   "ground": 103.5,
+   "bearing": 320.8,
+   "target": "Aurland",
+   "distance": 6027,
+   "quality": "good"
+  },
+  "3000006_1": {
+   "ground": 503.8,
+   "bearing": 276.4,
+   "target": "Lærdal",
+   "distance": 25547,
+   "quality": "rough"
+  },
+  "3000007_1": {
+   "ground": 1014,
+   "bearing": 321.4,
+   "target": "Borlaug",
+   "distance": 6625,
+   "quality": "good"
+  },
+  "3000007_2": {
+   "ground": 1014,
+   "bearing": 121.6,
+   "target": "Hemsedal",
+   "distance": 37157,
+   "quality": "rough"
+  },
+  "3000010_1": {
+   "ground": 36.6,
+   "bearing": 267.7,
+   "target": "Stryn",
+   "distance": 17378,
+   "quality": "rough"
+  },
+  "3000011_1": {
+   "ground": 796.7,
+   "bearing": 313.4,
+   "target": "Dokka",
+   "distance": 12042,
+   "quality": "good"
+  },
+  "3000012_1": {
+   "ground": 1390.5,
+   "bearing": 161.9,
+   "target": "Beitostølen",
+   "distance": 16448,
+   "quality": "rough"
+  },
+  "3000012_2": {
+   "ground": 1390.5
+  },
+  "3000013_1": {
+   "ground": 21.5,
+   "bearing": 4.8,
+   "target": "Åsane",
+   "distance": 3878,
+   "quality": "good"
+  },
+  "3000013_2": {
+   "ground": 21.5,
+   "bearing": 178,
+   "target": "Bergen",
+   "distance": 4812,
+   "quality": "good"
+  },
+  "3000014_1": {
+   "ground": 549.1
+  },
+  "3000015_1": {
+   "ground": 154.1
+  },
+  "3000015_2": {
+   "ground": 154.1,
+   "bearing": 324.6,
+   "target": "Skibotn",
+   "distance": 12372,
+   "quality": "good"
+  },
+  "3000017_1": {
+   "ground": 21.8,
+   "bearing": 269.8,
+   "target": "Tromsø",
+   "distance": 23362,
+   "quality": "rough"
+  },
+  "3000018_1": {
+   "ground": 83.1,
+   "bearing": 159.8,
+   "target": "Gandvik",
+   "distance": 1315,
+   "quality": "good"
+  },
+  "3000020_1": {
+   "ground": 246.1,
+   "bearing": 117.8,
+   "target": "Sokna",
+   "distance": 10907,
+   "quality": "good"
+  },
+  "3000021_1": {
+   "ground": 407.7,
+   "bearing": 127.2,
+   "target": "Fagernes",
+   "distance": 27927,
+   "quality": "rough"
+  },
+  "3000024_1": {
+   "ground": 1304,
+   "bearing": 245.7,
+   "target": "Skjolden",
+   "distance": 15667,
+   "quality": "rough"
+  },
+  "3000026_1": {
+   "ground": 251.9,
+   "bearing": 139.6,
+   "target": "Surnadal",
+   "distance": 5764,
+   "quality": "good"
+  },
+  "3000026_2": {
+   "ground": 251.9,
+   "bearing": 302.7,
+   "target": "Bøverfjorden",
+   "distance": 2603,
+   "quality": "good"
+  },
+  "3000027_1": {
+   "ground": 25.7
+  },
+  "3000027_2": {
+   "ground": 25.7
+  },
+  "3000028_1": {
+   "ground": 39.6,
+   "bearing": 260.2,
+   "target": "Madla",
+   "distance": 887,
+   "quality": "good"
+  },
+  "3000028_2": {
+   "ground": 39.6
+  },
+  "3000029_1": {
+   "ground": 108.3,
+   "bearing": 330.8,
+   "target": "Eggedal",
+   "distance": 23965,
+   "quality": "rough"
+  },
+  "3000030_1": {
+   "ground": 55.6,
+   "bearing": 268.4,
+   "target": "Nordfjordeid",
+   "distance": 16775,
+   "quality": "rough"
+  },
+  "3000031_1": {
+   "ground": 2.3,
+   "bearing": 68.7,
+   "target": "Trondheim",
+   "distance": 115699,
+   "quality": "very rough"
+  },
+  "3000032_1": {
+   "ground": 2.4,
+   "bearing": 234.8,
+   "target": "Molde",
+   "distance": 60215,
+   "quality": "very rough"
+  },
+  "3000033_1": {
+   "ground": 2.6
+  },
+  "3000034_1": {
+   "ground": 2.1,
+   "bearing": 186.1,
+   "target": "Vestnes",
+   "distance": 2579,
+   "quality": "good"
+  },
+  "3000036_1": {
+   "ground": 73.3,
+   "bearing": 5.1,
+   "target": "Stavanger",
+   "distance": 15404,
+   "quality": "rough"
+  },
+  "3000036_2": {
+   "ground": 73.3,
+   "bearing": 199,
+   "target": "Bryne",
+   "distance": 10617,
+   "quality": "good"
+  },
+  "3000039_1": {
+   "ground": 137.7,
+   "bearing": 311.5,
+   "target": "Hakadal",
+   "distance": 1362,
+   "quality": "good"
+  },
+  "3000040_1": {
+   "ground": 90.3,
+   "bearing": 0.6,
+   "target": "Oslo",
+   "distance": 29163,
+   "quality": "rough"
+  },
+  "3000042_1": {
+   "ground": 28.1,
+   "bearing": 250.7,
+   "target": "Straumøya",
+   "distance": 7145,
+   "quality": "good"
+  },
+  "3000043_1": {
+   "ground": 247.6
+  },
+  "3000043_2": {
+   "ground": 247.6,
+   "bearing": 321.3,
+   "target": "Skibotn",
+   "distance": 14291,
+   "quality": "good"
+  },
+  "3000044_1": {
+   "ground": 4.2,
+   "bearing": 240.1,
+   "target": "Åseli",
+   "distance": 1639,
+   "quality": "good"
+  },
+  "3000045_1": {
+   "ground": 6.7
+  },
+  "3000046_1": {
+   "ground": 36.2,
+   "bearing": 173.2,
+   "target": "Tjørvåg",
+   "distance": 4360,
+   "quality": "good"
+  },
+  "3000046_2": {
+   "ground": 36.2,
+   "bearing": 253.7,
+   "target": "Herøy",
+   "distance": 2270,
+   "quality": "good"
+  },
+  "3000047_1": {
+   "ground": 26.8,
+   "bearing": 175.2,
+   "target": "Sævik",
+   "distance": 1860,
+   "quality": "good"
+  },
+  "3000047_2": {
+   "ground": 26.8,
+   "bearing": 29.1,
+   "target": "Runde",
+   "distance": 1447,
+   "quality": "good"
+  },
+  "3000048_1": {
+   "ground": 169.4,
+   "bearing": 356.6,
+   "target": "Åheim",
+   "distance": 1986,
+   "quality": "good"
+  },
+  "3000048_2": {
+   "ground": 169.4,
+   "bearing": 213.1,
+   "target": "Bryggja",
+   "distance": 10330,
+   "quality": "good"
+  },
+  "3000049_1": {
+   "ground": 28.4,
+   "bearing": 173,
+   "target": "Nesttun",
+   "distance": 5103,
+   "quality": "good"
+  },
+  "3000050_1": {
+   "ground": 69.6
+  },
+  "3000051_1": {
+   "ground": 6
+  },
+  "3000053_1": {
+   "ground": 247.6,
+   "bearing": 143.4,
+   "target": "Kobbvatnet",
+   "distance": 4588,
+   "quality": "good"
+  },
+  "3000059_1": {
+   "ground": 219.8,
+   "bearing": 285.7,
+   "target": "Støren",
+   "distance": 30733,
+   "quality": "rough"
+  },
+  "3000060_1": {
+   "ground": 21.3,
+   "bearing": 3.7,
+   "target": "Åsane",
+   "distance": 6231,
+   "quality": "good"
+  },
+  "3000060_2": {
+   "ground": 21.3
+  },
+  "3000061_1": {
+   "ground": 19.1
+  },
+  "3000061_2": {
+   "ground": 19.1,
+   "bearing": 218.9,
+   "target": "Flesland",
+   "distance": 11121,
+   "quality": "good"
+  },
+  "3000062_1": {
+   "ground": 145.4,
+   "bearing": 172.3,
+   "target": "Stavanger",
+   "distance": 149025,
+   "quality": "very rough"
+  },
+  "3000063_1": {
+   "ground": 372.6,
+   "bearing": 230.9,
+   "target": "Svelgen",
+   "distance": 11091,
+   "quality": "good"
+  },
+  "3000064_1": {
+   "ground": 46.6,
+   "bearing": 92,
+   "target": "Nordfjordeid",
+   "distance": 45245,
+   "quality": "rough"
+  },
+  "3000066_1": {
+   "ground": 42.9,
+   "bearing": 213.5,
+   "target": "Narvik",
+   "distance": 4019,
+   "quality": "good"
+  },
+  "3000066_2": {
+   "ground": 47.6,
+   "bearing": 18.2,
+   "target": "Bjerkvik",
+   "distance": 11595,
+   "quality": "good"
+  },
+  "3000067_1": {
+   "ground": 11,
+   "bearing": 186.8,
+   "target": "Korgen",
+   "distance": 17154,
+   "quality": "rough"
+  },
+  "3000070_1": {
+   "ground": 49.2,
+   "bearing": 199.3,
+   "target": "Fauske",
+   "distance": 24405,
+   "quality": "rough"
+  },
+  "3000071_1": {
+   "ground": 156.3,
+   "bearing": 87,
+   "target": "Kåringen",
+   "distance": 2826,
+   "quality": "good"
+  },
+  "3000072_1": {
+   "ground": 112.5,
+   "bearing": 115.7,
+   "target": "Stamsund",
+   "distance": 7051,
+   "quality": "good"
+  },
+  "3000074_1": {
+   "ground": 56.1,
+   "bearing": 31.6,
+   "target": "Kirkenes",
+   "distance": 64349,
+   "quality": "very rough"
+  },
+  "3000074_2": {
+   "ground": 56.1,
+   "bearing": 163.3,
+   "target": "Nyrud",
+   "distance": 10364,
+   "quality": "good"
+  },
+  "3000075_1": {
+   "ground": 217.1,
+   "bearing": 204.1,
+   "target": "Ifjord",
+   "distance": 58768,
+   "quality": "rough"
+  },
+  "3000075_2": {
+   "ground": 217.1,
+   "bearing": 269.8,
+   "target": "Kjøllefjord",
+   "distance": 14762,
+   "quality": "good"
+  },
+  "3000075_3": {
+   "ground": 217.1,
+   "bearing": 16.1,
+   "target": "Mehamn",
+   "distance": 9608,
+   "quality": "good"
+  },
+  "3000078_1": {
+   "ground": 36.8,
+   "bearing": 116,
+   "target": "Breivika",
+   "distance": 566,
+   "quality": "good"
+  },
+  "3000078_2": {
+   "ground": 36.8,
+   "bearing": 253,
+   "target": "Giæverbukta",
+   "distance": 2256,
+   "quality": "good"
+  },
+  "3000079_1": {
+   "ground": 3.4,
+   "bearing": 12.3,
+   "target": "Gaupne",
+   "distance": 1681,
+   "quality": "good"
+  },
+  "3000079_2": {
+   "ground": 3.4,
+   "bearing": 209.3,
+   "target": "Sogndal",
+   "distance": 20198,
+   "quality": "rough"
+  },
+  "3000080_1": {
+   "ground": 95.8,
+   "bearing": 321.4,
+   "target": "Skibotn",
+   "distance": 11330,
+   "quality": "good"
+  },
+  "3000080_2": {
+   "ground": 95.8
+  },
+  "3000081_1": {
+   "ground": 135.2
+  },
+  "3000082_1": {
+   "ground": 32.2
+  },
+  "3000084_1": {
+   "ground": 103.4,
+   "bearing": 342.8,
+   "target": "Oslo",
+   "distance": 16357,
+   "quality": "rough"
+  },
+  "3000153_1": {
+   "ground": 56.1
+  },
+  "3000153_2": {
+   "ground": 56.1,
+   "bearing": 321.4,
+   "target": "Skibotn",
+   "distance": 7942,
+   "quality": "good"
+  },
+  "3000158_1": {
+   "ground": 363.8,
+   "bearing": 319.1,
+   "target": "Skibotn",
+   "distance": 26771,
+   "quality": "rough"
+  },
+  "3000158_2": {
+   "ground": 363.8
+  },
+  "3000161_1": {
+   "ground": 184.5,
+   "bearing": 293.7,
+   "target": "Lærdal",
+   "distance": 12839,
+   "quality": "good"
+  },
+  "3000162_1": {
+   "ground": 4.2,
+   "bearing": 312.9,
+   "target": "Fodnes",
+   "distance": 7335,
+   "quality": "good"
+  },
+  "3000163_1": {
+   "ground": 980.9,
+   "bearing": 22.8,
+   "target": "Vik",
+   "distance": 18825,
+   "quality": "rough"
+  },
+  "3000164_1": {
+   "ground": 230.1,
+   "bearing": 121.3,
+   "target": "Sogndal",
+   "distance": 4517,
+   "quality": "good"
+  },
+  "3000192_1": {
+   "ground": 319.7,
+   "bearing": 231.1,
+   "target": "Nesna",
+   "distance": 15564,
+   "quality": "rough"
+  },
+  "3000271_1": {
+   "ground": 211.3,
+   "bearing": 59.7,
+   "target": "Skotterud",
+   "distance": 19859,
+   "quality": "rough"
+  },
+  "3000272_1": {
+   "ground": 263.6,
+   "bearing": 162,
+   "target": "Skarnes",
+   "distance": 31456,
+   "quality": "rough"
+  },
+  "3000311_1": {
+   "ground": 73.6,
+   "bearing": 16.7,
+   "target": "Førde",
+   "distance": 14789,
+   "quality": "good"
+  },
+  "3000312_1": {
+   "ground": 283.5,
+   "bearing": 344.7,
+   "target": "Folkestad",
+   "distance": 20553,
+   "quality": "rough"
+  },
+  "3000358_1": {
+   "ground": 18.4,
+   "bearing": 283.7,
+   "target": "Bodø",
+   "distance": 2767,
+   "quality": "good"
+  },
+  "3000370_1": {
+   "ground": 32,
+   "bearing": 249.1,
+   "target": "Skjæveland",
+   "distance": 800,
+   "quality": "good"
+  },
+  "3000370_2": {
+   "ground": 32,
+   "bearing": 145.1,
+   "target": "Orstad",
+   "distance": 1653,
+   "quality": "good"
+  },
+  "3000371_2": {
+   "ground": 1130.6,
+   "bearing": 315.4,
+   "target": "Borlaug",
+   "distance": 15277,
+   "quality": "rough"
+  },
+  "3000371_3": {
+   "ground": 1130.6
+  },
+  "3000408_1": {
+   "ground": 699.8,
+   "bearing": 5.7,
+   "target": "Åndalsnes",
+   "distance": 12936,
+   "quality": "good"
+  },
+  "3000408_2": {
+   "ground": 699.8,
+   "bearing": 230.5,
+   "target": "Valldal",
+   "distance": 26770,
+   "quality": "rough"
+  },
+  "3000412_1": {
+   "ground": 755.4,
+   "bearing": 116.2,
+   "target": "Lom",
+   "distance": 43523,
+   "quality": "rough"
+  },
+  "3000417_1": {
+   "ground": 147.5,
+   "bearing": 336.8,
+   "target": "Oslo",
+   "distance": 13709,
+   "quality": "good"
+  },
+  "3000431_1": {
+   "ground": 78.8
+  },
+  "3000435_1": {
+   "ground": 101,
+   "bearing": 95.7,
+   "target": "Drangedal",
+   "distance": 9858,
+   "quality": "good"
+  },
+  "3000436_1": {
+   "ground": 22.7,
+   "bearing": 262.5,
+   "target": "Fiskebøl",
+   "distance": 29745,
+   "quality": "rough"
+  },
+  "3000440_1": {
+   "ground": 643.4,
+   "bearing": 258.5,
+   "target": "Aurlandsvangen",
+   "distance": 1413,
+   "quality": "good"
+  },
+  "3000441_1": {
+   "ground": 162.9,
+   "bearing": 203.4,
+   "target": "Drammen",
+   "distance": 26754,
+   "quality": "rough"
+  },
+  "3000445_1": {
+   "ground": 211.7,
+   "bearing": 177.8,
+   "target": "Romedal",
+   "distance": 8797,
+   "quality": "good"
+  },
+  "3000448_1": {
+   "ground": 474.3
+  },
+  "3000448_2": {
+   "ground": 474.3,
+   "bearing": 322.6,
+   "target": "Skibotn",
+   "distance": 30134,
+   "quality": "rough"
+  },
+  "3000462_1": {
+   "ground": 2.9,
+   "bearing": 117.2,
+   "target": "Åmøy",
+   "distance": 3873,
+   "quality": "good"
+  },
+  "3000523_1": {
+   "ground": 8.4,
+   "bearing": 187.7,
+   "target": "Vinje",
+   "distance": 33748,
+   "quality": "rough"
+  },
+  "3000527_1": {
+   "ground": 58.4,
+   "bearing": 311.8,
+   "target": "Lærdal",
+   "distance": 8189,
+   "quality": "good"
+  },
+  "3000545_1": {
+   "ground": 158.3,
+   "bearing": 64.7,
+   "target": "Saltfjellet",
+   "distance": 20871,
+   "quality": "rough"
+  },
+  "3000545_2": {
+   "ground": 158.3,
+   "bearing": 238.7,
+   "target": "Mo i Rana",
+   "distance": 40571,
+   "quality": "rough"
+  },
+  "3000550_1": {
+   "ground": 689.7,
+   "bearing": 238.5,
+   "target": "Dunderlandsdalen",
+   "distance": 40887,
+   "quality": "rough"
+  },
+  "3000550_2": {
+   "ground": 689.7,
+   "bearing": 353.6,
+   "target": "Saltdalen",
+   "distance": 34493,
+   "quality": "rough"
+  },
+  "3000556_1": {
+   "ground": 268.3,
+   "bearing": 122.8,
+   "target": "Graddis",
+   "distance": 15802,
+   "quality": "rough"
+  },
+  "3000556_2": {
+   "ground": 268.3,
+   "bearing": 306.1,
+   "target": "Saltdalen",
+   "distance": 12001,
+   "quality": "good"
+  },
+  "3000559_1": {
+   "ground": 939.2,
+   "bearing": 269.8,
+   "target": "Haugastøl",
+   "distance": 12771,
+   "quality": "good"
+  },
+  "3000574_1": {
+   "ground": 915.2,
+   "bearing": 111.3,
+   "target": "Lom",
+   "distance": 53456,
+   "quality": "rough"
+  },
+  "3000578_1": {
+   "ground": 17.5,
+   "bearing": 198.3,
+   "target": "Ropeid",
+   "distance": 16389,
+   "quality": "rough"
+  },
+  "3000590_1": {
+   "ground": 929.6,
+   "bearing": 102.4,
+   "target": "Otta",
+   "distance": 71933,
+   "quality": "very rough"
+  },
+  "3000590_2": {
+   "ground": 929.6,
+   "bearing": 251.6,
+   "target": "Stryn",
+   "distance": 37202,
+   "quality": "rough"
+  },
+  "3000590_3": {
+   "ground": 929.6
+  },
+  "3000592_1": {
+   "ground": 554.2,
+   "bearing": 323.6,
+   "target": "Åndalsnes",
+   "distance": 41179,
+   "quality": "rough"
+  },
+  "3000592_2": {
+   "ground": 554.2,
+   "bearing": 113.6,
+   "target": "Dombås",
+   "distance": 54191,
+   "quality": "rough"
+  },
+  "3000594_1": {
+   "ground": 356.3,
+   "bearing": 107,
+   "target": "Otta",
+   "distance": 12789,
+   "quality": "good"
+  },
+  "3000594_2": {
+   "ground": 356.3
+  },
+  "3000597_1": {
+   "ground": 79,
+   "bearing": 97.9,
+   "target": "Bjørnfjell",
+   "distance": 17869,
+   "quality": "rough"
+  },
+  "3000601_1": {
+   "ground": 231.4,
+   "bearing": 45.3,
+   "target": "Hokksund",
+   "distance": 17135,
+   "quality": "rough"
+  },
+  "3000603_1": {
+   "ground": 989.3,
+   "bearing": 256,
+   "target": "Lærdal",
+   "distance": 36110,
+   "quality": "rough"
+  },
+  "3000603_2": {
+   "ground": 989.3,
+   "bearing": 109.6,
+   "target": "Fagernes",
+   "distance": 62788,
+   "quality": "very rough"
+  },
+  "3000604_1": {
+   "ground": 208.8,
+   "bearing": 75.2,
+   "target": "Hovden",
+   "distance": 14705,
+   "quality": "good"
+  },
+  "3000605_1": {
+   "ground": 173.8,
+   "bearing": 161.6,
+   "target": "Kristiansand",
+   "distance": 39909,
+   "quality": "rough"
+  },
+  "3000606_1": {
+   "ground": 214.3
+  },
+  "3000607_1": {
+   "ground": 588.2,
+   "bearing": 33.1,
+   "target": "Hovden",
+   "distance": 12507,
+   "quality": "good"
+  },
+  "3000610_1": {
+   "ground": 61.8,
+   "bearing": 71.9,
+   "target": "Kristiansand",
+   "distance": 27334,
+   "quality": "rough"
+  },
+  "3000611_1": {
+   "ground": 34.2,
+   "bearing": 70,
+   "target": "Kristiansand",
+   "distance": 9612,
+   "quality": "good"
+  },
+  "3000614_1": {
+   "ground": 3.2,
+   "bearing": 234.7,
+   "target": "Bodø",
+   "distance": 1078,
+   "quality": "good"
+  },
+  "3000615_1": {
+   "ground": 2.5,
+   "bearing": 337.3,
+   "target": "Moskenes",
+   "distance": 292,
+   "quality": "good"
+  },
+  "3000616_1": {
+   "ground": 4.1,
+   "bearing": 202.7,
+   "target": "Storjord",
+   "distance": 148079,
+   "quality": "very rough"
+  },
+  "3000617_1": {
+   "ground": 2.6,
+   "bearing": 172.7,
+   "target": "Lødingen",
+   "distance": 707,
+   "quality": "good"
+  },
+  "3000618_1": {
+   "ground": 2.3,
+   "bearing": 140.9,
+   "target": "Skarberget",
+   "distance": 268,
+   "quality": "good"
+  },
+  "3000619_1": {
+   "ground": 2.5,
+   "bearing": 71.8,
+   "target": "Drag",
+   "distance": 166,
+   "quality": "good"
+  },
+  "3000620_1": {
+   "ground": 2.4,
+   "bearing": 355,
+   "target": "Kjøpsvik",
+   "distance": 398,
+   "quality": "good"
+  },
+  "3000621_1": {
+   "ground": 2.3,
+   "bearing": 106.8,
+   "target": "Værøy",
+   "distance": 610,
+   "quality": "good"
+  },
+  "3000622_1": {
+   "ground": 2,
+   "bearing": 212.7,
+   "target": "Røst",
+   "distance": 1800,
+   "quality": "good"
+  },
+  "3000625_1": {
+   "ground": 213.3,
+   "bearing": 261.4,
+   "target": "Krossmoen",
+   "distance": 12099,
+   "quality": "good"
+  },
+  "3000626_1": {
+   "ground": 36.4,
+   "bearing": 189.4,
+   "target": "Fauske",
+   "distance": 1577,
+   "quality": "good"
+  },
+  "3000627_1": {
+   "ground": 100.1,
+   "bearing": 273.5,
+   "target": "Jektvika",
+   "distance": 7341,
+   "quality": "good"
+  },
+  "3000631_1": {
+   "ground": 4.7,
+   "bearing": 86.7,
+   "target": "Voss",
+   "distance": 31945,
+   "quality": "rough"
+  },
+  "3000631_2": {
+   "ground": 4.7,
+   "bearing": 228.7,
+   "target": "Bergen",
+   "distance": 36975,
+   "quality": "rough"
+  },
+  "3000649_1": {
+   "ground": 26.5,
+   "bearing": 122.7,
+   "target": "Skjeltene",
+   "distance": 1574,
+   "quality": "good"
+  },
+  "3000649_2": {
+   "ground": 26.5
+  },
+  "3000661_1": {
+   "ground": 204.6,
+   "bearing": 249,
+   "target": "Valldal",
+   "distance": 10898,
+   "quality": "good"
+  },
+  "3000662_1": {
+   "ground": 732.7,
+   "bearing": 110,
+   "target": "Tyin",
+   "distance": 18452,
+   "quality": "rough"
+  },
+  "3000662_2": {
+   "ground": 732.7,
+   "bearing": 237.7,
+   "target": "Årdal",
+   "distance": 12995,
+   "quality": "good"
+  },
+  "3000664_1": {
+   "ground": 581.8
+  },
+  "3000665_1": {
+   "ground": 49.7
+  },
+  "3000666_1": {
+   "ground": 23.6,
+   "bearing": 264.4,
+   "target": "Florø",
+   "distance": 15872,
+   "quality": "rough"
+  },
+  "3000675_1": {
+   "ground": 50.7,
+   "bearing": 53.1,
+   "target": "Korgen",
+   "distance": 22898,
+   "quality": "rough"
+  },
+  "3000675_2": {
+   "ground": 50.7,
+   "bearing": 222.1,
+   "target": "Mosjøen",
+   "distance": 15552,
+   "quality": "rough"
+  },
+  "3000679_1": {
+   "ground": 10.8
+  },
+  "3000681_1": {
+   "ground": 182.7,
+   "bearing": 47.9,
+   "target": "Lunner",
+   "distance": 14464,
+   "quality": "good"
+  },
+  "3000682_1": {
+   "ground": 367.5,
+   "bearing": 245.8,
+   "target": "Jevnaker",
+   "distance": 6630,
+   "quality": "good"
+  },
+  "3000699_1": {
+   "ground": 364.1,
+   "bearing": 98.7,
+   "target": "Kaperdalen",
+   "distance": 2617,
+   "quality": "good"
+  },
+  "3000722_1": {
+   "ground": 588.2
+  },
+  "3000723_1": {
+   "ground": 77.9,
+   "bearing": 4.2,
+   "target": "Drammen",
+   "distance": 70572,
+   "quality": "very rough"
+  },
+  "3000725_1": {
+   "ground": 696.7,
+   "bearing": 10.7,
+   "target": "Oppdal",
+   "distance": 18921,
+   "quality": "rough"
+  },
+  "3000755_1": {
+   "ground": 114.2,
+   "bearing": 345.1,
+   "target": "Rakkestad",
+   "distance": 20922,
+   "quality": "rough"
+  },
+  "3000758_1": {
+   "ground": 592.7,
+   "bearing": 246.6,
+   "target": "Dunderlandsdalen",
+   "distance": 35538,
+   "quality": "rough"
+  },
+  "3000759_1": {
+   "ground": 20.3
+  },
+  "3000760_1": {
+   "ground": 171.9,
+   "bearing": 322.7,
+   "target": "Stavanger",
+   "distance": 85583,
+   "quality": "very rough"
+  },
+  "3000761_1": {
+   "ground": 94.9,
+   "bearing": 321,
+   "target": "Stavanger",
+   "distance": 81943,
+   "quality": "very rough"
+  },
+  "3000762_1": {
+   "ground": 204.9,
+   "bearing": 354.6,
+   "target": "Evje",
+   "distance": 37454,
+   "quality": "rough"
+  },
+  "3000762_2": {
+   "ground": 204.9,
+   "bearing": 146.4,
+   "target": "Kristiansand",
+   "distance": 13911,
+   "quality": "good"
+  },
+  "3000763_1": {
+   "ground": 208.4,
+   "bearing": 173.2,
+   "target": "Evje",
+   "distance": 29467,
+   "quality": "rough"
+  },
+  "3000763_2": {
+   "ground": 208.4,
+   "bearing": 97.9,
+   "target": "Hovden",
+   "distance": 20035,
+   "quality": "rough"
+  },
+  "3000764_1": {
+   "ground": 385.8,
+   "bearing": 163.3,
+   "target": "Evje",
+   "distance": 79432,
+   "quality": "very rough"
+  },
+  "3000765_1": {
+   "ground": 504,
+   "bearing": 22.8,
+   "target": "Hovden",
+   "distance": 15189,
+   "quality": "rough"
+  },
+  "3000765_2": {
+   "ground": 504,
+   "bearing": 162.3,
+   "target": "Evje",
+   "distance": 85347,
+   "quality": "very rough"
+  },
+  "3000766_1": {
+   "ground": 60
+  },
+  "3000767_1": {
+   "ground": 35.6,
+   "bearing": 37.1,
+   "target": "Arendal",
+   "distance": 11894,
+   "quality": "good"
+  },
+  "3000768_1": {
+   "ground": 16.2
+  },
+  "3000768_2": {
+   "ground": 16.2,
+   "bearing": 205.6,
+   "target": "Arendal",
+   "distance": 23207,
+   "quality": "rough"
+  },
+  "3000782_1": {
+   "ground": 3.2
+  },
+  "3000788_1": {
+   "ground": 673.5,
+   "bearing": 346,
+   "target": "Saltdalen",
+   "distance": 26056,
+   "quality": "rough"
+  },
+  "3000788_2": {
+   "ground": 673.5,
+   "bearing": 230.9,
+   "target": "Dunderlandsdalen",
+   "distance": 48129,
+   "quality": "rough"
+  },
+  "3000789_1": {
+   "ground": 134.9,
+   "bearing": 172.4,
+   "target": "Innhavet",
+   "distance": 9511,
+   "quality": "good"
+  },
+  "3000789_2": {
+   "ground": 134.9,
+   "bearing": 312.7,
+   "target": "Ulvsvåg",
+   "distance": 1212,
+   "quality": "good"
+  },
+  "3000795_1": {
+   "ground": 5,
+   "bearing": 261.3,
+   "target": "Bodø",
+   "distance": 15543,
+   "quality": "rough"
+  },
+  "3000796_1": {
+   "ground": 211.7,
+   "bearing": 221.6,
+   "target": "Mosjøen",
+   "distance": 29421,
+   "quality": "rough"
+  },
+  "3000797_1": {
+   "ground": 205.7,
+   "bearing": 327.2,
+   "target": "Gol",
+   "distance": 589,
+   "quality": "good"
+  },
+  "3000798_1": {
+   "ground": 149.6,
+   "bearing": 19,
+   "target": "Roverud",
+   "distance": 313,
+   "quality": "good"
+  },
+  "3000799_1": {
+   "ground": 914.4,
+   "bearing": 255.7,
+   "target": "Stryn",
+   "distance": 48767,
+   "quality": "rough"
+  },
+  "3000805_1": {
+   "ground": 125.8
+  },
+  "3000806_1": {
+   "ground": 138.1,
+   "bearing": 257.6,
+   "target": "Bergen",
+   "distance": 16720,
+   "quality": "rough"
+  },
+  "3000806_2": {
+   "ground": 138.1,
+   "bearing": 62.1,
+   "target": "Voss",
+   "distance": 48920,
+   "quality": "rough"
+  },
+  "3000810_1": {
+   "ground": 296.3,
+   "bearing": 58.5,
+   "target": "Evje",
+   "distance": 16117,
+   "quality": "rough"
+  },
+  "3000811_1": {
+   "ground": 362.1,
+   "bearing": 135.8,
+   "target": "Evje",
+   "distance": 21425,
+   "quality": "rough"
+  },
+  "3000812_1": {
+   "ground": 325.4,
+   "bearing": 190.9,
+   "target": "Kristiansand",
+   "distance": 40986,
+   "quality": "rough"
+  },
+  "3000813_1": {
+   "ground": 411.5,
+   "bearing": 104.3,
+   "target": "Arendal",
+   "distance": 51322,
+   "quality": "rough"
+  },
+  "3000814_1": {
+   "ground": 261.5,
+   "bearing": 267.9,
+   "target": "Trældal",
+   "distance": 3987,
+   "quality": "good"
+  },
+  "3000816_1": {
+   "ground": 159.2,
+   "bearing": 42.1,
+   "target": "Fagernes",
+   "distance": 22518,
+   "quality": "rough"
+  },
+  "3000819_1": {
+   "ground": 7.1,
+   "bearing": 239.1,
+   "target": "Vevang",
+   "distance": 1843,
+   "quality": "good"
+  },
+  "3000819_2": {
+   "ground": 7.1,
+   "bearing": 73.8,
+   "target": "Averøy kommune",
+   "distance": 15318,
+   "quality": "rough"
+  },
+  "3000820_1": {
+   "ground": 19,
+   "bearing": 176.1,
+   "target": "Smøla",
+   "distance": 10317,
+   "quality": "good"
+  },
+  "3000820_2": {
+   "ground": 19,
+   "bearing": 336.4,
+   "target": "Veiholmen",
+   "distance": 4961,
+   "quality": "good"
+  },
+  "3000821_1": {
+   "ground": 182.7,
+   "bearing": 87.6,
+   "target": "Eidsvåg",
+   "distance": 8984,
+   "quality": "good"
+  },
+  "3000821_2": {
+   "ground": 182.7,
+   "bearing": 264.2,
+   "target": "Molde",
+   "distance": 37365,
+   "quality": "rough"
+  },
+  "3000822_1": {
+   "ground": 245.5,
+   "bearing": 257.2,
+   "target": "Varhaug",
+   "distance": 9133,
+   "quality": "good"
+  },
+  "3000822_2": {
+   "ground": 245.5,
+   "bearing": 73.4,
+   "target": "Bue",
+   "distance": 10207,
+   "quality": "good"
+  },
+  "3000822_3": {
+   "ground": 245.6,
+   "bearing": 335.8,
+   "target": "Undheim",
+   "distance": 5104,
+   "quality": "good"
+  },
+  "3000828_1": {
+   "ground": 48.5
+  },
+  "3000831_1": {
+   "ground": 13,
+   "bearing": 181.5,
+   "target": "Kvål",
+   "distance": 3004,
+   "quality": "good"
+  },
+  "3000843_1": {
+   "ground": 107.9,
+   "bearing": 276.5,
+   "target": "Utskarpen",
+   "distance": 13050,
+   "quality": "good"
+  },
+  "3000843_2": {
+   "ground": 107.9,
+   "bearing": 70.6,
+   "target": "Mo i Rana",
+   "distance": 11429,
+   "quality": "good"
+  },
+  "3000844_1": {
+   "ground": 30.1
+  },
+  "3000848_1": {
+   "ground": 468.6,
+   "bearing": 122,
+   "target": "Fagernes",
+   "distance": 35084,
+   "quality": "rough"
+  },
+  "3000849_1": {
+   "ground": 10.6,
+   "bearing": 59.4,
+   "target": "Oslo",
+   "distance": 31266,
+   "quality": "rough"
+  },
+  "3000849_2": {
+   "ground": 10.6,
+   "bearing": 227.9,
+   "target": "Drammen",
+   "distance": 4430,
+   "quality": "good"
+  },
+  "3000854_1": {
+   "ground": 29.7
+  },
+  "3000858_1": {
+   "ground": 37.6
+  },
+  "3000859_1": {
+   "ground": 210.2
+  },
+  "3000859_2": {
+   "ground": 210.2,
+   "bearing": 312.6,
+   "target": "Hovden",
+   "distance": 19999,
+   "quality": "rough"
+  },
+  "3000864_1": {
+   "ground": 469.8
+  },
+  "3000867_1": {
+   "ground": 2.3,
+   "bearing": 136.8,
+   "target": "Lærdal",
+   "distance": 7660,
+   "quality": "good"
+  },
+  "3000868_1": {
+   "ground": 2.8,
+   "bearing": 55.2,
+   "target": "Vadheim",
+   "distance": 20569,
+   "quality": "rough"
+  },
+  "3000869_1": {
+   "ground": 3.3,
+   "bearing": 137.5,
+   "target": "Sandane",
+   "distance": 10436,
+   "quality": "good"
+  },
+  "3000870_1": {
+   "ground": 2.6,
+   "bearing": 317.4,
+   "target": "Nordfjordeid",
+   "distance": 7269,
+   "quality": "good"
+  },
+  "3000871_1": {
+   "ground": 1.8,
+   "bearing": 186.1,
+   "target": "Nordfjordeid",
+   "distance": 23238,
+   "quality": "rough"
+  },
+  "3000880_1": {
+   "ground": 92.3,
+   "bearing": 176.7,
+   "target": "Kløvet",
+   "distance": 12703,
+   "quality": "good"
+  },
+  "3000881_1": {
+   "ground": 79.1
+  },
+  "3000883_1": {
+   "ground": 26.2,
+   "bearing": 227.7,
+   "target": "Korsfjorden",
+   "distance": 7614,
+   "quality": "good"
+  },
+  "3000885_1": {
+   "ground": 9.6,
+   "bearing": 5.5,
+   "target": "Bjerkvik",
+   "distance": 5284,
+   "quality": "good"
+  },
+  "3000886_1": {
+   "ground": 13.6,
+   "bearing": 98.5,
+   "target": "Trældal",
+   "distance": 3180,
+   "quality": "good"
+  },
+  "3000892_1": {
+   "ground": 56.1,
+   "bearing": 5,
+   "target": "Harstad",
+   "distance": 10602,
+   "quality": "good"
+  },
+  "3000892_2": {
+   "ground": 56.1,
+   "bearing": 165.2,
+   "target": "Sørvika",
+   "distance": 2392,
+   "quality": "good"
+  },
+  "3000893_1": {
+   "ground": 45.6,
+   "bearing": 212.4,
+   "target": "Narvik",
+   "distance": 4727,
+   "quality": "good"
+  },
+  "3000894_1": {
+   "ground": 29.1
+  },
+  "3000895_1": {
+   "ground": 1.6,
+   "bearing": 29.1,
+   "target": "Ørsta",
+   "distance": 7025,
+   "quality": "good"
+  },
+  "3000896_1": {
+   "ground": 2.1,
+   "bearing": 208.4,
+   "target": "Ørsta",
+   "distance": 22103,
+   "quality": "rough"
+  },
+  "3000897_1": {
+   "ground": 1.9,
+   "bearing": 306.3,
+   "target": "Ålesund",
+   "distance": 10995,
+   "quality": "good"
+  },
+  "3000908_1": {
+   "ground": 160.5,
+   "bearing": 345.6,
+   "target": "Gardermoen",
+   "distance": 13045,
+   "quality": "good"
+  },
+  "3000920_1": {
+   "ground": 26.8,
+   "bearing": 105.3,
+   "target": "Alstad",
+   "distance": 827,
+   "quality": "good"
+  },
+  "3000929_1": {
+   "ground": 501.4
+  },
+  "3000929_2": {
+   "ground": 501.4,
+   "bearing": 56.2,
+   "target": "Kaupanger",
+   "distance": 5363,
+   "quality": "good"
+  },
+  "3000930_1": {
+   "ground": 30.4
+  },
+  "3000937_1": {
+   "ground": 372
+  },
+  "3000938_1": {
+   "ground": 39.9,
+   "bearing": 269,
+   "target": "Kåfjord",
+   "distance": 3938,
+   "quality": "good"
+  },
+  "3000940_1": {
+   "ground": 925.8,
+   "bearing": 251.5,
+   "target": "Stryn",
+   "distance": 40560,
+   "quality": "rough"
+  },
+  "3000940_2": {
+   "ground": 925.8,
+   "bearing": 95.1,
+   "target": "Grotli",
+   "distance": 9272,
+   "quality": "good"
+  },
+  "3000941_1": {
+   "ground": 13.6,
+   "bearing": 216.8,
+   "target": "Sundsfjorden",
+   "distance": 8093,
+   "quality": "good"
+  },
+  "3000942_1": {
+   "ground": 14.4,
+   "bearing": 208.5,
+   "target": "Narvik",
+   "distance": 12412,
+   "quality": "good"
+  },
+  "3000943_1": {
+   "ground": 125.6,
+   "bearing": 58.9,
+   "target": "Setermoen",
+   "distance": 7163,
+   "quality": "good"
+  },
+  "3000943_2": {
+   "ground": 125.5,
+   "bearing": 222.4,
+   "target": "Bjerkvik",
+   "distance": 37320,
+   "quality": "rough"
+  },
+  "3000944_1": {
+   "ground": 6.5,
+   "bearing": 222.4,
+   "target": "Giæverbukta",
+   "distance": 242,
+   "quality": "good"
+  },
+  "3000945_1": {
+   "ground": 65.8,
+   "bearing": 169.5,
+   "target": "Porsangmoen",
+   "distance": 9818,
+   "quality": "good"
+  },
+  "3000946_1": {
+   "ground": 48.9,
+   "bearing": 330.3,
+   "target": "Mosjøen",
+   "distance": 9182,
+   "quality": "good"
+  },
+  "3000953_1": {
+   "ground": 862.7,
+   "bearing": 115.9,
+   "target": "Vang",
+   "distance": 20049,
+   "quality": "rough"
+  },
+  "3000954_1": {
+   "ground": 73
+  },
+  "3000956_1": {
+   "ground": 49.9,
+   "bearing": 131,
+   "target": "Kåringen",
+   "distance": 13380,
+   "quality": "good"
+  },
+  "3000956_2": {
+   "ground": 49.9,
+   "bearing": 322.9,
+   "target": "Sortland",
+   "distance": 23582,
+   "quality": "rough"
+  },
+  "3000957_1": {
+   "ground": 3.9,
+   "bearing": 243.6,
+   "target": "Stokmarknes",
+   "distance": 4536,
+   "quality": "good"
+  },
+  "3000958_1": {
+   "ground": 6,
+   "bearing": 214.7,
+   "target": "Bekkarfjord",
+   "distance": 28382,
+   "quality": "rough"
+  },
+  "3000959_1": {
+   "ground": 89.7,
+   "bearing": 315.8,
+   "target": "Varangerbotn",
+   "distance": 71202,
+   "quality": "very rough"
+  },
+  "3000960_1": {
+   "ground": 346.6,
+   "bearing": 308.5,
+   "target": "Saltdalen",
+   "distance": 22021,
+   "quality": "rough"
+  },
+  "3000962_1": {
+   "ground": 132
+  },
+  "3000963_1": {
+   "ground": 50,
+   "bearing": 290.7,
+   "target": "Kjøllefjord",
+   "distance": 3225,
+   "quality": "good"
+  },
+  "3000964_1": {
+   "ground": 23.9,
+   "bearing": 159.2,
+   "target": "Stormyra",
+   "distance": 7240,
+   "quality": "good"
+  },
+  "3000965_1": {
+   "ground": 21.4,
+   "bearing": 157.3,
+   "target": "Porsgrunn",
+   "distance": 4014,
+   "quality": "good"
+  },
+  "3000966_1": {
+   "ground": 3.2,
+   "bearing": 351.2,
+   "target": "Porsgrunn",
+   "distance": 1220,
+   "quality": "good"
+  },
+  "3000967_1": {
+   "ground": 12.2,
+   "bearing": 233,
+   "target": "Kongsfjordfjellet",
+   "distance": 947,
+   "quality": "good"
+  },
+  "3000969_1": {
+   "ground": 11.1,
+   "bearing": 143.9,
+   "target": "Tromsøya",
+   "distance": 3484,
+   "quality": "good"
+  },
+  "3000970_1": {
+   "ground": 451.8,
+   "bearing": 56.6,
+   "target": "Saltdal kirke",
+   "distance": 13355,
+   "quality": "good"
+  },
+  "3000971_1": {
+   "ground": 21.9,
+   "bearing": 224.9,
+   "target": "Løpsmarka",
+   "distance": 2247,
+   "quality": "good"
+  },
+  "3000972_1": {
+   "ground": 33.3,
+   "bearing": 343.7,
+   "target": "Mehamn",
+   "distance": 1601,
+   "quality": "good"
+  },
+  "3000973_1": {
+   "ground": 30.2
+  },
+  "3000974_1": {
+   "ground": 39.2,
+   "bearing": 225.9,
+   "target": "Ankenes",
+   "distance": 2599,
+   "quality": "good"
+  },
+  "3000975_1": {
+   "ground": 8.5,
+   "bearing": 129.4,
+   "target": "Kirkenes",
+   "distance": 60271,
+   "quality": "very rough"
+  },
+  "3000976_1": {
+   "ground": 30.8
+  },
+  "3000978_1": {
+   "ground": 23.8,
+   "bearing": 11.5,
+   "target": "Rognan",
+   "distance": 12184,
+   "quality": "good"
+  },
+  "3000979_1": {
+   "ground": 6.5,
+   "bearing": 240.4,
+   "target": "Kvaløya",
+   "distance": 24136,
+   "quality": "rough"
+  },
+  "3000980_1": {
+   "ground": 7.1,
+   "bearing": 235.2,
+   "target": "Tjeldsundet",
+   "distance": 30031,
+   "quality": "rough"
+  },
+  "3000981_1": {
+   "ground": 326.9,
+   "bearing": 309.1,
+   "target": "Hattfjelldal",
+   "distance": 19431,
+   "quality": "rough"
+  },
+  "3000983_1": {
+   "ground": 45.9
+  },
+  "3000983_2": {
+   "ground": 45.9,
+   "bearing": 310,
+   "target": "Skibotn",
+   "distance": 380,
+   "quality": "good"
+  },
+  "3000984_1": {
+   "ground": 20
+  },
+  "3000985_1": {
+   "ground": 625.8,
+   "bearing": 358.9,
+   "target": "Saltdal kirke",
+   "distance": 45851,
+   "quality": "rough"
+  },
+  "3000986_1": {
+   "ground": 11.9,
+   "bearing": 180.9,
+   "target": "Tjøtta",
+   "distance": 11543,
+   "quality": "good"
+  },
+  "3000987_1": {
+   "ground": 21.6,
+   "bearing": 310.3,
+   "target": "Tana bru",
+   "distance": 443,
+   "quality": "good"
+  },
+  "3000988_1": {
+   "ground": 8.6,
+   "bearing": 357.4,
+   "target": "Harstad",
+   "distance": 18994,
+   "quality": "rough"
+  },
+  "3000988_2": {
+   "ground": 8.6,
+   "bearing": 216.3,
+   "target": "Tjeldsund kirke",
+   "distance": 11476,
+   "quality": "good"
+  },
+  "3000990_1": {
+   "ground": 43.8,
+   "bearing": 242.5,
+   "target": "Giæverbukta",
+   "distance": 1239,
+   "quality": "good"
+  },
+  "3000991_1": {
+   "ground": 30.8,
+   "bearing": 168.1,
+   "target": "Innhavet",
+   "distance": 10199,
+   "quality": "good"
+  },
+  "3000992_1": {
+   "ground": 18.8
+  },
+  "3000993_1": {
+   "ground": 34.5,
+   "bearing": 91.5,
+   "target": "Varangerbotn",
+   "distance": 867,
+   "quality": "good"
+  },
+  "3000994_1": {
+   "ground": 10.3
+  },
+  "3000995_1": {
+   "ground": 228.6,
+   "bearing": 264,
+   "target": "Ørje",
+   "distance": 4851,
+   "quality": "good"
+  },
+  "3000996_1": {
+   "ground": 436.2,
+   "bearing": 320.5,
+   "target": "Skibotn",
+   "distance": 28466,
+   "quality": "rough"
+  },
+  "3000996_2": {
+   "ground": 436.2
+  },
+  "3000997_1": {
+   "ground": 63.2
+  },
+  "3000998_1": {
+   "ground": 18.8,
+   "bearing": 36.5,
+   "target": "Røssvoll",
+   "distance": 5400,
+   "quality": "good"
+  },
+  "3000999_1": {
+   "ground": 4.9
+  },
+  "3001000_1": {
+   "ground": 2.5
+  },
+  "3001001_1": {
+   "ground": 165.3
+  },
+  "3001002_1": {
+   "ground": 3,
+   "bearing": 17.9,
+   "target": "Nesvik",
+   "distance": 185,
+   "quality": "good"
+  },
+  "3001003_1": {
+   "ground": 4.1,
+   "bearing": 66.9,
+   "target": "Hjelmeland",
+   "distance": 804,
+   "quality": "good"
+  },
+  "3001004_1": {
+   "ground": 117.2,
+   "bearing": 73.1,
+   "target": "Vatne",
+   "distance": 7227,
+   "quality": "good"
+  },
+  "3001004_2": {
+   "ground": 117.3,
+   "bearing": 343.9,
+   "target": "Brattvåg",
+   "distance": 6999,
+   "quality": "good"
+  },
+  "3001005_1": {
+   "ground": 393.8
+  },
+  "3001005_2": {
+   "ground": 393.8,
+   "bearing": 319.5,
+   "target": "Skibotn",
+   "distance": 28048,
+   "quality": "rough"
+  },
+  "3001006_1": {
+   "ground": 368,
+   "bearing": 1.9,
+   "target": "Trofors",
+   "distance": 36847,
+   "quality": "rough"
+  },
+  "3001006_2": {
+   "ground": 368,
+   "bearing": 187.1,
+   "target": "Majavatn",
+   "distance": 3869,
+   "quality": "good"
+  },
+  "3001008_1": {
+   "ground": 20.3
+  },
+  "3001008_2": {
+   "ground": 20.3,
+   "bearing": 82.3,
+   "target": "Fosnavåg",
+   "distance": 1470,
+   "quality": "good"
+  },
+  "3001009_1": {
+   "ground": 470.3
+  },
+  "3001010_1": {
+   "ground": 4.8,
+   "bearing": 253.2,
+   "target": "Levanger",
+   "distance": 8168,
+   "quality": "good"
+  },
+  "3001011_1": {
+   "ground": 12.5,
+   "bearing": 148.7,
+   "target": "Fredrikstad",
+   "distance": 3299,
+   "quality": "good"
+  },
+  "3001012_1": {
+   "ground": 7.1
+  },
+  "3001013_1": {
+   "ground": 20.2,
+   "bearing": 334.7,
+   "target": "Sarpsborg",
+   "distance": 12996,
+   "quality": "good"
+  },
+  "3001015_1": {
+   "ground": 571.5,
+   "bearing": 259.5,
+   "target": "Røldal",
+   "distance": 2814,
+   "quality": "good"
+  },
+  "3001015_2": {
+   "ground": 571.5,
+   "bearing": 105.3,
+   "target": "Haukeli",
+   "distance": 40203,
+   "quality": "rough"
+  },
+  "3001016_1": {
+   "ground": 771.6,
+   "bearing": 259.2,
+   "target": "Evje",
+   "distance": 105468,
+   "quality": "very rough"
+  },
+  "3001016_2": {
+   "ground": 771.6,
+   "bearing": 23.6,
+   "target": "Haukeli",
+   "distance": 25918,
+   "quality": "rough"
+  },
+  "3001017_1": {
+   "ground": 102,
+   "bearing": 20.3,
+   "target": "Kristiansund",
+   "distance": 39569,
+   "quality": "rough"
+  },
+  "3001018_1": {
+   "ground": 346,
+   "bearing": 7.7,
+   "target": "Trofors",
+   "distance": 31406,
+   "quality": "rough"
+  },
+  "3001018_2": {
+   "ground": 307.7,
+   "bearing": 165.2,
+   "target": "Majavatn",
+   "distance": 9869,
+   "quality": "good"
+  },
+  "3001019_1": {
+   "ground": 102.6,
+   "bearing": 236.7,
+   "target": "Vadsø",
+   "distance": 53764,
+   "quality": "rough"
+  },
+  "3001019_2": {
+   "ground": 102.6,
+   "bearing": 38.1,
+   "target": "Vardø",
+   "distance": 5192,
+   "quality": "good"
+  },
+  "3001020_1": {
+   "ground": 4.8,
+   "bearing": 179.6,
+   "target": "Kanebogen",
+   "distance": 1922,
+   "quality": "good"
+  },
+  "3001020_2": {
+   "ground": 6.6
+  },
+  "3001023_1": {
+   "ground": 33.4,
+   "bearing": 174,
+   "target": "Sandnes",
+   "distance": 11158,
+   "quality": "good"
+  },
+  "3001024_1": {
+   "ground": 29.5,
+   "bearing": 25.2,
+   "target": "Vardø",
+   "distance": 9478,
+   "quality": "good"
+  },
+  "3001024_2": {
+   "ground": 29.5,
+   "bearing": 240.4,
+   "target": "Vadsø",
+   "distance": 50702,
+   "quality": "rough"
+  },
+  "3001025_1": {
+   "ground": 503,
+   "bearing": 281.5,
+   "target": "Trældal",
+   "distance": 17374,
+   "quality": "rough"
+  },
+  "3001026_1": {
+   "ground": 1149.8,
+   "bearing": 264.6,
+   "target": "Leiro",
+   "distance": 19660,
+   "quality": "rough"
+  },
+  "3001026_2": {
+   "ground": 1149.8,
+   "bearing": 22.1,
+   "target": "Haugastøl",
+   "distance": 6812,
+   "quality": "good"
+  },
+  "3001027_1": {
+   "ground": 1156.9,
+   "bearing": 26.6,
+   "target": "Haugastøl",
+   "distance": 9031,
+   "quality": "good"
+  },
+  "3001027_2": {
+   "ground": 1156.9,
+   "bearing": 269.7,
+   "target": "Leiro",
+   "distance": 18095,
+   "quality": "rough"
+  },
+  "3001028_1": {
+   "ground": 1171.8,
+   "bearing": 34.4,
+   "target": "Haugastøl",
+   "distance": 11066,
+   "quality": "good"
+  },
+  "3001028_2": {
+   "ground": 1171.8,
+   "bearing": 273.4,
+   "target": "Leiro",
+   "distance": 15901,
+   "quality": "rough"
+  },
+  "3001029_1": {
+   "ground": 1100.2,
+   "bearing": 58,
+   "target": "Haugastøl",
+   "distance": 27443,
+   "quality": "rough"
+  },
+  "3001029_2": {
+   "ground": 1100.2,
+   "bearing": 302.9,
+   "target": "Leiro",
+   "distance": 4486,
+   "quality": "good"
+  },
+  "3001031_1": {
+   "ground": 152.9,
+   "bearing": 262.8,
+   "target": "Ørje",
+   "distance": 2412,
+   "quality": "good"
+  },
+  "3001032_1": {
+   "ground": 35.9,
+   "bearing": 11.3,
+   "target": "Hammerfest",
+   "distance": 3703,
+   "quality": "good"
+  },
+  "3001032_2": {
+   "ground": 35.9,
+   "bearing": 148.5,
+   "target": "Kvalsund",
+   "distance": 16276,
+   "quality": "rough"
+  },
+  "3001033_1": {
+   "ground": 383.8,
+   "bearing": 223,
+   "target": "Alta",
+   "distance": 29864,
+   "quality": "rough"
+  },
+  "3001033_2": {
+   "ground": 383.8,
+   "bearing": 38.5,
+   "target": "Skaidi",
+   "distance": 36522,
+   "quality": "rough"
+  },
+  "3001034_1": {
+   "ground": 256.6,
+   "bearing": 140,
+   "target": "Honningsvåg",
+   "distance": 8142,
+   "quality": "good"
+  },
+  "3001034_2": {
+   "ground": 256.6,
+   "bearing": 140,
+   "target": "Nordkapp",
+   "distance": 8270,
+   "quality": "good"
+  },
+  "3001036_1": {
+   "ground": 8.9
+  },
+  "3001037_1": {
+   "ground": 5.1,
+   "bearing": 3.4,
+   "target": "Steinkjer",
+   "distance": 25500,
+   "quality": "rough"
+  },
+  "3001040_1": {
+   "ground": 390.1,
+   "bearing": 323.1,
+   "target": "Talvik",
+   "distance": 10007,
+   "quality": "good"
+  },
+  "3001041_1": {
+   "ground": 12.4,
+   "bearing": 46.2,
+   "target": "Altaelva",
+   "distance": 5726,
+   "quality": "good"
+  },
+  "3001043_1": {
+   "ground": 662.5,
+   "bearing": 229.1,
+   "target": "Røldal",
+   "distance": 4315,
+   "quality": "good"
+  },
+  "3001043_2": {
+   "ground": 662.5
+  },
+  "3001044_1": {
+   "ground": 2.1
+  },
+  "3001046_1": {
+   "ground": 44.6,
+   "bearing": 356.8,
+   "target": "Glomfjord",
+   "distance": 6064,
+   "quality": "good"
+  },
+  "3001047_1": {
+   "ground": 61.5,
+   "bearing": 127.5,
+   "target": "Mandal",
+   "distance": 23590,
+   "quality": "rough"
+  },
+  "3001048_1": {
+   "ground": 110.9,
+   "bearing": 121.6,
+   "target": "Kyrksæterøra",
+   "distance": 13139,
+   "quality": "good"
+  },
+  "3001048_2": {
+   "ground": 110.9,
+   "bearing": 240.8,
+   "target": "Aure",
+   "distance": 19246,
+   "quality": "rough"
+  },
+  "3001049_1": {
+   "ground": 114,
+   "bearing": 187,
+   "target": "Skaret",
+   "distance": 11647,
+   "quality": "good"
+  },
+  "3001049_2": {
+   "ground": 114,
+   "bearing": 215.9,
+   "target": "Eikrem",
+   "distance": 2034,
+   "quality": "good"
+  },
+  "3001049_3": {
+   "ground": 114,
+   "bearing": 325.2,
+   "target": "Elnesvågen",
+   "distance": 11165,
+   "quality": "good"
+  },
+  "3001049_4": {
+   "ground": 114,
+   "bearing": 194.9,
+   "target": "Årø",
+   "distance": 2379,
+   "quality": "good"
+  },
+  "3001050_1": {
+   "ground": 156.8,
+   "bearing": 345.2,
+   "target": "Mosjøen",
+   "distance": 33267,
+   "quality": "rough"
+  },
+  "3001050_2": {
+   "ground": 156.8,
+   "bearing": 180.6,
+   "target": "Majavatn",
+   "distance": 42281,
+   "quality": "rough"
+  },
+  "3001051_1": {
+   "ground": 72.3,
+   "bearing": 93.9,
+   "target": "Kirkenes",
+   "distance": 28887,
+   "quality": "rough"
+  },
+  "3001051_2": {
+   "ground": 72.3,
+   "bearing": 329.6,
+   "target": "Varangerbotn",
+   "distance": 55188,
+   "quality": "rough"
+  },
+  "3001053_1": {
+   "ground": 247.6,
+   "bearing": 102.3,
+   "target": "Hovden",
+   "distance": 22713,
+   "quality": "rough"
+  },
+  "3001053_2": {
+   "ground": 247.6,
+   "bearing": 169.5,
+   "target": "Evje",
+   "distance": 31915,
+   "quality": "rough"
+  },
+  "3001054_1": {
+   "ground": 370.5
+  },
+  "3001054_2": {
+   "ground": 370.5
+  },
+  "3001055_1": {
+   "ground": 158.1,
+   "bearing": 267.4,
+   "target": "Gursken",
+   "distance": 10137,
+   "quality": "good"
+  },
+  "3001055_2": {
+   "ground": 158.1,
+   "bearing": 65.3,
+   "target": "Leikong",
+   "distance": 1842,
+   "quality": "good"
+  },
+  "3001056_1": {
+   "ground": 2.2
+  },
+  "3001057_1": {
+   "ground": 2
+  },
+  "3001058_1": {
+   "ground": 3
+  },
+  "3001059_1": {
+   "ground": 2.8
+  },
+  "3001060_1": {
+   "ground": 2.9
+  },
+  "3001061_1": {
+   "ground": 2.1
+  },
+  "3001062_1": {
+   "ground": 2.6
+  },
+  "3001063_1": {
+   "ground": 2.4,
+   "bearing": 198.8,
+   "target": "Brønnøysund",
+   "distance": 13507,
+   "quality": "good"
+  },
+  "3001064_1": {
+   "ground": 2.7,
+   "bearing": 214.5,
+   "target": "Brasøya",
+   "distance": 167,
+   "quality": "good"
+  },
+  "3001065_1": {
+   "ground": 2,
+   "bearing": 82.8,
+   "target": "Austbø",
+   "distance": 1287,
+   "quality": "good"
+  },
+  "3001066_1": {
+   "ground": 2.3,
+   "bearing": 30.7,
+   "target": "Herøy",
+   "distance": 4679,
+   "quality": "good"
+  },
+  "3001067_1": {
+   "ground": 2.5,
+   "bearing": 116.5,
+   "target": "Søvik",
+   "distance": 1107,
+   "quality": "good"
+  },
+  "3001068_1": {
+   "ground": 2
+  },
+  "3001069_1": {
+   "ground": 2.7,
+   "bearing": 302.9,
+   "target": "Dønna",
+   "distance": 5208,
+   "quality": "good"
+  },
+  "3001070_1": {
+   "ground": 2.3,
+   "bearing": 309.5,
+   "target": "Sandnessjøen",
+   "distance": 245,
+   "quality": "good"
+  },
+  "3001071_1": {
+   "ground": 2.7,
+   "bearing": 335.1,
+   "target": "Tjøtta",
+   "distance": 789,
+   "quality": "good"
+  },
+  "3001072_1": {
+   "ground": 2.4,
+   "bearing": 12.8,
+   "target": "Skutvik",
+   "distance": 469,
+   "quality": "good"
+  },
+  "3001073_1": {
+   "ground": 2.5,
+   "bearing": 60.3,
+   "target": "Jektvika",
+   "distance": 350,
+   "quality": "good"
+  },
+  "3001074_1": {
+   "ground": 2.5,
+   "bearing": 250.7,
+   "target": "Ågskardet",
+   "distance": 263,
+   "quality": "good"
+  },
+  "3001075_1": {
+   "ground": 16.3,
+   "bearing": 234.5,
+   "target": "Vadsø",
+   "distance": 55465,
+   "quality": "rough"
+  },
+  "3001075_2": {
+   "ground": 16.3,
+   "bearing": 65.4,
+   "target": "Vardø",
+   "distance": 3300,
+   "quality": "good"
+  },
+  "3001078_1": {
+   "ground": 4.6,
+   "bearing": 175,
+   "target": "Kanebogen",
+   "distance": 1096,
+   "quality": "good"
+  },
+  "3001078_2": {
+   "ground": 4.6,
+   "bearing": 285,
+   "target": "Harstadbotn",
+   "distance": 197,
+   "quality": "good"
+  },
+  "3001079_1": {
+   "ground": 32.2,
+   "bearing": 146.2,
+   "target": "Kolltveit",
+   "distance": 2385,
+   "quality": "good"
+  },
+  "3001080_1": {
+   "ground": 974.7
+  },
+  "3001083_1": {
+   "ground": 55.6
+  },
+  "3001087_1": {
+   "ground": 4.3,
+   "bearing": 48.8,
+   "target": "Esøya",
+   "distance": 893,
+   "quality": "good"
+  },
+  "3001088_1": {
+   "ground": 127.2
+  },
+  "3001089_2": {
+   "ground": 12.9
+  },
+  "3001090_1": {
+   "ground": 844.4,
+   "bearing": 119.7,
+   "target": "Brunkeberg",
+   "distance": 76115,
+   "quality": "very rough"
+  },
+  "3001090_2": {
+   "ground": 844.4,
+   "bearing": 282.5,
+   "target": "Røldal",
+   "distance": 28525,
+   "quality": "rough"
+  },
+  "3001091_1": {
+   "ground": 120.7,
+   "bearing": 133.2,
+   "target": "Sandvika",
+   "distance": 7659,
+   "quality": "good"
+  },
+  "3001092_1": {
+   "ground": 287.3,
+   "bearing": 130.2,
+   "target": "Sandvika",
+   "distance": 14678,
+   "quality": "good"
+  },
+  "3001093_1": {
+   "ground": 5.8
+  },
+  "3001093_2": {
+   "ground": 10.5
+  },
+  "3001096_1": {
+   "ground": 204.8
+  },
+  "3001096_2": {
+   "ground": 204.8
+  },
+  "3001097_1": {
+   "ground": 385.4,
+   "bearing": 331,
+   "target": "Bru",
+   "distance": 18257,
+   "quality": "rough"
+  },
+  "3001098_1": {
+   "ground": 60,
+   "bearing": 12.2,
+   "target": "Askøy",
+   "distance": 1963,
+   "quality": "good"
+  },
+  "3001101_1": {
+   "ground": 2.7,
+   "bearing": 230.8,
+   "target": "Haugesund",
+   "distance": 80734,
+   "quality": "very rough"
+  },
+  "3001102_1": {
+   "ground": 441,
+   "bearing": 4,
+   "target": "Stranda",
+   "distance": 16758,
+   "quality": "rough"
+  },
+  "3001103_1": {
+   "ground": 159.6,
+   "bearing": 40.3,
+   "target": "Rømskog kirke",
+   "distance": 17447,
+   "quality": "rough"
+  },
+  "3001104_1": {
+   "ground": 48.6,
+   "bearing": 342.3,
+   "target": "Halden",
+   "distance": 25127,
+   "quality": "rough"
+  },
+  "3001105_1": {
+   "ground": 31.9
+  },
+  "3001105_2": {
+   "ground": 31.9
+  },
+  "3001106_1": {
+   "ground": 74.8
+  },
+  "3001107_1": {
+   "ground": 706,
+   "bearing": 166.6,
+   "target": "Evje",
+   "distance": 98162,
+   "quality": "very rough"
+  },
+  "3001107_2": {
+   "ground": 706,
+   "bearing": 93.9,
+   "target": "Hovden",
+   "distance": 2684,
+   "quality": "good"
+  },
+  "3001108_1": {
+   "ground": 84.4,
+   "bearing": 202.8,
+   "target": "Birkeland",
+   "distance": 14480,
+   "quality": "good"
+  },
+  "3001108_2": {
+   "ground": 84.4,
+   "bearing": 17.5,
+   "target": "Hynnekleiv",
+   "distance": 16960,
+   "quality": "rough"
+  },
+  "3001109_1": {
+   "ground": 249.5,
+   "bearing": 356.1,
+   "target": "Vrådal",
+   "distance": 18573,
+   "quality": "rough"
+  },
+  "3001109_2": {
+   "ground": 249.5,
+   "bearing": 176.5,
+   "target": "Treungen",
+   "distance": 15473,
+   "quality": "rough"
+  },
+  "3001110_1": {
+   "ground": 3.6,
+   "bearing": 159.8,
+   "target": "Svelvik",
+   "distance": 8411,
+   "quality": "good"
+  },
+  "3001111_1": {
+   "ground": 151.5,
+   "bearing": 202.2,
+   "target": "Noresund",
+   "distance": 11098,
+   "quality": "good"
+  },
+  "3001112_1": {
+   "ground": 700,
+   "bearing": 314.8,
+   "target": "Tolga",
+   "distance": 48282,
+   "quality": "rough"
+  },
+  "3001113_1": {
+   "ground": 164.2,
+   "bearing": 354.1,
+   "target": "Øyer",
+   "distance": 6281,
+   "quality": "good"
+  },
+  "3001114_1": {
+   "ground": 3.4,
+   "bearing": 121.6,
+   "target": "Holm",
+   "distance": 462,
+   "quality": "good"
+  },
+  "3001115_1": {
+   "ground": 2.9
+  },
+  "3001122_1": {
+   "ground": 2.3,
+   "bearing": 11.2,
+   "target": "Kjerringøy",
+   "distance": 7560,
+   "quality": "good"
+  },
+  "3001123_1": {
+   "ground": 2.6,
+   "bearing": 223.8,
+   "target": "Bodø",
+   "distance": 23961,
+   "quality": "rough"
+  },
+  "3001124_1": {
+   "ground": 3.4,
+   "bearing": 102.1,
+   "target": "Vassdalsvik",
+   "distance": 346,
+   "quality": "good"
+  },
+  "3001125_1": {
+   "ground": 3.5,
+   "bearing": 204.7,
+   "target": "Ørnes",
+   "distance": 77884,
+   "quality": "very rough"
+  },
+  "3001128_1": {
+   "ground": 180,
+   "bearing": 19.8,
+   "target": "Minnesund",
+   "distance": 13125,
+   "quality": "good"
+  },
+  "3001129_1": {
+   "ground": 141.5,
+   "bearing": 200,
+   "target": "Notodden",
+   "distance": 12128,
+   "quality": "good"
+  },
+  "3001130_1": {
+   "ground": 109.9,
+   "bearing": 38.4,
+   "target": "Levanger",
+   "distance": 27684,
+   "quality": "rough"
+  },
+  "3001135_1": {
+   "ground": 793.1,
+   "bearing": 237.8,
+   "target": "Haugesund",
+   "distance": 93965,
+   "quality": "very rough"
+  },
+  "3001136_1": {
+   "ground": 65.9,
+   "bearing": 150.7,
+   "target": "Nordkapp",
+   "distance": 6919,
+   "quality": "good"
+  },
+  "3001137_1": {
+   "ground": 43.7,
+   "bearing": 5.6,
+   "target": "Nordkapp",
+   "distance": 8489,
+   "quality": "good"
+  },
+  "3001139_1": {
+   "ground": 66.5,
+   "bearing": 135,
+   "target": "sørøst",
+   "quality": "rough"
+  },
+  "3001139_2": {
+   "ground": 66.5,
+   "bearing": 315,
+   "target": "nordvest",
+   "quality": "rough"
+  },
+  "3001140_1": {
+   "ground": 1032.2,
+   "bearing": 324,
+   "target": "Geiranger",
+   "distance": 10211,
+   "quality": "good"
+  },
+  "3001140_2": {
+   "ground": 1032.2,
+   "bearing": 95.4,
+   "target": "Grotli",
+   "distance": 16138,
+   "quality": "rough"
+  },
+  "3001141_1": {
+   "ground": 366.7
+  },
+  "3001142_1": {
+   "ground": 280.1
+  },
+  "3001143_1": {
+   "ground": 479.1
+  },
+  "3001144_1": {
+   "ground": 272.9
+  },
+  "3001144_2": {
+   "ground": 272.9
+  },
+  "3001145_1": {
+   "ground": 252.4
+  },
+  "3001145_2": {
+   "ground": 252.4
+  },
+  "3001148_1": {
+   "ground": 38.8
+  },
+  "3001149_1": {
+   "ground": 39.7
+  },
+  "3001150_1": {
+   "ground": 6.6
+  },
+  "3001153_1": {
+   "ground": 34.3,
+   "bearing": 7.8,
+   "target": "Tempe",
+   "distance": 685,
+   "quality": "good"
+  },
+  "3001156_1": {
+   "ground": 874.8,
+   "bearing": 346.7,
+   "target": "Grotli",
+   "distance": 209,
+   "quality": "good"
+  }
+ }
+}
