@@ -448,6 +448,22 @@ the same button, the × in its sheet, Escape, or the layers button.
   and call sign. Download the model in view as `.glb`, as `.glb` + `.json` for the vessels folder, or
   (built ships) as Wavefront `.obj` + `.mtl` + the painted hull pictures (metres, Y up, bow towards +X).
 
+- **Model from photos** (Models tab): up to six photos of one vessel, towards the bow, towards the
+  stern, from above, the port side, the starboard side and (optionally) from below, make a textured
+  model of it (`public/ships/photomodel.js`, tested; `public/ships/photomesh.js`). Each photo is cut
+  out from its background (the colour round its border, within an adjustable threshold, or the
+  picture's transparency; parts of the vessel parted by a pale line are kept, specks are not, holes
+  are filled), with a preview. The length is given (the ship in view's by default); beam and height
+  come from the photos' proportions and can be set. The shape is the visual hull: of a grid of cells
+  180 along the length, those inside the vessel's outline in every photo, meshed (surface nets) and
+  smoothed. Each part is painted from the photo that faces it most squarely, at the photo's own
+  resolution, so it saves and downloads as a .glb like any model and can be placed on the map. The
+  photos should be taken square on (side views bow to the left on the port side, to the right on the
+  starboard side; from above bow right, port up; from below bow right, starboard up), each can be
+  marked as mirrored. Hollows (an open deck, a hold) cannot be seen in outlines and come out filled;
+  thin parts (masts, rails) are lost. Rendered from six sides, the inspector's own 142 m ferry comes
+  back within 0.1 m in beam and height.
+
 **The vessels folder.** Before building a ship from its type, Rudder looks for a model of it: first in
 its own vessels folder (`public/vessels/`, listed in `vessels/index.json`), then among the models
 saved on the device. A model is matched to a ship by MMSI, then IMO number, then call sign, then name
