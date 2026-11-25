@@ -267,6 +267,22 @@ picture follows from these (a pinhole camera, with the earth's curve); the pictu
 few minutes old, so moving ships may be a little ahead of their marks. Land between a ship and the
 camera is not taken into account.
 
+## Your own ship on the chart
+
+In the ship inspector (**Ships**), **Place on the map** (Ship tab) puts the ship in view, built,
+from Wikidata or from a model file, on the chart: the inspector closes and the chart asks you to
+tap open water (Escape or Cancel to stop). The spot is sounded at the hull's bow, stern, middle
+and sides with Kartverket's height service; land, or less water than her draught, is refused and
+said so. She is put there bow up the screen, still, and you take her helm (Taking the helm).
+
+She is drawn like an AIS ship, whether the AIS layer is on or not, and as she looked in the
+inspector (her model is saved on the device under her MMSI, from a range no real ship has, so the
+chart finds it: Vessels folder). **Hand back** the helm and she carries on straight at the speed
+and course she had: Rudder moves her on by dead reckoning every few seconds and sounds the water
+under her every 15 s; land or too little water stops her. Her card has **Remove from the map**.
+Placed ships are kept on the device and are still there, where dead reckoning has them, after a
+reload (`public/placed.js`, tested; `public/aismap.js`).
+
 ## Land heights in 3D
 
 Under the layers button, **Land heights in 3D** drapes the chart over Kartverket's terrain model

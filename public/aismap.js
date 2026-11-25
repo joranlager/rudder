@@ -13,6 +13,8 @@ import { scaleBarMetres, modelsAtScale } from './scalebar.js';
 import { createShipModels, pickShips, boxAround, MAX_MODELS, POV_RADIUS_M } from './shipmodels.js';
 import { nearestShore, guessHeading } from './shoreline.js';
 import { TILEJSON } from './infra.js';
+import { loadPlaced, savePlaced, nextMmsi, placedReport, carryOn, advance, stopped, isPlacedMmsi } from './placed.js';
+import { soundingPoints, seabedUrl, parseSeabed, groundCheck } from './contact.js';
 
 const STORE_KEY = 'rudder.ais.v1';
 const MIN_ZOOM = 7; // wider views would ask for most of the coast at once
@@ -51,6 +53,13 @@ export function createAisLayer(map) {
   let creds = loadCredentials(); // read before cfg: it moves credentials out of the old store
   let cfg = load();
   const vessels = new Map();
+  // Ships the user placed on the chart (placed.js): in `vessels` like the others, kept when it is
+  // cleared, shown even with AIS off, and moved on by Rudder between reports.
+  const placed = new Map(loadPlaced().map((v) => [v.mmsi, v]));
+  const keepPlaced = () => { for (const v of placed.values()) if (v.mmsi !== controlled) vessels.set(v.mmsi, v); };
+  const shownNow = () => cfg.on || playback !== null || placed.size > 0;
+  const storePlaced = () => savePlaced([...placed.values()]);
+  for (const v of placed.values()) vessels.set(v.mmsi, v);
   let token = null; // { token, expiresAt }
   let fetched = null; // [w, s, e, n] the last full request covered
   let lastFetch = 0;
@@ -89,7 +98,7 @@ export function createAisLayer(map) {
         'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.2, 'circle-opacity': fade, 'circle-stroke-opacity': fade,
       },
     });
-    setVisible(cfg.on);
+    setVisible(shownNow());
   }
 
   function setVisible(on) {
@@ -107,7 +116,7 @@ export function createAisLayer(map) {
 
   function updateModels() {
     // From the bridge the chart is tilted far over, so the scale bar says little: models stay on.
-    const active = (cfg.on || playback) && map.getSource('ais-points') && (pov !== null || modelsAtScale(scaleBarMetres(map)));
+    const active = shownNow() && map.getSource('ais-points') && (pov !== null || modelsAtScale(scaleBarMetres(map)));
     let list = [];
     if (active) {
       const own = pov !== null ? vessels.get(pov) : null;
@@ -264,11 +273,44 @@ export function createAisLayer(map) {
   // great many ships are loaded, so the chart stays quick).
   let anyMoving = true;
   setInterval(() => {
-    if (!cfg.on || playback || document.hidden || !map.getSource('ais-points')) return;
+    if ((!cfg.on && !placed.size) || playback || document.hidden || !map.getSource('ais-points')) return;
     if (vessels.size > 1500 && (Date.now() / 300 | 0) % 2) return; // every other tick
     if (!anyMoving) { anyMoving = [...vessels.values()].some((v) => (v.speedOverGround ?? 0) > 0.5); if (!anyMoving) return; }
     anyMoving = drawSymbols() > 0;
   }, 300);
+
+  // Placed ships left to themselves carry on: every few seconds a fresh report where dead reckoning
+  // has them; every 15 s the water under them is sounded, and land or too little water stops them.
+  let lastSound = 0;
+  setInterval(async () => {
+    if (!placed.size || playback) return;
+    const now = Date.now();
+    for (const [m, v] of placed) {
+      if (m === controlled) continue;
+      const nv = advance(v, now);
+      placed.set(m, nv);
+      vessels.set(m, nv);
+    }
+    if (now - lastSound > 15000) {
+      lastSound = now;
+      for (const [m, v] of placed) {
+        if (m === controlled || !(v.speedOverGround >= 0.1)) continue;
+        try {
+          const pts = soundingPoints(v, { lat: v.latitude, lon: v.longitude, heading: v.trueHeading });
+          const sea = parseSeabed(await (await fetch(seabedUrl(pts.map((p) => p.p)))).json());
+          const { hit } = groundCheck(pts, sea, (v.draught || 0) / 10);
+          if (hit && placed.has(m) && m !== controlled) {
+            const sv = stopped(placed.get(m));
+            placed.set(m, sv);
+            vessels.set(m, sv);
+            setStatus(`${v.name} ran aground (${hit.name}) and stopped.`, 'err');
+          }
+        } catch { /* sounding unavailable: try again later */ }
+      }
+    }
+    storePlaced();
+    draw();
+  }, 3000);
 
   // Ship name under the pointer (the chart has no font server, so no map labels).
   const tip = document.createElement('div');
@@ -430,7 +472,7 @@ export function createAisLayer(map) {
     if (e.type === 'change' && t.dataset.ais === 'on') {
       cfg.on = t.checked;
       save();
-      setVisible(cfg.on);
+      setVisible(shownNow());
       if (cfg.on) start(); else { stop(); setStatus(''); }
       return true;
     }
@@ -445,8 +487,9 @@ export function createAisLayer(map) {
       cfg.on = false;
       save();
       stop();
-      setVisible(false);
+      setVisible(shownNow());
       vessels.clear();
+      keepPlaced();
       draw();
       setStatus('');
     } else if (cfg.on) {
@@ -533,7 +576,8 @@ export function createAisLayer(map) {
       playback = null;
       models.setPlayback(null);
       vessels.clear();
-      setVisible(cfg.on);
+      keepPlaced();
+      setVisible(shownNow());
       draw();
       if (cfg.on) start();
     }
@@ -544,7 +588,7 @@ export function createAisLayer(map) {
     if (cfg.on === on) return;
     cfg.on = on;
     save();
-    setVisible(on);
+    setVisible(shownNow());
     if (on) start(); else { stop(); setStatus(''); }
     if (panel) renderPanel(panel);
   }
@@ -557,7 +601,7 @@ export function createAisLayer(map) {
     testAccess,
     /** The vessel under a map point (a little slack around small symbols), or null. */
     vesselAt(point) {
-      if (!(cfg.on || playback) || !map.getLayer('ais-dot')) return null;
+      if (!shownNow() || !map.getLayer('ais-dot')) return null;
       // A 3D model is where the ship is now, which can be ahead of its last report.
       const hit = modelled.length ? models.vesselAt(point) : null;
       if (hit) return vessels.get(hit.mmsi) ?? hit;
@@ -575,6 +619,7 @@ export function createAisLayer(map) {
       playback.now = now;
       vessels.clear();
       for (const v of list) vessels.set(v.mmsi, v);
+      keepPlaced();
       draw(now);
     },
     /** MMSIs drawn as 3D models now (for checking). */
@@ -627,15 +672,47 @@ export function createAisLayer(map) {
       const was = controlled;
       controlled = mmsi === null ? null : Number(mmsi);
       models.setOverride(controlled, where);
-      if (was !== null && controlled === null) { lastFetch = 0; fetchShips({ full: true }); } // its simulated report gives way to the next real one
+      if (was !== null && controlled === null) {
+        if (placed.has(was)) {
+          // a placed ship carries on at the speed and course it was handed back with
+          const v = carryOn(vessels.get(was) ?? placed.get(was));
+          placed.set(was, v);
+          vessels.set(was, v);
+          storePlaced();
+          draw();
+        } else { lastFetch = 0; fetchShips({ full: true }); } // its simulated report gives way to the next real one
+      }
       updateModels();
     },
     /** The simulation's report for the ship under command: the chart symbols, card and search follow it. */
     setReport(v) {
       if (v.mmsi !== controlled) return;
       vessels.set(v.mmsi, v);
+      if (placed.has(v.mmsi)) placed.set(v.mmsi, { ...v, placed: true });
       draw();
     },
+    /** Put a ship of the user's on the chart (placed.js): `spec` { name, kind, length, beam, draft }. Returns its report. */
+    placeShip(spec, at, heading) {
+      const v = placedReport(spec, at, heading, nextMmsi([...placed.keys(), ...vessels.keys()]));
+      placed.set(v.mmsi, v);
+      vessels.set(v.mmsi, v);
+      storePlaced();
+      ensureLayers();
+      setVisible(true);
+      draw();
+      return v;
+    },
+    /** Take a placed ship off the chart. */
+    removePlaced(mmsi) {
+      const m = Number(mmsi);
+      if (!placed.delete(m)) return;
+      vessels.delete(m);
+      models.setShips([]).then(() => updateModels());
+      storePlaced();
+      setVisible(shownNow());
+      draw();
+    },
+    isPlaced: (mmsi) => placed.has(Number(mmsi)),
     /** Where a ship is drawn now: moved on from its last report, as its 3D model is. */
     shownShip: (v) => models.shown(v),
     /** The bridge view is from this ship (or none): keep it, and the 3D models, drawn whatever the scale. */
