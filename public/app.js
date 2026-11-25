@@ -9,6 +9,7 @@ import { createPlayback } from './playback.js';
 import { createTracker } from './tracker.js';
 import { createLiveTraces } from './livetraces.js';
 import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
+import { createInfra } from './infralayer.js';
 import { createFarView } from './farview.js';
 import { DEM_MIN_ZOOM } from './terrain.js';
 import { modelPlacement } from './shipmodels.js';
@@ -62,6 +63,9 @@ const ais = createAisLayer(map);
 // Land heights in 3D (landheights.js), switched in the layers panel and remembered.
 const land = createLandHeights(map, { basemapIds: BASEMAPS.map((b) => b.id), onError: (m) => console.warn(m) });
 if (settings.terrain) land.setOn(true);
+// Roads, bridges and buildings (infralayer.js), over the background and overlays, under the ships.
+const infra = createInfra(map, { belowIds: [...BASEMAPS, ...OVERLAYS].map((x) => x.id), onError: (m) => console.warn(m) });
+if (settings.infra) infra.setOn(true);
 // View from the bridge of a ship (pov.js), from its card.
 const far = createFarView(map);
 let helm = null; // the helm of a ship, once taken (helm.js); created below, after the bridge view
@@ -125,11 +129,26 @@ function renderLayerPanel() {
       <label for="ov-terrain">Land heights in 3D</label>
       <small>The chart over Kartverket's terrain model (hoydedata.no). Tilt with two fingers or right-drag. Also seen from a ship's bridge.</small>
       <span class="zoomhint" data-minzoom="${DEM_MIN_ZOOM}" data-terrain-hint hidden>Zoom in to see it (from zoom ${DEM_MIN_ZOOM})</span>
+    </div>
+    <div class="opt" data-overlay-infra>
+      <input type="checkbox" id="ov-infra" ${settings.infra ? 'checked' : ''}>
+      <label for="ov-infra">Roads, bridges and buildings</label>
+      <small>From OpenStreetMap: roads and railways by class, buildings raised to their height, and bridges built in 3D over the water. Best on the Satellite background, tilted. Bridge heights are estimated.</small>
+      <span class="zoomhint" data-minzoom="13" data-infra-hint hidden>Zoom in for every road, buildings and 3D bridges (from zoom 13)</span>
     </div>`;
   updateZoomHints();
   ais.renderPanel($('#ais-settings'));
 }
 $('#terrain-settings').addEventListener('change', (e) => {
+  if (e.target.id === 'ov-infra') {
+    settings.infra = e.target.checked;
+    infra.setOn(settings.infra);
+    saveSettings();
+    updateZoomHints();
+    // Buildings and bridges stand up: tilt the chart a little to show them, as for land heights.
+    if (settings.infra && !bridge.active && map.getZoom() >= 13 && map.getPitch() < 20) map.easeTo({ pitch: 45, duration: 900 });
+    return;
+  }
   if (e.target.id !== 'ov-terrain') return;
   settings.terrain = e.target.checked;
   land.setOn(settings.terrain);
@@ -166,7 +185,9 @@ $('#overlays').addEventListener('input', (e) => {
 function updateZoomHints() {
   const z = map.getZoom();
   for (const h of document.querySelectorAll('.zoomhint')) {
-    const on = h.hasAttribute('data-terrain-hint') ? settings.terrain : settings.overlays[h.closest('[data-overlay]').dataset.overlay].on;
+    const on = h.hasAttribute('data-terrain-hint') ? settings.terrain
+      : h.hasAttribute('data-infra-hint') ? settings.infra
+        : settings.overlays[h.closest('[data-overlay]').dataset.overlay].on;
     h.hidden = !on || z >= Number(h.dataset.minzoom);
   }
 }

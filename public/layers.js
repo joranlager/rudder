@@ -12,6 +12,10 @@ export const WMS = {
 const KARTVERKET = '© <a href="https://www.kartverket.no/" target="_blank" rel="noopener">Kartverket</a>';
 const KYSTVERKET = '© <a href="https://www.kystverket.no/" target="_blank" rel="noopener">Kystverket</a>';
 const BARENTSWATCH = '© <a href="https://www.barentswatch.no/" target="_blank" rel="noopener">BarentsWatch</a>';
+// EOX's Sentinel-2 cloudless mosaic: true satellite pictures (Copernicus Sentinel-2, 10 m), cloud free.
+// The 2024 mosaic is CC BY-NC-SA 4.0 (not for commercial use); answers any website (CORS). Checked 2026-11-25.
+const EOX = 'Satellite: <a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless</a> by <a href="https://eox.at" target="_blank" rel="noopener">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel data 2024), <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a>';
+export const SATELLITE_TILES = 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg';
 
 /** Tile URL for a Kartverket WMTS layer in web mercator. */
 export const wmtsUrl = (layer) => `${WMTS}/${layer}/default/webmercator/{z}/{y}/{x}.png`;
@@ -35,6 +39,9 @@ export const BASEMAPS = [
     tiles: [wmtsUrl('topograatone')], maxzoom: 18, attribution: KARTVERKET },
   { id: 'topo', name: 'Topographic', note: 'Kartverket topographic map',
     tiles: [wmtsUrl('topo')], maxzoom: 18, attribution: KARTVERKET },
+  // Sentinel-2 sees 10 m: its pictures stop sharpening at zoom 14 and are enlarged beyond.
+  { id: 'satellite', name: 'Satellite', note: 'Sentinel-2 cloudless 2024 (EOX), 10 m: best with roads, bridges and buildings on',
+    tiles: [SATELLITE_TILES], maxzoom: 14, attribution: EOX },
 ];
 
 /** Layers over the background. minzoom matches where each service starts drawing. */
@@ -81,7 +88,7 @@ export function buildStyle(settings) {
 }
 
 export function defaultSettings() {
-  return { basemap: 'sjokart', terrain: false, overlays: Object.fromEntries(OVERLAYS.map((o) => [o.id, { on: o.on, opacity: o.opacity }])) };
+  return { basemap: 'sjokart', terrain: false, infra: false, overlays: Object.fromEntries(OVERLAYS.map((o) => [o.id, { on: o.on, opacity: o.opacity }])) };
 }
 
 /** Merge stored settings over the defaults, dropping anything unknown. */
@@ -90,6 +97,7 @@ export function mergeSettings(stored) {
   if (!stored || typeof stored !== 'object') return d;
   if (BASEMAPS.some((b) => b.id === stored.basemap)) d.basemap = stored.basemap;
   if (typeof stored.terrain === 'boolean') d.terrain = stored.terrain;
+  if (typeof stored.infra === 'boolean') d.infra = stored.infra;
   for (const o of OVERLAYS) {
     const s = stored.overlays?.[o.id];
     if (!s) continue;
