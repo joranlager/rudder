@@ -38,6 +38,7 @@ files from two deploys (GitHub Pages lets browsers keep files for ten minutes).
 | Topographic, grey and colour | Kartverket | WMTS `topograatone`, `topo` |
 | Satellite | EOX (Copernicus Sentinel-2) | Sentinel-2 cloudless 2024, WMTS `tiles.maps.eox.at`, 10 m |
 | Roads, bridges, buildings | OpenStreetMap via OpenFreeMap | Vector tiles `tiles.openfreemap.org/planet` (OpenMapTiles schema) |
+| Road bridges in 3D | Statens vegvesen (NVDB) | API v4 `nvdbapiles.atlas.vegvesen.no`: bridges (type 60) and the road network with heights |
 | Webcams | Statens vegvesen | WFS `ogckart-sn1.atlas.vegvesen.no/datex_3_1/wfs`, `CctvSimple_v2`; pictures `kamera.atlas.vegvesen.no` |
 | Depth areas (from zoom 9) | Kartverket | WMS `wms.dybdedata2`, `Dybdelag` |
 | Depth contours, soundings, rocks (from zoom 12) | Kartverket | WMS `wms.dybdedata2` |
@@ -191,12 +192,25 @@ the land from OpenStreetMap, over any background and under the ships (`public/in
 - roads by class (motorways to paths) at their true width from zoom 15, railways, ferry routes,
   piers and runways; tunnels dashed;
 - buildings raised to their height (from zoom 13);
-- bridges built in 3D (from zoom 13): the road or railway on a deck that rises from its ends and
-  stands over the water, on piers, with two towers on long spans (most long Norwegian bridges hang
-  from towers), and its outline on the water as a shadow. OpenStreetMap does not give a bridge's
-  height, so it is estimated from its length (about 3 m + 2.6 % of the length, at most 70 m: the
-  Stavanger city bridge comes out at 31 m, the Hålogaland bridge at 43 m). A bridge cut into several
-  tiles is put together by its OpenStreetMap id, so it is built as one.
+- road bridges built in 3D (from zoom 13) as they are, from NVDB, Statens vegvesen's road database
+  (`nvdbapiles.atlas.vegvesen.no`, API v4, NLOD; `public/nvdbbridges.js`, tested). Each bridge's type
+  (suspension, cable-stayed, arch, box or girder, floating), length, longest span, width and outline
+  come from its bridge record (object type 60); the deck follows the road over it at its real height
+  above the sea (the road network's geometry has heights, NN2000; roads passing under the bridge are
+  left out). The main span, as long as the bridge's longest span, is centred where the deck is
+  highest. A suspension bridge gets two towers at its ends, a main cable on each side sagging a tenth
+  of the span and hangers; a cable-stayed bridge two pylons with stays fanning out (NVDB does not say
+  how many pylons: a bridge with one, like Grenlandsbrua, still gets two); an arch bridge an arch
+  under its main span; others piers at the main span's ends and along the approaches. Breviksbrua
+  (suspension, 676 m, main span 272 m) comes out with its deck at 48.7 m and its towers at 81 m.
+  NVDB is asked for the map in cells of about 1 km, each once a visit.
+- other bridges (railways, private roads, and where NVDB has no heights) from OpenStreetMap: a deck
+  that rises from its ends and stands over the water, on piers, with two towers on long spans, and
+  its outline on the water as a shadow. OpenStreetMap does not give a bridge's height, so it is
+  estimated from its length (about 3 m + 2.6 % of the length, at most 70 m). A bridge cut into
+  several tiles is put together by its OpenStreetMap id, so it is built as one.
+- With land heights on, MapLibre stands extruded shapes on the ground, so a deck over a valley (not
+  over the sea) is drawn that much too high.
 
 Switching it on tilts the chart to show the heights. Best on the Satellite background with land
 heights on.

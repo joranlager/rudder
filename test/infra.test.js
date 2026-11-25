@@ -110,5 +110,5 @@ test('only road and rail bridges are built; anything else is left out', () => {
   assert.ok(fc.features.length > 0);
   assert.ok(fc.features.every((f) => f.properties.color === '#7b7f86' || f.properties.part !== 'deck'), 'only the railway');
   assert.ok(buildBridges(bridge(5, 3000)).features.length <= 6000);
-  assert.equal(buildBridges(bridge(5, 3000), { maxParts: 10 }).features.length, 10);
+  assert.equal(buildBridges(bridge(5, 3000), [], { maxParts: 10 }).features.length, 10);
 });

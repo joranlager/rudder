@@ -4,6 +4,42 @@
 
 import { styleReady, whenStyleReady } from './mapready.js';
 import { TILEJSON, ATTRIBUTION, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, PREFIX, infraLayers, buildBridges } from './infra.js';
+import { bridgesUrl, roadsUrl, bridgeFromNvdb, roadsFromNvdb, buildNvdbBridge, onBridge, CLIENT, ATTRIBUTION as NVDB_ATTRIBUTION } from './nvdbbridges.js';
+
+// NVDB's bridges and roads are asked for in cells of the map (about 1 x 1 km), each once a visit.
+const CELL_LON = 0.02, CELL_LAT = 0.01, MAX_CELLS = 24;
+const cells = new Map(); // "i,j" -> Promise<{ bridges, roads }>
+function cell(i, j) {
+  const key = `${i},${j}`;
+  if (!cells.has(key)) {
+    const box = [i * CELL_LON, j * CELL_LAT, (i + 1) * CELL_LON, (j + 1) * CELL_LAT];
+    const get = (url) => fetch(url, { headers: { 'X-Client': CLIENT, Accept: 'application/json' } }).then((r) => { if (!r.ok) throw new Error(`NVDB ${r.status}`); return r.json(); });
+    cells.set(key, Promise.all([get(bridgesUrl(box)), get(roadsUrl(box))])
+      .then(([b, r]) => ({ bridges: (b.objekter ?? []).map(bridgeFromNvdb).filter(Boolean), roads: roadsFromNvdb(r) }))
+      .catch((e) => { console.warn('NVDB', e.message); cells.delete(key); return { bridges: [], roads: [] }; }));
+  }
+  return cells.get(key);
+}
+
+/** NVDB's bridges built in 3D around the view, and those bridges (to leave out of OpenStreetMap's). */
+async function nvdbBridges(map) {
+  const b = map.getBounds();
+  const c = map.getCenter();
+  // the view, but not more than a few kilometres of it (a tilted view reaches far)
+  const w = Math.max(b.getWest(), c.lng - 0.06), e = Math.min(b.getEast(), c.lng + 0.06);
+  const s = Math.max(b.getSouth(), c.lat - 0.03), n = Math.min(b.getNorth(), c.lat + 0.03);
+  const keys = [];
+  for (let i = Math.floor(w / CELL_LON); i <= Math.floor(e / CELL_LON); i++) for (let j = Math.floor(s / CELL_LAT); j <= Math.floor(n / CELL_LAT); j++) keys.push([i, j]);
+  const got = await Promise.all(keys.slice(0, MAX_CELLS).map(([i, j]) => cell(i, j)));
+  const byId = new Map(), roads = [];
+  for (const g of got) { for (const br of g.bridges) byId.set(br.id, br); roads.push(...g.roads); }
+  const built = [], parts = [];
+  for (const br of byId.values()) {
+    const f = buildNvdbBridge(br, roads);
+    if (f.length) { built.push(br); parts.push(...f); }
+  }
+  return { built, parts };
+}
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
 
@@ -16,6 +52,12 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
   let on = false;
   let timer = 0;
   let errors = 0;
+  let seq = 0, nvdb = null;
+  /** An OpenStreetMap bridge piece lying on one of NVDB's bridges (its middle within the outline). */
+  const onNvdb = (f, built) => {
+    const c = f.geometry?.type === 'LineString' ? f.geometry.coordinates : f.geometry?.coordinates?.[0];
+    return Boolean(c?.length) && onBridge(c[Math.floor(c.length / 2)], built);
+  };
 
   function rebuild() {
     clearTimeout(timer);
@@ -24,7 +66,14 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
       if (!on || !src) return;
       if (map.getZoom() < BRIDGE_MIN_ZOOM - 0.5) { src.setData(EMPTY); return; }
       const feats = map.querySourceFeatures(SOURCE, { sourceLayer: 'transportation', filter: ['==', ['get', 'brunnel'], 'bridge'] });
-      src.setData(buildBridges(feats));
+      const mine = ++seq;
+      // OpenStreetMap's at once; NVDB's road bridges (real heights and types) when they come, in their place.
+      src.setData(buildBridges(nvdb ? feats.filter((f) => !onNvdb(f, nvdb.built)) : feats, nvdb?.parts));
+      nvdbBridges(map).then((r) => {
+        if (mine !== seq || !on) return;
+        nvdb = r;
+        map.getSource(BRIDGE_SOURCE)?.setData(buildBridges(feats.filter((f) => !onNvdb(f, r.built)), r.parts));
+      });
     }, 150);
   }
   const onData = (e) => { if (e.sourceId === SOURCE && e.isSourceLoaded) rebuild(); };
@@ -33,7 +82,7 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
     if (!styleReady(map)) { whenStyleReady(map, apply); return; } // not isStyleLoaded(): mapready.js
     if (on) {
       if (!map.getSource(SOURCE)) map.addSource(SOURCE, { type: 'vector', url: TILEJSON, attribution: ATTRIBUTION });
-      if (!map.getSource(BRIDGE_SOURCE)) map.addSource(BRIDGE_SOURCE, { type: 'geojson', data: EMPTY });
+      if (!map.getSource(BRIDGE_SOURCE)) map.addSource(BRIDGE_SOURCE, { type: 'geojson', data: EMPTY, attribution: NVDB_ATTRIBUTION });
       const before = infraBefore(map.getStyle().layers, belowIds);
       for (const l of infraLayers()) if (!map.getLayer(l.id)) map.addLayer(l, before);
       map.on('sourcedata', onData);

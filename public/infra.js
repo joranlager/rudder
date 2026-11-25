@@ -146,7 +146,7 @@ const square = ([x, y], half, o) => ring([[x - half, y - half], [x + half, y - h
  * of deck stands at that bridge's profile there. Returns a FeatureCollection of polygons with
  * { part: 'deck' | 'pier' | 'tower', base, top, color }.
  */
-export function buildBridges(features, { maxParts = 6000 } = {}) {
+export function buildBridges(features, extra = [], { maxParts = 6000 } = {}) {
   const ways = new Map();
   for (const f of features) {
     const g = f.geometry;
@@ -235,5 +235,6 @@ export function buildBridges(features, { maxParts = 6000 } = {}) {
       }
     }
   }
-  return { type: 'FeatureCollection', features: out.slice(0, maxParts) };
+  // parts built elsewhere (NVDB's road bridges, nvdbbridges.js) go first, so they are never cut off
+  return { type: 'FeatureCollection', features: [...(extra ?? []), ...out].slice(0, maxParts + (extra?.length ?? 0)) };
 }
