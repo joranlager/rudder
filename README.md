@@ -35,6 +35,8 @@ files from two deploys (GitHub Pages lets browsers keep files for ten minutes).
 |---|---|---|
 | Nautical chart (default background) | Kartverket | WMTS `cache.kartverket.no`, layer `sjokartraster`, web mercator |
 | Topographic, grey and colour | Kartverket | WMTS `topograatone`, `topo` |
+| Satellite | EOX (Copernicus Sentinel-2) | Sentinel-2 cloudless 2024, WMTS `tiles.maps.eox.at`, 10 m |
+| Roads, bridges, buildings | OpenStreetMap via OpenFreeMap | Vector tiles `tiles.openfreemap.org/planet` (OpenMapTiles schema) |
 | Depth areas (from zoom 9) | Kartverket | WMS `wms.dybdedata2`, `Dybdelag` |
 | Depth contours, soundings, rocks (from zoom 12) | Kartverket | WMS `wms.dybdedata2` |
 | Not surveyed areas | Kartverket | WMS `wms.dybdedata2`, `IkkeSjomalt` |
@@ -171,6 +173,31 @@ back level and unzoomed. With the console open, the map ends where the console b
 centred in the window above it. The eye is on the bridge, high enough to see over the bow and cargo
 (about 8 % of the ship's length above the deck at least), and the ships within 6 km are drawn,
 nearest first.
+
+## Satellite, roads, bridges and buildings
+
+**Satellite** (a background under the layers button) shows the land and sea as Copernicus's
+Sentinel-2 satellites see them: EOX's cloud-free mosaic of 2024, 10 m a pixel, so it is sharp to
+about zoom 14 and enlarged beyond. It is licensed CC BY-NC-SA 4.0: free for non-commercial use with
+credit, which the map gives. (Norway's own aerial photos, Norge i bilder, are sharper, but their
+open service answers only registered addresses, so a web page cannot use them.)
+
+**Roads, bridges and buildings** (under Land in the layers panel, remembered) draws what is built on
+the land from OpenStreetMap, over any background and under the ships (`public/infra.js`,
+`public/infralayer.js`, tested):
+
+- roads by class (motorways to paths) at their true width from zoom 15, railways, ferry routes,
+  piers and runways; tunnels dashed;
+- buildings raised to their height (from zoom 13);
+- bridges built in 3D (from zoom 13): the road or railway on a deck that rises from its ends and
+  stands over the water, on piers, with two towers on long spans (most long Norwegian bridges hang
+  from towers), and its outline on the water as a shadow. OpenStreetMap does not give a bridge's
+  height, so it is estimated from its length (about 3 m + 2.6 % of the length, at most 70 m: the
+  Stavanger city bridge comes out at 31 m, the Hålogaland bridge at 43 m). A bridge cut into several
+  tiles is put together by its OpenStreetMap id, so it is built as one.
+
+Switching it on tilts the chart to show the heights. Best on the Satellite background with land
+heights on.
 
 ## Land heights in 3D
 

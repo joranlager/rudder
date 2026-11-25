@@ -7,6 +7,7 @@
 
 import { registerDemProtocol } from './demprotocol.js';
 import { PROTOCOL, DEM_MIN_ZOOM, DEM_MAX_ZOOM, EXAGGERATION } from './terrain.js';
+import { styleReady, whenStyleReady } from './mapready.js';
 
 export const SOURCE_ID = 'terrain-dem';
 export const HILLSHADE_ID = 'hillshade';
@@ -25,7 +26,7 @@ export function createLandHeights(map, { basemapIds, onError = () => {} }) {
   let errors = 0;
 
   function apply() {
-    if (!map.isStyleLoaded()) { map.once('idle', apply); return; }
+    if (!styleReady(map)) { whenStyleReady(map, apply); return; }
     if (on) {
       if (!registered) { registerDemProtocol(maplibregl, { log: (level, text) => console[level === 'warn' ? 'warn' : 'log'](text) }); registered = true; }
       if (!map.getSource(SOURCE_ID)) {
