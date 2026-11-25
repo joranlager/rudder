@@ -8,7 +8,7 @@
 // is on, the user does not move the chart: the ship does. Buttons (or the arrow keys) look ahead, to
 // port, to starboard or astern.
 
-import { hullFromAis } from './ais.js';
+import { hullFromAis, drawHeading } from './ais.js';
 
 export const LOOK_PITCH = 82; // degrees from straight down: the horizon sits in the upper part of the view
 export const POV_MAX_PITCH = 85; // MapLibre's limit
@@ -187,7 +187,7 @@ export function createBridgeView(map, { ais, bar, far = null, onEnter = () => {}
     map.setMaxZoom(POV_MAX_ZOOM);
     mmsi = v.mmsi;
     lastText = '';
-    lastHeading = v.trueHeading < 360 ? v.trueHeading : v.courseOverGround < 360 ? v.courseOverGround : 0;
+    lastHeading = drawHeading(v) ?? (v.courseOverGround < 360 ? v.courseOverGround : 0);
     setLook('ahead');
     pitch = LOOK_PITCH;
     ais.setPov(mmsi);

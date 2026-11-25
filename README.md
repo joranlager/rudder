@@ -336,6 +336,14 @@ The models are drawn with three.js in a MapLibre custom layer sharing the map's 
 (5–15 ms) and only moved after that, with its hull painting reduced to 1024 px for the chart.
 three.js is loaded the first time models are needed.
 
+**Ships that tell no heading.** Many small craft send no compass heading (AIS 511), and a ship lying
+still has no course to go by, so such a ship used to be only a dot. Up close (from zoom 12.5) it now
+gets a guessed heading and is drawn at its true size and as a 3D model: along the quay or shore it lies
+at, when one is within 30 m of its side (OpenStreetMap's water outlines and piers, from OpenFreeMap's
+tiles; the bow the way the ship pointed before, or its last course, else either way), else the heading
+it told earlier, else its last course, else north. A guessed heading has a dashed outline and no arrow,
+and the ship's card says how it was guessed (`public/shoreline.js`, tested).
+
 **Ships move by themselves, at every scale.** The chart's symbols (arrows, dots and outlines) are
 redrawn a few times a second where each ship is drawn now, the same as the 3D models below, so ships
 under way glide across the chart between AIS reports instead of jumping every 30 seconds. Ships

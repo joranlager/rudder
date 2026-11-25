@@ -116,11 +116,20 @@ const NAV_STATUS = [
 ];
 export const navStatusText = (s) => NAV_STATUS[Number(s)] || 'Not defined';
 
-/** Heading to draw: true heading when given (511 = not available), else course over ground when moving. */
-export function drawHeading(v) {
+/** The heading the ship tells: its true heading when given (511 = not available), else its course over ground when moving. */
+export function reportedHeading(v) {
   if (Number.isFinite(v.trueHeading) && v.trueHeading >= 0 && v.trueHeading < 360) return v.trueHeading;
   if (Number.isFinite(v.courseOverGround) && v.courseOverGround < 360 && (v.speedOverGround ?? 0) > 0.5) return v.courseOverGround;
   return null;
+}
+
+/**
+ * Heading to draw: the reported one, else the one guessed for a ship that tells none (shoreline.js:
+ * along the quay it lies at, as reported earlier, its last course), so it is drawn at its true size
+ * and as a 3D model rather than as a dot.
+ */
+export function drawHeading(v) {
+  return reportedHeading(v) ?? (Number.isFinite(v.headingGuess?.deg) ? v.headingGuess.deg : null);
 }
 
 /** Length, beam and where the GPS antenna sits, from the AIS reference dimensions (metres). */
@@ -167,7 +176,16 @@ export function mergeVessels(byMmsi, batch) {
     if (!v?.mmsi || !Number.isFinite(v.latitude) || !Number.isFinite(v.longitude)) continue;
     const old = byMmsi.get(v.mmsi);
     // A simulated report (the user had the helm) gives way to the first real one, however old.
-    if (!old || old.simulated || Date.parse(v.msgtime) >= Date.parse(old.msgtime)) byMmsi.set(v.mmsi, { ...old, ...v, simulated: false });
+    if (!old || old.simulated || Date.parse(v.msgtime) >= Date.parse(old.msgtime)) {
+      const merged = { ...old, ...v, simulated: false };
+      // A heading it told before is kept for when it tells none (many stop sending one when still).
+      const h = reportedHeading(v);
+      if (h !== null) merged.knownHeading = h;
+      // A guessed heading holds while the ship stays where it was guessed.
+      const g = merged.headingGuess;
+      if (g && (h !== null || Math.abs(g.lat - v.latitude) > 1.5e-4 || Math.abs(g.lon - v.longitude) > 3e-4)) delete merged.headingGuess;
+      byMmsi.set(v.mmsi, merged);
+    }
   }
   return byMmsi;
 }
@@ -194,9 +212,11 @@ export function toGeoJson(vessels, now = Date.now(), staleMinutes = 15) {
   for (const v of vessels) {
     const g = typeGroup(v.shipType);
     const hdg = drawHeading(v);
+    const told = reportedHeading(v) !== null;
     const props = {
       mmsi: v.mmsi, name: (v.name || '').trim() || String(v.mmsi), color: g.color, group: g.id,
-      heading: hdg ?? 0, hasHeading: hdg !== null, moving: (v.speedOverGround ?? 0) > 0.5,
+      // An arrow only for a heading the ship tells; a guessed one is drawn at true size, dashed.
+      heading: hdg ?? 0, hasHeading: told, guessed: !told && hdg !== null, moving: (v.speedOverGround ?? 0) > 0.5,
       stale: ageMinutes(v, now) > staleMinutes,
     };
     points.push({ type: 'Feature', id: v.mmsi, geometry: { type: 'Point', coordinates: [v.longitude, v.latitude] }, properties: props });

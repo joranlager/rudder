@@ -241,8 +241,9 @@ export function createShipModels(map) {
         moving ||= at.moving;
         const merc = maplibregl.MercatorCoordinate.fromLngLat([at.lon, at.lat], 0);
         m.root.position.set((merc.x - o.x) / s, 0, (merc.y - o.y) / s);
-        // A ship that reports no heading keeps the last one it was drawn with.
-        const heading = at.heading ?? m.lastHeading ?? m.place.heading;
+        // A ship that reports no heading: the one it is placed on (told earlier, or guessed along its
+        // quay: ais.js drawHeading), else the last one it was drawn with.
+        const heading = at.heading ?? m.place.heading ?? m.lastHeading;
         m.lastHeading = heading;
         m.root.rotation.y = Math.PI / 2 - (heading * Math.PI) / 180;
       }
@@ -393,7 +394,7 @@ export function createShipModels(map) {
       if (playbackWhere) { const p = playbackWhere(v); if (p) return { ...p, moving: true }; }
       const m = models.get(v.mmsi);
       const at = motion.show(m?.v ?? v, Date.now());
-      return { ...at, heading: at.heading ?? m?.lastHeading ?? m?.place?.heading ?? null };
+      return { ...at, heading: at.heading ?? m?.place?.heading ?? m?.lastHeading ?? null };
     },
     /** The modelled ship drawn under a screen point (where it is shown now, not where it last reported), or null. */
     vesselAt(point) {
@@ -401,7 +402,7 @@ export function createShipModels(map) {
       for (const m of models.values()) {
         const at = m.shown ?? motion.show(m.v, now);
         const { length, beam, toBow } = vesselSize(m.v);
-        const { bow, stern } = bowAndStern(at.lat, at.lon, at.heading ?? m.lastHeading ?? m.place.heading, toBow, length);
+        const { bow, stern } = bowAndStern(at.lat, at.lon, at.heading ?? m.place.heading ?? m.lastHeading, toBow, length);
         const b = map.project([bow[1], bow[0]]), st = map.project([stern[1], stern[0]]);
         const pxPerM = Math.hypot(b.x - st.x, b.y - st.y) / length;
         if (hitsShip(point, b, st, (beam / 2) * pxPerM)) return m.v;

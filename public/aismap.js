@@ -6,17 +6,23 @@
 
 import {
   TOKEN_URL, LATEST_URL, TYPE_GROUPS, tokenRequestBody, parseToken, pastedToken, latestRequest, bboxPolygon, bboxInside,
-  mergeVessels, pruneVessels, toGeoJson, directoryRequest, matchVessels, movedReport,
+  mergeVessels, pruneVessels, toGeoJson, directoryRequest, matchVessels, movedReport, reportedHeading, vesselSize,
 } from './ais.js';
 import { loadCredentials, accessKind } from './credentials.js';
 import { scaleBarMetres, modelsAtScale } from './scalebar.js';
 import { createShipModels, pickShips, boxAround, MAX_MODELS, POV_RADIUS_M } from './shipmodels.js';
+import { nearestShore, guessHeading } from './shoreline.js';
+import { TILEJSON } from './infra.js';
 
 const STORE_KEY = 'rudder.ais.v1';
 const MIN_ZOOM = 7; // wider views would ask for most of the coast at once
 const REFRESH_MS = 30_000;
 const PAD = 0.3; // fetch 30 % beyond the view each way, so small pans need no new request
-const LAYERS = ['ais-hull', 'ais-hull-line', 'ais-arrow', 'ais-dot'];
+const LAYERS = ['ais-hull', 'ais-hull-line', 'ais-hull-guess', 'ais-arrow', 'ais-dot'];
+// The shore, for ships that tell no heading (shoreline.js): OpenFreeMap's water outlines and piers,
+// loaded by an invisible layer while ships are near enough to be drawn at true size.
+const SHORE = 'ais-shore', SHORE_PROBE = 'ais-shore-probe', GUESS_ZOOM = 12.5;
+const GUESS_DOT = ['any', ['!', ['get', 'guessed']], ['<', ['zoom'], 13]]; // dots step aside for guessed outlines
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -64,7 +70,9 @@ export function createAisLayer(map) {
     const fade = ['case', ['get', 'stale'], 0.45, 1];
     // True size and heading from zoom 13, where a ship is big enough to see.
     map.addLayer({ id: 'ais-hull', type: 'fill', source: 'ais-hulls', minzoom: 13, paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['*', 0.45, fade] } });
-    map.addLayer({ id: 'ais-hull-line', type: 'line', source: 'ais-hulls', minzoom: 13, paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': fade } });
+    map.addLayer({ id: 'ais-hull-line', type: 'line', source: 'ais-hulls', minzoom: 13, filter: ['!', ['get', 'guessed']], paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': fade } });
+    // A heading guessed, not told: the outline dashed.
+    map.addLayer({ id: 'ais-hull-guess', type: 'line', source: 'ais-hulls', minzoom: 13, filter: ['get', 'guessed'], paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-dasharray': [2, 1.5], 'line-opacity': fade } });
     map.addLayer({
       id: 'ais-arrow', type: 'symbol', source: 'ais-points', filter: ['get', 'hasHeading'],
       layout: {
@@ -75,7 +83,7 @@ export function createAisLayer(map) {
       paint: { 'icon-color': ['get', 'color'], 'icon-halo-color': '#ffffff', 'icon-halo-width': 1.2, 'icon-opacity': fade },
     });
     map.addLayer({
-      id: 'ais-dot', type: 'circle', source: 'ais-points', filter: ['!', ['get', 'hasHeading']],
+      id: 'ais-dot', type: 'circle', source: 'ais-points', filter: ['all', ['!', ['get', 'hasHeading']], GUESS_DOT],
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 3, 13, 5], 'circle-color': ['get', 'color'],
         'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.2, 'circle-opacity': fade, 'circle-stroke-opacity': fade,
@@ -124,7 +132,9 @@ export function createAisLayer(map) {
       if (map.getLayer('ais-hull')) {
         map.setPaintProperty('ais-hull', 'fill-opacity', ['case', isModel, 0, ['*', 0.45, fade]]);
         map.setPaintProperty('ais-hull-line', 'line-opacity', ['case', isModel, 0, fade]);
+        map.setPaintProperty('ais-hull-guess', 'line-opacity', ['case', isModel, 0, fade]);
         map.setFilter('ais-arrow', ['all', ['get', 'hasHeading'], ['!', isModel]]);
+        map.setFilter('ais-dot', ['all', ['!', ['get', 'hasHeading']], GUESS_DOT, ['!', isModel]]);
       }
     }
     models.setShips(list).catch((e) => setStatus(`3D ships could not load (${e.message}).`, 'err'));
@@ -143,8 +153,88 @@ export function createAisLayer(map) {
     }
   }
 
+  // ---------- headings for ships that tell none (shoreline.js) ----------
+
+  let lastGuess = 0, shoreTimer = 0;
+  const guesses = new Map(); // mmsi -> guess { deg, how, lat, lon, shore }: kept while the ship stays put
+  const stillThere = (g, v) => g && Math.abs(g.lat - v.latitude) < 1.5e-4 && Math.abs(g.lon - v.longitude) < 3e-4;
+
+  /** Put the guesses made back on the ships (new reports, and every frame of playback, come without). */
+  function applyGuesses() {
+    for (const v of vessels.values()) {
+      if (v.headingGuess || reportedHeading(v) !== null) continue;
+      const g = guesses.get(v.mmsi);
+      if (stillThere(g, v)) v.headingGuess = g;
+    }
+  }
+  function ensureShore() {
+    if (map.getSource(SHORE)) return;
+    try {
+      map.addSource(SHORE, { type: 'vector', url: TILEJSON });
+      // Drawn with nothing to see: it only makes the map load the water tiles here.
+      map.addLayer({ id: SHORE_PROBE, type: 'fill', source: SHORE, 'source-layer': 'water', minzoom: 12, paint: { 'fill-opacity': 0 } }, 'ais-hull');
+      map.on('sourcedata', (e) => {
+        if (e.sourceId !== SHORE || !e.isSourceLoaded) return;
+        clearTimeout(shoreTimer);
+        shoreTimer = setTimeout(() => { if (guessHeadings(true)) { drawSymbols(); updateModels(); } }, 200);
+      });
+    } catch { /* the style is busy: next time */ }
+  }
+
+  /** Water outlines and piers loaded around the view, as lines of [lon, lat]. */
+  function shoreLines() {
+    const lines = [];
+    const add = (g) => {
+      if (!g) return;
+      if (g.type === 'Polygon') lines.push(...g.coordinates);
+      else if (g.type === 'MultiPolygon') for (const p of g.coordinates) lines.push(...p);
+      else if (g.type === 'LineString') lines.push(g.coordinates);
+      else if (g.type === 'MultiLineString') lines.push(...g.coordinates);
+    };
+    for (const f of map.querySourceFeatures(SHORE, { sourceLayer: 'water' })) add(f.geometry);
+    for (const f of map.querySourceFeatures(SHORE, { sourceLayer: 'transportation', filter: ['==', ['get', 'class'], 'pier'] })) add(f.geometry);
+    return lines;
+  }
+
+  /**
+   * Give the ships in view that tell no heading a guessed one (along the quay they lie at, as told
+   * earlier, their last course), so they are drawn at true size and as models, not as dots. Up close
+   * only, at most every second and a half unless `force`. Returns whether any guess changed.
+   */
+  function guessHeadings(force = false) {
+    if (map.getZoom() < GUESS_ZOOM || !map.getSource('ais-points')) return false;
+    if (!force && Date.now() - lastGuess < 1500) return false;
+    lastGuess = Date.now();
+    ensureShore();
+    const b = map.getBounds();
+    const padX = (b.getEast() - b.getWest()) * 0.2, padY = (b.getNorth() - b.getSouth()) * 0.2;
+    let lines = null, changed = false;
+    for (const v of vessels.values()) {
+      if (v.longitude < b.getWest() - padX || v.longitude > b.getEast() + padX || v.latitude < b.getSouth() - padY || v.latitude > b.getNorth() + padY) continue;
+      if (reportedHeading(v) !== null) continue;
+      const { length, beam } = vesselSize(v);
+      if (!(length > 0 && beam > 0)) continue;
+      const g = v.headingGuess ?? guesses.get(v.mmsi);
+      if (stillThere(g, v) && g.shore) { v.headingGuess = g; continue; }
+      lines ??= map.getSource(SHORE) ? shoreLines() : [];
+      // Shore data around the ship (any within 500 m) means its tile is in: the guess is final there.
+      // Without, guess for now and look again when more tiles come.
+      const near = lines.length ? nearestShore(v.longitude, v.latitude, lines, 500) : null;
+      const shore = near && near.distance <= beam / 2 + 40 ? near : null;
+      const next = { ...guessHeading(v, shore, beam), lat: v.latitude, lon: v.longitude, shore: Boolean(near) };
+      if (g && stillThere(g, v) && g.deg === next.deg && g.how === next.how && g.shore === next.shore) { v.headingGuess = g; continue; }
+      v.headingGuess = next;
+      guesses.set(v.mmsi, v.headingGuess);
+      changed = true;
+    }
+    return changed;
+  }
+  map.on('moveend', () => { if (guessHeadings(true)) { drawSymbols(); updateModels(); } });
+
   function draw(now = playback ? playback.now : Date.now()) {
     if (!ensureLayers()) return;
+    applyGuesses();
+    guessHeadings();
     drawSymbols(now);
     updateModels();
   }
