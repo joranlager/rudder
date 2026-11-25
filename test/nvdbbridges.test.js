@@ -70,7 +70,10 @@ test("a suspension bridge: towers at the main span's ends, cables, no piers unde
   const legs = of('tower').filter((f) => f.properties.base === 0);
   assert.equal(legs.length, 4, 'two towers of two legs');
   assert.ok(of('tower').length > 4, 'and crossbeams');
-  assert.ok(of('cable').length > 100);
+  const lines = of('cable-line');
+  assert.equal(lines.length, 2, 'a main cable each side, as a smooth line');
+  assert.ok(lines.every((f) => f.geometry.type === 'LineString' && f.geometry.coordinates.length > 100 && f.geometry.coordinates.every((c) => c.length === 3)));
+  assert.ok(of('cable').length > 20, 'hangers');
   const deckTop = Math.max(...of('deck').map((f) => f.properties.top));
   assert.ok(deckTop > 47 && deckTop < 50, `deck ${deckTop}`);
   const towerTop = legs[0].properties.top;
@@ -78,14 +81,14 @@ test("a suspension bridge: towers at the main span's ends, cables, no piers unde
   // no pier within the main span (centred where the deck is highest: 165..435 m)
   const xOf = (f) => { const c = f.geometry.coordinates[0][0]; return (c[0] - o[0]) * 111320 * Math.cos((o[1] * Math.PI) / 180); };
   for (const p of of('pier')) { const x = xOf(p); assert.ok(x < 165 || x > 435, `pier at ${x}`); }
-  for (const f of parts) assert.ok(f.properties.top > f.properties.base && f.properties.base >= 0);
+  for (const f of parts.filter((x) => x.geometry.type === 'Polygon')) assert.ok(f.properties.top > f.properties.base && f.properties.base >= 0);
 });
 
 test('other kinds: pylons and stays, an arch, piers', () => {
   const r = roadsFromNvdb(roads);
   const cs = buildNvdbBridge(bridgeFromNvdb(nvdbBridge('Skråstagbru (752)', 300)), r);
   assert.equal(cs.filter((f) => f.properties.part === 'tower' && f.properties.base === 0).length, 4);
-  assert.ok(cs.filter((f) => f.properties.part === 'cable').length > 50);
+  assert.ok(cs.filter((f) => f.properties.part === 'cable-line').length >= 32, 'stays, each a line');
   const arch = buildNvdbBridge(bridgeFromNvdb(nvdbBridge('Bue/hvelv (5)', 200)), r);
   assert.ok(arch.some((f) => f.properties.part === 'arch'));
   const girder = buildNvdbBridge(bridgeFromNvdb(nvdbBridge('Kassebru (415)', 150)), r);

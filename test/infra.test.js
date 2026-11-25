@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { infraLayers, buildBridges, bridgeClearance, deckProfile, toLocal, toLonLat, PREFIX, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM } from '../public/infra.js';
+import { infraLayers, buildBridges, bridgeClearance, deckProfile, toLocal, toLonLat, PREFIX, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, baseClass } from '../public/infra.js';
 import { infraBefore } from '../public/infralayer.js';
 import { BASEMAPS, buildStyle, mergeSettings, defaultSettings, SATELLITE_TILES } from '../public/layers.js';
 
@@ -123,4 +123,15 @@ test('where NVDB knows a bridge, the road itself is raised to its heights, in th
   assert.ok(decks.every((f) => f.properties.top === 42 && f.properties.road === 'secondary'));
   assert.equal(decks[0].properties.color, '#f7fabf', 'the secondary road\'s own colour');
   assert.equal(known.features.filter((f) => f.properties.part !== 'deck').length, 0, 'towers and piers come from NVDB instead');
+});
+
+test('roads being built are drawn, and raised on bridges, as the roads they become', () => {
+  assert.equal(baseClass('motorway_construction'), 'motorway');
+  assert.equal(baseClass('trunk'), 'trunk');
+  const ways = bridge(8, 600, { cls: 'motorway_construction' });
+  const decks = buildBridges(ways, [], { heightFor: () => () => 50 }).features.filter((f) => f.properties.part === 'deck');
+  assert.ok(decks.length > 10);
+  assert.equal(decks[0].properties.road, 'motorway');
+  const road = infraLayers().find((l) => l.id === `${PREFIX}road`);
+  assert.ok(JSON.stringify(road.filter).includes('motorway_construction'));
 });

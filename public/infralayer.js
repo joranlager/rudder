@@ -6,6 +6,7 @@ import { styleReady, whenStyleReady } from './mapready.js';
 import { TILEJSON, ATTRIBUTION, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, PREFIX, infraLayers, buildBridges } from './infra.js';
 import { bridgesUrl, roadsUrl, bridgeFromNvdb, roadsFromNvdb, buildNvdbBridge, onBridge, groundPoints, parseGround, deckProfile, deckHeight, groundAt, CLIENT, ATTRIBUTION as NVDB_ATTRIBUTION } from './nvdbbridges.js';
 import { seabedUrl } from './contact.js';
+import { createBridgeCables } from './bridgecables.js';
 
 // The ground under each NVDB bridge (Kartverket's terrain model), asked once per bridge.
 const grounds = new Map(); // bridge id -> Promise<number[] | null>
@@ -54,6 +55,8 @@ async function nvdbBridges(map, { terrain = null } = {}) {
   const byId = new Map(), roads = [];
   for (const g of got) { for (const br of g.bridges) byId.set(br.id, br); roads.push(...g.roads); }
   const lift = (p, T) => {
+    // a cable (a 3D line, drawn above the sea level of the map): its heights exaggerated like the land
+    if (p.geometry.type === 'LineString') return { ...p, geometry: { ...p.geometry, coordinates: p.geometry.coordinates.map(([x, y, h]) => [x, y, h * terrain.exaggeration]) } };
     // a part above the sea, as MapLibre should draw it: exaggerated like the land, less the land drawn under it
     const base = Math.max(0, p.properties.base * terrain.exaggeration - T);
     return { ...p, properties: { ...p.properties, base, top: Math.max(base + 0.2, p.properties.top * terrain.exaggeration - T) } };
@@ -68,7 +71,7 @@ async function nvdbBridges(map, { terrain = null } = {}) {
     const g = ground.map((x) => x ?? 0);
     const pf = deckProfile(br, roads);
     const build = (deck) => (terrain
-      ? buildNvdbBridge(br, roads, null, { deck }).map((p) => lift(p, terrain.elevation(centre(p)) ?? 0))
+      ? buildNvdbBridge(br, roads, null, { deck }).map((p) => lift(p, p.geometry.type === 'LineString' ? 0 : terrain.elevation(centre(p)) ?? 0))
       : buildNvdbBridge(br, roads, g, { deck }));
     const top = (ll) => {
       const { t, z } = deckHeight(pf, ll);
@@ -91,13 +94,14 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
   let timer = 0;
   let errors = 0;
   let seq = 0, nvdb = null;
+  const cables = createBridgeCables(map);
 
   function rebuild() {
     clearTimeout(timer);
     timer = setTimeout(() => {
       const src = map.getSource(BRIDGE_SOURCE);
       if (!on || !src) return;
-      if (map.getZoom() < BRIDGE_MIN_ZOOM - 0.5) { src.setData(EMPTY); return; }
+      if (map.getZoom() < BRIDGE_MIN_ZOOM - 0.5) { src.setData(EMPTY); cables.setCables([]); return; }
       const feats = map.querySourceFeatures(SOURCE, { sourceLayer: 'transportation', filter: ['==', ['get', 'brunnel'], 'bridge'] });
       const mine = ++seq;
       const draw = (list) => {
@@ -106,7 +110,8 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
         const ctxOf = (lines) => {
           const l = lines[0];
           const mid = l[Math.floor(l.length / 2)];
-          return list?.find((x) => onBridge(mid, [x.br])) ?? null;
+          // (twin carriageways can lie well apart, either side of NVDB's narrow outline)
+          return list?.find((x) => onBridge(mid, [x.br], 16)) ?? null;
         };
         const used = new Set();
         const heightFor = (lines) => {
@@ -118,7 +123,10 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
         const roadsOnly = buildBridges(feats, [], { heightFor });
         const extra = [];
         for (const x of list ?? []) extra.push(...x.parts, ...(used.has(x) ? [] : x.deckParts()));
-        return { type: 'FeatureCollection', features: [...extra, ...roadsOnly.features] };
+        // cables and stays as smooth tubes (bridgecables.js); the rest as MapLibre's 3D shapes
+        cables.setCables(extra.filter((f) => f.geometry.type === 'LineString')
+          .map((f) => ({ coordinates: f.geometry.coordinates, r: f.properties.r, color: f.properties.color })));
+        return { type: 'FeatureCollection', features: [...extra.filter((f) => f.geometry.type !== 'LineString'), ...roadsOnly.features] };
       };
       src.setData(draw(nvdb));
       const t = map.getTerrain?.();
@@ -151,6 +159,7 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
     } else {
       map.off('sourcedata', onData);
       map.off('moveend', rebuild);
+      cables.remove();
       for (const l of infraLayers()) if (map.getLayer(l.id)) map.removeLayer(l.id);
       for (const s of [BRIDGE_SOURCE, SOURCE]) if (map.getSource(s)) map.removeSource(s);
     }

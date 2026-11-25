@@ -243,7 +243,7 @@ export function buildNvdbBridge(bridge, roads, ground = null, { deck = true } = 
   const S = Math.min(length, bridge.span ?? Math.min(length, 40));
   const thick = bridge.kind === 'suspension' || bridge.kind === 'cable-stayed' ? 2.5 : Math.min(8, Math.max(0.8, S / 22));
   // The deck: pieces a few metres long along the bridge, at the road's height.
-  const n = Math.max(2, Math.min(160, Math.ceil(length / 6)));
+  const n = Math.max(2, Math.min(800, Math.ceil(length / 2))); // 2 m pieces: no visible steps
   // (Without `deck`, the road layer's own road over the bridge is raised as its deck: deckHeight.)
   for (let i = 0; i < (deck ? n : 0); i++) {
     const t0 = i / n, t1 = (i + 1) / n, top = z((t0 + t1) / 2);
@@ -266,12 +266,15 @@ export function buildNvdbBridge(bridge, roads, ground = null, { deck = true } = 
     for (let t = m1 + dt; t < 0.99; t += dt) pier(t);
   };
   // A cable as pieces from point to point (each level, at its middle height): continuous seen from afar.
+  // A cable as a smooth 3D line (drawn as a tube by bridgecables.js): [lon, lat, height above the ground
+  // there] along it, `r` its radius. (As boxes, MapLibre's extrusions, a sloping cable is a staircase.)
   const cableBoxes = (pts, r) => {
-    for (let i = 0; i + 1 < pts.length; i++) {
-      const [p, h, tp] = pts[i], [q, g, tq] = pts[i + 1];
-      const lo = Math.min(h, g) - r, hi = Math.max(h, g) + r;
-      out.push(P('cable', lo, hi, COLORS.cable, quad(p, q, r, o), (tp + tq) / 2));
-    }
+    if (pts.length < 2) return;
+    out.push({
+      type: 'Feature',
+      properties: { part: 'cable-line', r, color: COLORS.cable, nvdb: true },
+      geometry: { type: 'LineString', coordinates: pts.map(([p, h, t]) => [...toLonLat(p, o), Math.max(0, h - gnd(t))]) },
+    });
   };
   if (bridge.kind === 'suspension') {
     // Two towers at the main span's ends, a main cable on each side hanging between them (sag 1/10 of
@@ -294,9 +297,9 @@ export function buildNvdbBridge(bridge, roads, ground = null, { deck = true } = 
       return z(t) + 1 + (towerTop - z(t) - 1) * f ** 1.4;
     };
     for (const k of [-1, 1]) {
-      const steps = Math.max(30, Math.ceil(length / 3)), pts = [];
+      const steps = Math.max(60, Math.ceil(length / 1.5)), pts = []; // short pieces: a smooth curve
       for (let i = 0; i <= steps; i++) pts.push([side(at(i / steps), k * (half + 0.6)), cable(i / steps), i / steps]);
-      cableBoxes(pts, 0.6);
+      cableBoxes(pts, 0.45);
       // hangers every ~12 m in the main span
       const hs = Math.max(4, Math.round(((m1 - m0) * length) / 12));
       for (let i = 1; i < hs; i++) {
@@ -316,12 +319,13 @@ export function buildNvdbBridge(bridge, roads, ground = null, { deck = true } = 
           for (const dir of [-1, 1]) {
             const tEnd = t + dir * (s / 2) * (j / 8) * 0.95;
             if (tEnd <= 0.01 || tEnd >= 0.99) continue;
-            const hTop = towerTop - j * 1.5, steps = 18, pts = [];
+            const hTop = towerTop - j * 1.5, pts = [];
+            const steps = Math.max(18, Math.ceil(Math.hypot(Math.abs(tEnd - t) * length, hTop - z(tEnd)) / 2));
             for (let i = 1; i < steps; i++) {
               const u = i / steps, tt = t + (tEnd - t) * u;
               pts.push([side(at(tt), k * (half + 0.4)), hTop + (z(tEnd) + 1 - hTop) * u, tt]);
             }
-            cableBoxes(pts, 0.3);
+            cableBoxes(pts, 0.22);
           }
         }
       }
@@ -329,7 +333,7 @@ export function buildNvdbBridge(bridge, roads, ground = null, { deck = true } = 
     approaches(Math.max(25, S * 0.3));
   } else if (bridge.kind === 'arch') {
     // An arch under the main span, springing from the water (or ground) at its ends.
-    const steps = Math.max(12, Math.ceil((m1 - m0) * length / 4));
+    const steps = Math.max(12, Math.ceil(((m1 - m0) * length) / 2));
     for (let i = 0; i < steps; i++) {
       const u = (i + 0.5) / steps, t = m0 + (m1 - m0) * u;
       const rise = gnd(t) + (z(t) - thick - gnd(t)) * (1 - (2 * u - 1) ** 2);

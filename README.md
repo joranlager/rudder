@@ -195,6 +195,11 @@ the land from OpenStreetMap, over any background and under the ships (`public/in
 - bridges are the road layer's own roads, raised (from zoom 13): where a road or railway crosses a
   bridge, its flat line gives way to the same road, in its own colour and width, standing at the
   bridge's height, with what holds it up beneath and above. There is no separate bridge layer.
+  The raised road is built in pieces 2 m long, with round joints at bends: MapLibre's 3D shapes are
+  flat-topped boxes, and at that length the steps of a sloping deck are a few centimetres. Cables and
+  stays are drawn as smooth tubes along curves through their points (three.js, in a MapLibre custom
+  layer, as the 3D ships are; `public/bridgecables.js`). Roads being built (OpenMapTiles'
+  `motorway_construction` and so on) are drawn as the roads they become.
 - road bridges are raised as they are, from NVDB, Statens vegvesen's road database
   (`nvdbapiles.atlas.vegvesen.no`, API v4, NLOD; `public/nvdbbridges.js`, tested). Each bridge's type
   (suspension, cable-stayed, arch, box or girder, floating), length, longest span, width and outline

@@ -34,20 +34,27 @@ const widthExpr = (m, minPx = 0.6) => [
   'interpolate', ['exponential', 2], ['zoom'],
   8, minPx, 12, Math.max(minPx, m * 0.12), 15, Math.max(1.5, m * 0.42), 19, m * 6.7,
 ];
-const byClass = (table, fallback) => ['match', ['get', 'class'], ...Object.entries(table).flat(), fallback];
+/**
+ * A road being built is drawn as the road it becomes: OpenMapTiles marks it `motorway_construction`
+ * and so on (the E18 over Grenlandsbrua is, while NVDB has it as a bridge in use).
+ */
+export const baseClass = (cls) => String(cls ?? '').replace(/_construction$/, '');
+const withBuilding = (table) => Object.fromEntries(Object.entries(table).flatMap(([k, v]) => [[k, v], [`${k}_construction`, v]]));
+const MAJOR_ALL = [...MAJOR, ...MAJOR.map((m) => `${m}_construction`)];
+const byClass = (table, fallback) => ['match', ['get', 'class'], ...Object.entries(withBuilding(table)).flat(), fallback];
 
 /**
  * The map layers over the background, in drawing order, each id starting with PREFIX. Bridges are
  * drawn as roads below BRIDGE_MIN_ZOOM and as built decks (BRIDGE_SOURCE) from it.
  */
 export function infraLayers() {
-  const roads = ['all', ['==', ['geometry-type'], 'LineString'], ['match', ['get', 'class'], Object.keys(ROAD_COLOR), true, false]];
+  const roads = ['all', ['==', ['geometry-type'], 'LineString'], ['match', ['get', 'class'], Object.keys(withBuilding(ROAD_COLOR)), true, false]];
   const notTunnel = ['!=', ['get', 'brunnel'], 'tunnel'];
   const flatBridge = ['any', ['!=', ['get', 'brunnel'], 'bridge'], ['<', ['zoom'], BRIDGE_MIN_ZOOM]];
   const width = (k = 1) => ['*', k, byClass(Object.fromEntries(Object.entries(ROAD_WIDTH)), 5)];
   const w = (k) => [
     'interpolate', ['exponential', 2], ['zoom'],
-    8, ['*', k, ['case', ['in', ['get', 'class'], ['literal', MAJOR]], 1, 0.4]],
+    8, ['*', k, ['case', ['in', ['get', 'class'], ['literal', MAJOR_ALL]], 1, 0.4]],
     12, ['*', k, ['max', 0.8, ['*', 0.15, width()]]],
     15, ['*', k, ['max', 1.5, ['*', 0.42, width()]]],
     19, ['*', k, ['*', 6.7, width()]],
@@ -73,11 +80,11 @@ export function infraLayers() {
       layout: { 'line-cap': 'butt' },
       paint: { 'line-color': '#6b6b6b', 'line-width': w(1), 'line-dasharray': [1, 1.2], 'line-opacity': 0.55 } },
     { id: `${PREFIX}road-casing`, type: 'line', source: SOURCE, 'source-layer': 'transportation', minzoom: 8,
-      filter: ['all', roads, notTunnel, flatBridge, ['any', ['>=', ['zoom'], 12], ['in', ['get', 'class'], ['literal', MAJOR]]]],
+      filter: ['all', roads, notTunnel, flatBridge, ['any', ['>=', ['zoom'], 12], ['in', ['get', 'class'], ['literal', MAJOR_ALL]]]],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#5b5146', 'line-width': w(1.35), 'line-opacity': 0.85 } },
     { id: `${PREFIX}road`, type: 'line', source: SOURCE, 'source-layer': 'transportation', minzoom: 8,
-      filter: ['all', roads, notTunnel, flatBridge, ['any', ['>=', ['zoom'], 12], ['in', ['get', 'class'], ['literal', MAJOR]]]],
+      filter: ['all', roads, notTunnel, flatBridge, ['any', ['>=', ['zoom'], 12], ['in', ['get', 'class'], ['literal', MAJOR_ALL]]]],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': byClass(ROAD_COLOR, '#ffffff'), 'line-width': w(1) } },
     { id: `${PREFIX}rail`, type: 'line', source: SOURCE, 'source-layer': 'transportation', minzoom: 9,
@@ -142,12 +149,12 @@ const square = ([x, y], half, o) => ring([[x - half, y - half], [x + half, y - h
  * of deck stands at that bridge's profile there. Returns a FeatureCollection of polygons with
  * { part: 'deck' | 'pier' | 'tower', base, top, color }.
  */
-export function buildBridges(features, extra = [], { maxParts = 6000, heightFor = () => null } = {}) {
+export function buildBridges(features, extra = [], { maxParts = 20000, heightFor = () => null } = {}) {
   const ways = new Map();
   for (const f of features) {
     const g = f.geometry;
     if (!g || (g.type !== 'LineString' && g.type !== 'MultiLineString')) continue;
-    const cls = f.properties?.class;
+    const cls = baseClass(f.properties?.class);
     if (!(cls in ROAD_WIDTH) || cls === 'pier') continue;
     const key = f.id ?? JSON.stringify(f.properties) + JSON.stringify(g.coordinates[0]);
     const w = ways.get(key) ?? { cls, layer: Number(f.properties?.layer) || 1, lines: [] };
@@ -183,12 +190,13 @@ export function buildBridges(features, extra = [], { maxParts = 6000, heightFor 
     const heightAt = (t) => Math.max(0.8, H * deckProfile(t));
     const topOf = (local) => (known ? known(toLonLat(local, o)) : null) ?? heightAt(tOf(local));
     for (const l of lines) {
-      // Pieces of deck a few metres long, so the deck follows its curve up and down.
+      // Pieces of deck 2 m long: each is a flat-topped box (MapLibre's extrusions), so a sloping road is
+      // a staircase of steps a few centimetres high, too small to see.
       for (let i = 0; i + 1 < l.length; i++) {
         const p = l[i], q = l[i + 1];
         const segLen = Math.hypot(q[0] - p[0], q[1] - p[1]);
         if (segLen < 0.05) continue;
-        const n = Math.max(1, Math.ceil(segLen / Math.max(4, length / 40)));
+        const n = Math.max(1, Math.ceil(segLen / 2));
         const d = [(q[0] - p[0]) / segLen, (q[1] - p[1]) / segLen];
         const nx = -d[1] * half, ny = d[0] * half;
         for (let k = 0; k < n; k++) {
@@ -203,6 +211,12 @@ export function buildBridges(features, extra = [], { maxParts = 6000, heightFor 
             geometry: { type: 'Polygon', coordinates: ring([[e0[0] + nx, e0[1] + ny], [e1[0] + nx, e1[1] + ny], [e1[0] - nx, e1[1] - ny], [e0[0] - nx, e0[1] - ny]], o) },
           });
         }
+      }
+      // Round joints where the road bends, so a curving deck has no notches at its corners.
+      for (let i = 1; i + 1 < l.length; i++) {
+        const top = topOf(l[i]);
+        const oct = Array.from({ length: 8 }, (_, k) => [l[i][0] + half * Math.cos((k * Math.PI) / 4 + Math.PI / 8), l[i][1] + half * Math.sin((k * Math.PI) / 4 + Math.PI / 8)]);
+        out.push({ type: 'Feature', properties: { part: 'deck', base: Math.max(0, top - (known ? 1.5 : thick)), top, color: deckColor, road: w.cls }, geometry: { type: 'Polygon', coordinates: ring(oct, o) } });
       }
     }
     // Piers under the deck along the bridge's line, where the deck stands clear of the ground; on long
