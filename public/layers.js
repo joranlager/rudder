@@ -88,7 +88,7 @@ export function buildStyle(settings) {
 }
 
 export function defaultSettings() {
-  return { basemap: 'sjokart', terrain: false, infra: false, overlays: Object.fromEntries(OVERLAYS.map((o) => [o.id, { on: o.on, opacity: o.opacity }])) };
+  return { basemap: 'sjokart', terrain: false, infra: false, webcams: false, overlays: Object.fromEntries(OVERLAYS.map((o) => [o.id, { on: o.on, opacity: o.opacity }])) };
 }
 
 /** Merge stored settings over the defaults, dropping anything unknown. */
@@ -98,6 +98,7 @@ export function mergeSettings(stored) {
   if (BASEMAPS.some((b) => b.id === stored.basemap)) d.basemap = stored.basemap;
   if (typeof stored.terrain === 'boolean') d.terrain = stored.terrain;
   if (typeof stored.infra === 'boolean') d.infra = stored.infra;
+  if (typeof stored.webcams === 'boolean') d.webcams = stored.webcams;
   for (const o of OVERLAYS) {
     const s = stored.overlays?.[o.id];
     if (!s) continue;

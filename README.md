@@ -11,6 +11,7 @@ npm start      # http://localhost:8080 (local static server)
 npm test       # parsers, URL builders, navigation maths, AIS, ship models
 npm run vendor # rebuilds public/vendor/three.js and three-io.js from the pinned devDependencies (after npm ci)
 npm run vessels # lists the models in public/vessels/ in its index.json
+npm run webcams # works out where each webcam looks (public/webcams.json); behind a proxy: NODE_USE_ENV_PROXY=1
 npm run build  # copies public/ to dist/ and stamps the build
 ```
 
@@ -37,6 +38,7 @@ files from two deploys (GitHub Pages lets browsers keep files for ten minutes).
 | Topographic, grey and colour | Kartverket | WMTS `topograatone`, `topo` |
 | Satellite | EOX (Copernicus Sentinel-2) | Sentinel-2 cloudless 2024, WMTS `tiles.maps.eox.at`, 10 m |
 | Roads, bridges, buildings | OpenStreetMap via OpenFreeMap | Vector tiles `tiles.openfreemap.org/planet` (OpenMapTiles schema) |
+| Webcams | Statens vegvesen | WFS `ogckart-sn1.atlas.vegvesen.no/datex_3_1/wfs`, `CctvSimple_v2`; pictures `kamera.atlas.vegvesen.no` |
 | Depth areas (from zoom 9) | Kartverket | WMS `wms.dybdedata2`, `Dybdelag` |
 | Depth contours, soundings, rocks (from zoom 12) | Kartverket | WMS `wms.dybdedata2` |
 | Not surveyed areas | Kartverket | WMS `wms.dybdedata2`, `IkkeSjomalt` |
@@ -198,6 +200,44 @@ the land from OpenStreetMap, over any background and under the ships (`public/in
 
 Switching it on tilts the chart to show the heights. Best on the Satellite background with land
 heights on.
+
+## Webcams
+
+Under the layers button, **Webcams** (remembered) shows Statens vegvesen's open cameras, about 900 at
+ferry quays, bridges, harbours and along the roads, from its open WFS
+(`ogckart-sn1.atlas.vegvesen.no/datex_3_1/wfs`, layer `CctvSimple_v2`, NLOD, answers any website).
+Each is an icon with a cone turned the way it looks (a plain icon where that is not known; faded
+when the camera reports a fault).
+
+**Tap a camera** for its card: its latest picture, where it looks and how sure that is, and the
+ships with AIS in its view now. Its sector (the camera's field of view, out to the place it looks to,
+0.8 to 6 km) is drawn on the chart, and an **eye** stands on the camera. Cameras that share a site
+are listed at the top of the card.
+
+**The eye** (on the chart, or on the card's picture) opens the view through the camera: its picture
+over the whole screen, refreshed every minute, with the ships in it marked where they are now (dead
+reckoned, as on the chart): a frame from the waterline to about the top of the ship, and a tag with
+the name, type, distance, speed and course. Ships just outside the picture are named at its edge.
+Tapping a tag leaves the view and opens the ship's card. Behind the view the chart moves to the
+camera, so the ships around it are loaded (Ships (AIS) must be on). Escape or × leaves it.
+(`public/webcamlayer.js`, `public/webcamview.js`, the geometry in `public/webcams.js`, tested.)
+
+**Where a camera looks.** The cameras do not publish a compass bearing (the DATEX field `bearing` is
+empty for all of them, checked 2026-11-25); each names the place it looks towards ("Esøya", "mot
+Eggedal", "Rosten/E6"). `npm run webcams` (`scripts/webcams.mjs`) looks each place up in Kartverket's
+place-name register, takes the nearest place of that name, and stores the bearing from the camera to
+it in `public/webcams.json`, with how sure it is: *good* when the place is within 15 km (most ferry
+quay and bridge cameras), *rough* or *very rough* for road cameras that name a far town (they look
+along the road, not straight at it). It also stores the ground height under each camera (from the
+full DATEX record) for the height of the lens. About 140 cameras name no place ("skifter": it turns;
+"Finland"; "sentrum"): their direction is unknown. The field of view is taken as 60°.
+
+**Adjust view** in the view lines it up and keeps it on this device: the direction (so a landmark
+sits under the place's name, marked ▾ at the top of the picture), the width of view, the tilt (so
+the dashed line lies on the sea's horizon) and the lens's height above the sea. A ship's place in the
+picture follows from these (a pinhole camera, with the earth's curve); the picture itself can be a
+few minutes old, so moving ships may be a little ahead of their marks. Land between a ship and the
+camera is not taken into account.
 
 ## Land heights in 3D
 

@@ -10,6 +10,8 @@ import { createTracker } from './tracker.js';
 import { createLiveTraces } from './livetraces.js';
 import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
 import { createInfra } from './infralayer.js';
+import { createWebcams } from './webcamlayer.js';
+import { createWebcamView, shipsInView } from './webcamview.js';
 import { createFarView } from './farview.js';
 import { DEM_MIN_ZOOM } from './terrain.js';
 import { modelPlacement } from './shipmodels.js';
@@ -97,6 +99,18 @@ document.addEventListener('click', (e) => {
     if (v) helm.take(v);
   }
 });
+// Webcams (webcamlayer.js): open cameras turned the way they look; tap one for its sector and card, its
+// eye for the view through it with the ships on it (webcamview.js).
+const webcams = createWebcams(map, { onView: (c) => webcamView.enter(c), onError: (m) => alert(m) });
+const webcamView = createWebcamView(map, {
+  el: $('#webcam-view'), ais, webcams,
+  onEnter: () => { togglePanel('info', false); togglePanel('layers', false); togglePanel('settings', false); togglePanel('tracker', false); },
+  onExit: (c) => { if (webcams.on) { webcams.select(c.id); showWebcam(webcams.camerasAt(map.project([c.lon, c.lat])), c.id); } },
+  onShip: (v) => showVessel(v),
+});
+if (settings.webcams) webcams.setOn(true);
+webcams.onChange(() => { const c = webcams.selected; if (c && !$('#info').hidden && $('#info-body [data-webcam]')) showWebcam(webcams.camerasAt(map.project([c.lon, c.lat])), c.id); });
+
 // Settings: BarentsWatch access, kept on this device.
 const settingsPanel = createSettings($('#settings-body'), { ais, openPanel: () => togglePanel('settings', true) });
 // Getting a BarentsWatch token: Shortcuts (iPhone, iPad, Mac), the bookmark on BarentsWatch (any
@@ -136,6 +150,12 @@ function renderLayerPanel() {
       <small>From OpenStreetMap: roads and railways by class, buildings raised to their height, and bridges built in 3D over the water. Best on the Satellite background, tilted. Bridge heights are estimated.</small>
       <span class="zoomhint" data-minzoom="13" data-infra-hint hidden>Zoom in for every road, buildings and 3D bridges (from zoom 13)</span>
     </div>`;
+  $('#webcam-settings').innerHTML = `<h3>Webcams</h3>
+    <div class="opt">
+      <input type="checkbox" id="ov-webcams" ${settings.webcams ? 'checked' : ''}>
+      <label for="ov-webcams">Webcams</label>
+      <small>Statens vegvesen's open cameras at ferry quays, bridges, harbours and roads, turned the way they look. Tap one for what it sees; its eye opens the view with the ships in it marked.</small>
+    </div>`;
   updateZoomHints();
   ais.renderPanel($('#ais-settings'));
 }
@@ -159,6 +179,13 @@ $('#terrain-settings').addEventListener('change', (e) => {
     if (settings.terrain && map.getPitch() < 20) map.easeTo({ pitch: TERRAIN_TILT, duration: 900 });
     else if (!settings.terrain) map.easeTo({ pitch: 0, duration: 900 });
   }
+});
+$('#webcam-settings').addEventListener('change', (e) => {
+  if (e.target.id !== 'ov-webcams') return;
+  settings.webcams = e.target.checked;
+  webcams.setOn(settings.webcams);
+  saveSettings();
+  if (!settings.webcams && $('#info-body [data-webcam]')) togglePanel('info', false);
 });
 for (const type of ['change', 'click', 'submit']) $('#ais-settings').addEventListener(type, (e) => ais.onPanelEvent(e));
 
@@ -202,7 +229,11 @@ function togglePanel(id, open) {
   if (id === 'tracker') { $('#tracker-btn').setAttribute('aria-expanded', String(!el.hidden)); tracker?.setOpen(!el.hidden); }
   if (id === 'layers') $('#layers-btn').setAttribute('aria-expanded', String(!el.hidden));
   if (id === 'settings') $('#settings-btn').setAttribute('aria-expanded', String(!el.hidden));
-  if (id === 'info' && el.hidden) clearClick();
+  if (id === 'info' && el.hidden) {
+    clearClick();
+    // the camera's sector and eye go with its card (not while looking through it: they come back after)
+    if (typeof webcams !== 'undefined' && !webcamView.active) webcams.deselect();
+  }
 }
 $('#layers-btn').addEventListener('click', () => togglePanel('layers'));
 $('#settings-btn').addEventListener('click', () => togglePanel('settings'));
@@ -351,8 +382,59 @@ function tideGraph(curve, now) {
 // A tap on a ship shows the ship; anywhere else, the sea at that point.
 map.on('click', (e) => {
   if (bridge.active) return; // from the bridge the chart is not tapped
+  if (webcamView.active) return;
   const v = ais.vesselAt(e.point);
-  if (v) showVessel(v); else showPoint(e.lngLat);
+  if (v) { webcams.deselect(); showVessel(v); return; }
+  const cams = webcams.camerasAt(e.point);
+  if (cams.length) { showWebcam(cams); return; }
+  webcams.deselect();
+  showPoint(e.lngLat);
+});
+
+// ---------- a webcam ----------
+/** The card of a camera (and the other cameras at its site), with its sector and eye on the map. */
+function showWebcam(cams, id = null) {
+  if (!cams.length) return;
+  clearClick();
+  const c = webcams.select(id ?? webcams.selected?.id ?? cams[0].id) ?? cams[0];
+  const site = cams.length > 1 ? cams : [];
+  const v = c.view;
+  const seen = shipsInView(c, ais);
+  const rows = [
+    ['Looks', v.bearing === null ? 'Direction unknown' : `${Math.round(v.bearing)}° ${compassPoint(v.bearing)}${v.target ? ` towards ${v.target}` : ''}`],
+    ['Direction', v.bearing === null ? 'Set it in the view (Adjust view)' : v.quality === 'set here' ? 'Set on this device' : `Worked out from ${v.target ?? 'its place'} (${v.quality})`],
+    ['Says it looks to', c.looks || null],
+    ['Road', c.road || null],
+    ['Status', c.ok ? null : 'Camera fault: no new pictures'],
+    ['Ships in view', ais.working && v.bearing !== null ? (seen.length ? seen.slice(0, 4).map((x) => (x.s.name || '').trim() || x.s.mmsi).join(', ') + (seen.length > 4 ? ` and ${seen.length - 4} more` : '') : 'none with AIS now') : null],
+  ].filter(([, x]) => x != null && x !== '');
+  $('#info-title').textContent = c.name;
+  $('#info-body').innerHTML = `<div data-webcam="${esc(c.id)}">
+    ${site.length ? `<div class="webcam-site" role="tablist">${site.map((x) => `<button type="button" role="tab" aria-selected="${x.id === c.id}" data-webcam-pick="${esc(x.id)}">${esc(x.looks || x.id)}</button>`).join('')}</div>` : ''}
+    <button type="button" class="webcam-shot" data-webcam-view="${esc(c.id)}" title="Look through this camera">
+      <img src="${esc(c.image)}?t=${Math.floor(Date.now() / 60000)}" alt="Latest picture from ${esc(c.name)}" loading="lazy">
+      <span class="webcam-shot-eye" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5C6.5 5 2.7 9.2 1.5 12c1.2 2.8 5 7 10.5 7s9.3-4.2 10.5-7C21.3 9.2 17.5 5 12 5Zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z"/></svg></span>
+    </button>
+    <dl class="rows">${rows.map(([k, x]) => `<dt>${k}</dt><dd>${esc(x)}</dd>`).join('')}</dl>
+    <div class="info-actions">
+      <button type="button" class="info-btn primary" data-webcam-view="${esc(c.id)}">Look through it</button>
+      ${c.forecast ? `<a class="info-btn" href="${esc(c.forecast)}" target="_blank" rel="noopener">Weather here (yr)</a>` : ''}
+    </div>
+    <div class="src">Camera and picture © Statens vegvesen (NLOD). Its direction is worked out from the place it looks to and can be off by some degrees.</div>
+  </div>`;
+  togglePanel('info', true);
+  // On a phone the card covers the lower half: move the camera (and its eye) into the space above it.
+  const card = $('#info').getBoundingClientRect(), mapBox = map.getContainer().getBoundingClientRect();
+  const at = map.project([c.lon, c.lat]);
+  if (card.width > mapBox.width * 0.8 && at.y > card.top - mapBox.top - 50) {
+    map.easeTo({ center: [c.lon, c.lat], offset: [0, (card.top - mapBox.top) / 2 - mapBox.height / 2], duration: 500 });
+  }
+}
+$('#info-body').addEventListener('click', (e) => {
+  const pick = e.target.closest('[data-webcam-pick]');
+  if (pick) { const c = webcams.camera(pick.dataset.webcamPick); if (c) showWebcam(webcams.camerasAt(map.project([c.lon, c.lat])), c.id); return; }
+  const look = e.target.closest('[data-webcam-view]');
+  if (look) { const c = webcams.camera(look.dataset.webcamView); if (c) webcamView.enter(c); }
 });
 
 // ---------- a ship from AIS ----------
