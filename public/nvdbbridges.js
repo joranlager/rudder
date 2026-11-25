@@ -220,7 +220,7 @@ const COLORS = { deck: '#a9adb3', pier: '#8f9399', tower: '#7d8288', cable: '#3a
  * follows the road's real heights; the main span (its longest span) is centred where the deck is
  * highest; the rest follows its kind. [] when NVDB has no heights for it.
  */
-export function buildNvdbBridge(bridge, roads, ground = null) {
+export function buildNvdbBridge(bridge, roads, ground = null, { deck = true } = {}) {
   const pf = deckProfile(bridge, roads);
   if (!pf) return [];
   const { o, a, ax, length } = pf;
@@ -244,7 +244,8 @@ export function buildNvdbBridge(bridge, roads, ground = null) {
   const thick = bridge.kind === 'suspension' || bridge.kind === 'cable-stayed' ? 2.5 : Math.min(8, Math.max(0.8, S / 22));
   // The deck: pieces a few metres long along the bridge, at the road's height.
   const n = Math.max(2, Math.min(160, Math.ceil(length / 6)));
-  for (let i = 0; i < n; i++) {
+  // (Without `deck`, the road layer's own road over the bridge is raised as its deck: deckHeight.)
+  for (let i = 0; i < (deck ? n : 0); i++) {
     const t0 = i / n, t1 = (i + 1) / n, top = z((t0 + t1) / 2);
     out.push(P('deck', top - thick, top + 0.4, COLORS.deck, quad(at(t0 - 0.002), at(t1 + 0.002), half, o), (t0 + t1) / 2));
   }
@@ -344,6 +345,24 @@ export function buildNvdbBridge(bridge, roads, ground = null) {
     approaches(Math.max(12, Math.min(S, 60)));
   }
   return out;
+}
+
+/**
+ * The deck's height at a point on the bridge (lon, lat), above the sea, and where that is along it
+ * (t, 0..1): { z, t }. For raising the road layer's own road over the bridge to where the road is.
+ */
+export function deckHeight(pf, lonlat) {
+  const p = toLocal(lonlat, pf.o);
+  const t = ((p[0] - pf.a[0]) * pf.ax[0] + (p[1] - pf.a[1]) * pf.ax[1]) / pf.length;
+  return { t, z: heightAt(pf, Math.max(0, Math.min(1, t))) };
+}
+
+/** The ground's height at t (0..1) along a bridge from GROUND_SAMPLES samples (0 without). */
+export function groundAt(ground, t) {
+  if (!ground?.length) return 0;
+  const f = Math.max(0, Math.min(1, t)) * (ground.length - 1), i = Math.floor(f), k = f - i;
+  const g0 = ground[i] ?? 0, g1 = ground[Math.min(ground.length - 1, i + 1)] ?? g0;
+  return Math.max(0, g0 + (g1 - g0) * k);
 }
 
 export const GROUND_SAMPLES = 41;

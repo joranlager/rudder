@@ -112,3 +112,15 @@ test('only road and rail bridges are built; anything else is left out', () => {
   assert.ok(buildBridges(bridge(5, 3000)).features.length <= 6000);
   assert.equal(buildBridges(bridge(5, 3000), [], { maxParts: 10 }).features.length, 10);
 });
+
+test('where NVDB knows a bridge, the road itself is raised to its heights, in the road\'s colour, without guessed towers', () => {
+  const ways = bridge(7, 800);
+  const plain = buildBridges(ways);
+  assert.ok(plain.features.some((f) => f.properties.part === 'tower'), 'estimated: towers on a long bridge');
+  const known = buildBridges(ways, [], { heightFor: () => () => 42 });
+  const decks = known.features.filter((f) => f.properties.part === 'deck');
+  assert.ok(decks.length > 10);
+  assert.ok(decks.every((f) => f.properties.top === 42 && f.properties.road === 'secondary'));
+  assert.equal(decks[0].properties.color, '#f7fabf', 'the secondary road\'s own colour');
+  assert.equal(known.features.filter((f) => f.properties.part !== 'deck').length, 0, 'towers and piers come from NVDB instead');
+});

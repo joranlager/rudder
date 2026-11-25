@@ -65,10 +65,6 @@ export function infraLayers() {
     { id: `${PREFIX}pier-line`, type: 'line', source: SOURCE, 'source-layer': 'transportation', minzoom: 13,
       filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'class'], 'pier']],
       paint: { 'line-color': '#d8cfc0', 'line-width': widthExpr(ROAD_WIDTH.pier) } },
-    // The bridge's own outline (man_made=bridge) on the ground: the deck's shadow on the water.
-    { id: `${PREFIX}bridge-shadow`, type: 'fill', source: SOURCE, 'source-layer': 'transportation', minzoom: BRIDGE_MIN_ZOOM,
-      filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['==', ['get', 'class'], 'bridge']],
-      paint: { 'fill-color': '#0b1a24', 'fill-opacity': 0.1 } },
     { id: `${PREFIX}ferry`, type: 'line', source: SOURCE, 'source-layer': 'transportation', minzoom: 7,
       filter: ['==', ['get', 'class'], 'ferry'],
       paint: { 'line-color': '#3c6fb4', 'line-width': 1.2, 'line-dasharray': [3, 2], 'line-opacity': 0.8 } },
@@ -146,7 +142,7 @@ const square = ([x, y], half, o) => ring([[x - half, y - half], [x + half, y - h
  * of deck stands at that bridge's profile there. Returns a FeatureCollection of polygons with
  * { part: 'deck' | 'pier' | 'tower', base, top, color }.
  */
-export function buildBridges(features, extra = [], { maxParts = 6000 } = {}) {
+export function buildBridges(features, extra = [], { maxParts = 6000, heightFor = () => null } = {}) {
   const ways = new Map();
   for (const f of features) {
     const g = f.geometry;
@@ -179,8 +175,13 @@ export function buildBridges(features, extra = [], { maxParts = 6000 } = {}) {
     const half = (ROAD_WIDTH[w.cls] ?? 6) / 2 + (w.cls === 'path' ? 0.3 : 1); // carriageway and railings
     const thick = Math.min(3, 0.6 + length * 0.002);
     const rail = w.cls === 'rail' || w.cls === 'transit';
-    const deckColor = rail ? '#7b7f86' : w.cls === 'path' ? '#b7a58b' : '#a9adb3';
+    // The deck is the road itself, raised: in the road's colour, as wide as the road is drawn.
+    const deckColor = rail ? '#7b7f86' : ROAD_COLOR[w.cls] ?? '#ffffff';
+    // Where NVDB knows the bridge (nvdbbridges.js), the road's real heights there, and its towers,
+    // cables or piers come from NVDB too; else heights estimated from the length.
+    const known = heightFor(w.lines);
     const heightAt = (t) => Math.max(0.8, H * deckProfile(t));
+    const topOf = (local) => (known ? known(toLonLat(local, o)) : null) ?? heightAt(tOf(local));
     for (const l of lines) {
       // Pieces of deck a few metres long, so the deck follows its curve up and down.
       for (let i = 0; i + 1 < l.length; i++) {
@@ -195,10 +196,10 @@ export function buildBridges(features, extra = [], { maxParts = 6000 } = {}) {
           const s1 = [p[0] + (q[0] - p[0]) * ((k + 1) / n), p[1] + (q[1] - p[1]) * ((k + 1) / n)];
           // a little overlap, so the pieces join without slits
           const e0 = [s0[0] - d[0] * 0.3, s0[1] - d[1] * 0.3], e1 = [s1[0] + d[0] * 0.3, s1[1] + d[1] * 0.3];
-          const top = heightAt(tOf([(s0[0] + s1[0]) / 2, (s0[1] + s1[1]) / 2]));
+          const top = topOf([(s0[0] + s1[0]) / 2, (s0[1] + s1[1]) / 2]);
           out.push({
             type: 'Feature',
-            properties: { part: 'deck', base: Math.max(0, top - thick), top, color: deckColor },
+            properties: { part: 'deck', base: Math.max(0, top - (known ? 1.5 : thick)), top, color: deckColor, road: w.cls },
             geometry: { type: 'Polygon', coordinates: ring([[e0[0] + nx, e0[1] + ny], [e1[0] + nx, e1[1] + ny], [e1[0] - nx, e1[1] - ny], [e0[0] - nx, e0[1] - ny]], o) },
           });
         }
@@ -206,7 +207,7 @@ export function buildBridges(features, extra = [], { maxParts = 6000 } = {}) {
     }
     // Piers under the deck along the bridge's line, where the deck stands clear of the ground; on long
     // bridges two towers stand up through the deck (most long Norwegian bridges are suspension or cable-stayed).
-    if (length >= 25 && w.cls !== 'path') {
+    if (length >= 25 && w.cls !== 'path' && !known) {
       const span = Math.min(120, Math.max(20, length / 12));
       const pierHalf = Math.min(4, Math.max(1, half * 0.35));
       for (let s = span; s < length - span / 2; s += span) {

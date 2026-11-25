@@ -4,7 +4,7 @@
 
 import { styleReady, whenStyleReady } from './mapready.js';
 import { TILEJSON, ATTRIBUTION, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, PREFIX, infraLayers, buildBridges } from './infra.js';
-import { bridgesUrl, roadsUrl, bridgeFromNvdb, roadsFromNvdb, buildNvdbBridge, onBridge, groundPoints, parseGround, CLIENT, ATTRIBUTION as NVDB_ATTRIBUTION } from './nvdbbridges.js';
+import { bridgesUrl, roadsUrl, bridgeFromNvdb, roadsFromNvdb, buildNvdbBridge, onBridge, groundPoints, parseGround, deckProfile, deckHeight, groundAt, CLIENT, ATTRIBUTION as NVDB_ATTRIBUTION } from './nvdbbridges.js';
 import { seabedUrl } from './contact.js';
 
 // The ground under each NVDB bridge (Kartverket's terrain model), asked once per bridge.
@@ -34,8 +34,15 @@ function cell(i, j) {
   return cells.get(key);
 }
 
-/** NVDB's bridges built in 3D around the view, and those bridges (to leave out of OpenStreetMap's). */
-async function nvdbBridges(map) {
+/**
+ * NVDB's bridges around the view, each ready to raise the road layer's road over it: { br, pf (its
+ * deck's line and heights), top(lonlat) (the deck's top there, as MapLibre should extrude it), parts
+ * (its towers, cables, arch or piers, and a deck of its own for when the road layer has no road on it) }.
+ * `terrain` { exaggeration, elevation(lngLat) } while land heights are on: heights are then raised as
+ * the land is (true heights times the exaggeration) and stand on the terrain MapLibre draws, so the
+ * ends meet the land as drawn; without, on Kartverket's ground under them (the map is flat).
+ */
+async function nvdbBridges(map, { terrain = null } = {}) {
   const b = map.getBounds();
   const c = map.getCenter();
   // the view, but not more than a few kilometres of it (a tilted view reaches far)
@@ -46,17 +53,30 @@ async function nvdbBridges(map) {
   const got = await Promise.all(keys.slice(0, MAX_CELLS).map(([i, j]) => cell(i, j)));
   const byId = new Map(), roads = [];
   for (const g of got) { for (const br of g.bridges) byId.set(br.id, br); roads.push(...g.roads); }
-  const built = [], parts = [];
+  const lift = (p, T) => {
+    // a part above the sea, as MapLibre should draw it: exaggerated like the land, less the land drawn under it
+    const base = Math.max(0, p.properties.base * terrain.exaggeration - T);
+    return { ...p, properties: { ...p.properties, base, top: Math.max(base + 0.2, p.properties.top * terrain.exaggeration - T) } };
+  };
+  const centre = (p) => { const r = p.geometry.coordinates[0]; return [r.reduce((a, q) => a + q[0], 0) / r.length, r.reduce((a, q) => a + q[1], 0) / r.length]; };
+  const out = [];
   await Promise.all([...byId.values()].map(async (br) => {
     const pts = groundPoints(br, roads);
     if (!pts) return;
-    // Built on the ground under it: without, a bridge over a street on a hill would stand a hill too high.
     const ground = await groundOf(br.id, pts);
     if (!ground) return; // OpenStreetMap's estimate stands in for it
-    const f = buildNvdbBridge(br, roads, ground.map((g) => g ?? 0));
-    if (f.length) { built.push(br); parts.push(...f); }
+    const g = ground.map((x) => x ?? 0);
+    const pf = deckProfile(br, roads);
+    const build = (deck) => (terrain
+      ? buildNvdbBridge(br, roads, null, { deck }).map((p) => lift(p, terrain.elevation(centre(p)) ?? 0))
+      : buildNvdbBridge(br, roads, g, { deck }));
+    const top = (ll) => {
+      const { t, z } = deckHeight(pf, ll);
+      return terrain ? z * terrain.exaggeration - (terrain.elevation(ll) ?? 0) : z - groundAt(g, t);
+    };
+    out.push({ br, pf, top, parts: build(false), deckParts: () => build(true).filter((p) => p.properties.part === 'deck') });
   }));
-  return { built, parts };
+  return out;
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
@@ -71,11 +91,6 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
   let timer = 0;
   let errors = 0;
   let seq = 0, nvdb = null;
-  /** An OpenStreetMap bridge piece lying on one of NVDB's bridges (its middle within the outline). */
-  const onNvdb = (f, built) => {
-    const c = f.geometry?.type === 'LineString' ? f.geometry.coordinates : f.geometry?.coordinates?.[0];
-    return Boolean(c?.length) && onBridge(c[Math.floor(c.length / 2)], built);
-  };
 
   function rebuild() {
     clearTimeout(timer);
@@ -85,16 +100,43 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
       if (map.getZoom() < BRIDGE_MIN_ZOOM - 0.5) { src.setData(EMPTY); return; }
       const feats = map.querySourceFeatures(SOURCE, { sourceLayer: 'transportation', filter: ['==', ['get', 'brunnel'], 'bridge'] });
       const mine = ++seq;
-      // OpenStreetMap's at once; NVDB's road bridges (real heights and types) when they come, in their place.
-      src.setData(buildBridges(nvdb ? feats.filter((f) => !onNvdb(f, nvdb.built)) : feats, nvdb?.parts));
-      nvdbBridges(map).then((r) => {
+      const draw = (list) => {
+        // The road layer's bridge roads, raised: where NVDB knows the bridge, at the road's real heights,
+        // with its towers, cables or piers; NVDB's own deck only where the road layer has no road on it.
+        const ctxOf = (lines) => {
+          const l = lines[0];
+          const mid = l[Math.floor(l.length / 2)];
+          return list?.find((x) => onBridge(mid, [x.br])) ?? null;
+        };
+        const used = new Set();
+        const heightFor = (lines) => {
+          const ctx = ctxOf(lines);
+          if (!ctx) return null;
+          used.add(ctx);
+          return ctx.top;
+        };
+        const roadsOnly = buildBridges(feats, [], { heightFor });
+        const extra = [];
+        for (const x of list ?? []) extra.push(...x.parts, ...(used.has(x) ? [] : x.deckParts()));
+        return { type: 'FeatureCollection', features: [...extra, ...roadsOnly.features] };
+      };
+      src.setData(draw(nvdb));
+      const t = map.getTerrain?.();
+      const terrain = t ? {
+        exaggeration: t.exaggeration ?? 1,
+        // the land's height as drawn there (exaggerated): MapLibre's own, from the middle of the view
+        elevation: (ll) => { const e = map.queryTerrainElevation?.(ll); return e == null ? null : e + (map.transform.elevation ?? 0); },
+      } : null;
+      nvdbBridges(map, { terrain }).then((list) => {
         if (mine !== seq || !on) return;
-        nvdb = r;
-        map.getSource(BRIDGE_SOURCE)?.setData(buildBridges(feats.filter((f) => !onNvdb(f, r.built)), r.parts));
+        nvdb = list;
+        map.getSource(BRIDGE_SOURCE)?.setData(draw(list));
       });
     }, 150);
   }
-  const onData = (e) => { if (e.sourceId === SOURCE && e.isSourceLoaded) rebuild(); };
+  // New vector tiles, new terrain tiles (land heights: the bridges stand on them), land heights on or off.
+  const onData = (e) => { if ((e.sourceId === SOURCE || e.sourceId === 'terrain-dem') && e.isSourceLoaded) rebuild(); };
+  map.on('terrain', () => { if (on) rebuild(); });
 
   function apply() {
     if (!styleReady(map)) { whenStyleReady(map, apply); return; } // not isStyleLoaded(): mapready.js
@@ -123,5 +165,6 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
       errors = 0;
       apply();
     },
+
   };
 }

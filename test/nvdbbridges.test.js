@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  bridgesUrl, roadsUrl, parseWkt, bridgeKind, bridgeFromNvdb, roadsFromNvdb, deckProfile, heightAt, buildNvdbBridge, onBridge, inside, groundPoints, parseGround,
+  bridgesUrl, roadsUrl, parseWkt, bridgeKind, bridgeFromNvdb, roadsFromNvdb, deckProfile, heightAt, buildNvdbBridge, onBridge, inside, groundPoints, parseGround, deckHeight, groundAt,
 } from '../public/nvdbbridges.js';
 import { toLonLat } from '../public/infra.js';
 
@@ -127,4 +127,18 @@ test('the deck lies on the road, not on the outline\'s edge', () => {
     const off = -(p.x - pf.a[0]) * pf.ax[1] + (p.y - pf.a[1]) * pf.ax[0];
     assert.ok(Math.abs(off) < 0.5, `the road is on the deck's line: ${off}`);
   }
+});
+
+test('the deck\'s height at a point of the road, and the ground along the bridge', () => {
+  const b = bridgeFromNvdb(nvdbBridge());
+  const pf = deckProfile(b, roadsFromNvdb(roads));
+  const mid = deckHeight(pf, P(300, 0));
+  assert.ok(Math.abs(mid.t - 0.5) < 0.02);
+  assert.ok(Math.abs(mid.z - 48) < 1);
+  assert.ok(deckHeight(pf, P(-100, 0)).z < 32, 'beyond the end: the end\'s height');
+  assert.equal(groundAt([0, 10, 20], 0.75), 15);
+  assert.equal(groundAt(null, 0.5), 0);
+  const noDeck = buildNvdbBridge(b, roadsFromNvdb(roads), null, { deck: false });
+  assert.equal(noDeck.filter((f) => f.properties.part === 'deck').length, 0, 'the road layer\'s road is the deck');
+  assert.ok(noDeck.some((f) => f.properties.part === 'tower'));
 });
