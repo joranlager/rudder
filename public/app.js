@@ -10,6 +10,8 @@ import { createTracker } from './tracker.js';
 import { createLiveTraces } from './livetraces.js';
 import { createLandHeights, TILT as TERRAIN_TILT } from './landheights.js';
 import { createInfra } from './infralayer.js';
+import { soundingPoints, seabedUrl, parseSeabed, groundCheck } from './contact.js';
+import { deleteModel } from './vessellibrary.js';
 import { createWebcams } from './webcamlayer.js';
 import { createWebcamView, shipsInView } from './webcamview.js';
 import { createFarView } from './farview.js';
@@ -247,6 +249,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('#rudder-bw')) 
 document.addEventListener('click', (e) => { const c = e.target.closest('[data-close]'); if (c) togglePanel(c.dataset.close, false); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  if (placing) { stopPlacing(); return; }
   // In the ship inspector, Escape in a field only leaves the field.
   if (shipsOpen()) { if (!e.target.closest?.('#ships input, #ships select')) closeShips(); return; }
   togglePanel('layers', false); togglePanel('settings', false); togglePanel('info', false);
@@ -263,7 +266,7 @@ async function openShips() {
   $('#ships-btn').setAttribute('aria-expanded', 'true');
   if (ships) { ships.resume(); return; }
   shipsLoading ??= import('./ships/ui.js')
-    .then((m) => { ships = m.createShipInspector($('#ships'), { onClose: closeShips }); })
+    .then((m) => { ships = m.createShipInspector($('#ships'), { onClose: closeShips, onPlace: startPlacing }); })
     .catch((err) => {
       shipsLoading = null;
       $('#ships').innerHTML = `<p class="ships-noview">Could not load the ship inspector (${esc(err.message)}).</p>`;
@@ -380,7 +383,70 @@ function tideGraph(curve, now) {
 }
 
 // A tap on a ship shows the ship; anywhere else, the sea at that point.
+// ---------- placing a ship of one's own (Ships → Place on the map; placed.js) ----------
+let placing = null; // { spec, keepLook } while the user picks the spot
+function placeBar(text, tone = '') {
+  let bar = $('#place-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'place-bar';
+    bar.className = 'place-bar';
+    bar.setAttribute('role', 'status');
+    document.body.appendChild(bar);
+    bar.addEventListener('click', (e) => { if (e.target.closest('[data-place-cancel]')) stopPlacing(); });
+  }
+  bar.hidden = !text;
+  bar.dataset.tone = tone;
+  bar.innerHTML = text ? `<span>${text}</span><button type="button" data-place-cancel>Cancel</button>` : '';
+}
+function startPlacing(spec, keepLook) {
+  closeShips();
+  togglePanel('info', false);
+  placing = { spec, keepLook, busy: false };
+  map.getCanvas().style.cursor = 'crosshair';
+  placeBar(`Tap open water to put <b>${esc(spec.name)}</b> there, bow up the screen.`);
+}
+function stopPlacing() {
+  placing = null;
+  map.getCanvas().style.cursor = '';
+  placeBar('');
+}
+async function placeAt(lngLat) {
+  if (placing.busy) return;
+  placing.busy = true;
+  const { spec } = placing;
+  const heading = (map.getBearing() + 360) % 360;
+  const at = { lat: lngLat.lat, lon: lngLat.lng, heading };
+  placeBar(`Sounding the water there…`);
+  // The hull's bow, stern, middle and sides must all be on water deep enough (Kartverket's heights).
+  const probe = { dimensionA: spec.length / 2, dimensionB: spec.length / 2, dimensionC: spec.beam / 2, dimensionD: spec.beam / 2 };
+  const pts = soundingPoints(probe, at);
+  let hit = null;
+  try {
+    const sea = parseSeabed(await (await fetch(seabedUrl(pts.map((p) => p.p)))).json());
+    hit = groundCheck(pts, sea, spec.draft).hit;
+    if (sea.length !== pts.length) throw new Error('no answer');
+  } catch {
+    placing.busy = false;
+    placeBar(`The depth there could not be checked just now (Kartverket's height service). Try again.`, 'err');
+    return;
+  }
+  if (hit) {
+    placing.busy = false;
+    placeBar(hit.reason === 'land'
+      ? `That is land at the ${esc(hit.name)}. Tap open water for <b>${esc(spec.name)}</b>.`
+      : `Too shallow at the ${esc(hit.name)} (${hit.depth?.toFixed(1)} m; she draws ${spec.draft.toFixed(1)} m). Tap deeper water.`, 'err');
+    return;
+  }
+  const { keepLook } = placing;
+  stopPlacing();
+  const v = ais.placeShip(spec, at, heading);
+  keepLook(v.mmsi).catch((e) => console.warn('placed ship look', e)); // the chart builds it from its type meanwhile
+  helm.take(v);
+}
+
 map.on('click', (e) => {
+  if (placing) { placeAt(e.lngLat); return; }
   if (bridge.active) return; // from the bridge the chart is not tapped
   if (webcamView.active) return;
   const v = ais.vesselAt(e.point);
@@ -469,10 +535,11 @@ function showVessel(v) {
       <button type="button" class="info-btn primary" data-bridge="${v.mmsi}" ${bridgeOk(v) ? '' : 'disabled title="Needs a size and heading from AIS"'}>View from the bridge</button>
       <button type="button" class="info-btn" data-helm-take="${v.mmsi}" ${bridgeOk(v) ? '' : 'disabled title="Needs a size and heading from AIS"'}>Take the helm</button>
       <button type="button" class="info-btn" data-open3d="${v.mmsi}">Open 3D model</button>
+      ${ais.isPlaced(v.mmsi) ? `<button type="button" class="info-btn" data-place-remove="${v.mmsi}">Remove from the map</button>` : ''}
       <button type="button" class="info-btn" data-sea-here="${v.mmsi}">Sea and weather here</button>
     </div>
     ${tracker.cardHtml(v)}
-    <div class="src">${v.playback ? 'Recorded on this device from Kystverket\'s AIS via BarentsWatch.' : 'AIS from Kystverket via BarentsWatch.'} Size and draught as the ship reports them.</div>`;
+    <div class="src">${ais.isPlaced(v.mmsi) ? 'Your ship, placed on the chart. Handed back, she carries on at her speed and course until she is stopped or runs aground.' : v.playback ? 'Recorded on this device from Kystverket\'s AIS via BarentsWatch.' : 'AIS from Kystverket via BarentsWatch.'} Size and draught as the ship reports them.</div>`;
   togglePanel('info', true);
 }
 $('#info-body').addEventListener('click', (e) => {
@@ -497,6 +564,15 @@ $('#info-body').addEventListener('change', (e) => {
 $('#info-body').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  if (b.dataset.placeRemove) {
+    const m = Number(b.dataset.placeRemove);
+    if (helm.active && helm.mmsi === m) helm.release();
+    if (bridge.active && bridge.mmsi === m) bridge.exit();
+    ais.removePlaced(m);
+    deleteModel(`placed-${m}`).catch(() => {});
+    togglePanel('info', false);
+    return;
+  }
   const v = ais.vessel(b.dataset.open3d ?? b.dataset.seaHere ?? b.dataset.bridge ?? b.dataset.helmTake);
   if (!v) return;
   if (b.dataset.helmTake) { if (ais.playingBack) { alert('Go back to live AIS (Ships tracker) to take the helm.'); return; } helm.take(v); }

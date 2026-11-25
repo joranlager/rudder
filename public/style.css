@@ -398,3 +398,13 @@ a.info-btn { text-decoration: none; display: inline-flex; align-items: center; }
   .wv-bar { grid-template-columns: 1fr auto; align-items: center; }
   .wv-adjust, .wv-note { grid-column: 1 / -1; }
 }
+
+/* placing a ship of one's own (app.js) */
+.place-bar {
+  position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 64px);
+  display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 8px 8px 8px 16px;
+  border-radius: 999px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-size: 14px;
+}
+.place-bar[hidden] { display: none; }
+.place-bar[data-tone="err"] { background: #fff1e6; color: #8a3a00; }
+.place-bar button { border: 0; border-radius: 999px; padding: 6px 14px; font: 600 14px system-ui, sans-serif; background: color-mix(in srgb, var(--ink) 10%, transparent); color: inherit; cursor: pointer; }

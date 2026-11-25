@@ -95,7 +95,7 @@ function loadCss() {
  * Builds the inspector into `root` (an empty element that covers the map) and returns its controls.
  * `onClose` is called when the inspector's own close button is used.
  */
-export function createShipInspector(root, { onClose } = {}) {
+export function createShipInspector(root, { onClose, onPlace } = {}) {
   loadCss();
   const st = {
     tab: 'ship',
@@ -767,6 +767,8 @@ export function createShipInspector(root, { onClose } = {}) {
         ].filter(([, x]) => x != null && x !== '')
       : [];
     return `
+      ${onPlace ? `<div class="group pad ships-place"><div class="row"><button type="button" class="primary" data-act="place">Place on the map</button></div>
+        <p class="muted small">Put this ship on the chart, on open water, and take the helm. It looks as it does here.</p></div>` : ''}
       ${st.file && st.notice ? `<p class="notice">${esc(st.notice)} <button type="button" class="ghost" data-act="close-file">Show the built model</button></p>` : ''}
       ${st.fileLoading ? '<p class="muted small">Loading its model…</p>' : ''}
       ${
@@ -1296,6 +1298,23 @@ export function createShipInspector(root, { onClose } = {}) {
         .then((b) => downloadBlob(`${base}_view.png`, b));
     } else if (a === 'hull-png' && model?.hullCanvas) downloadCanvas(`${base}_hull_paint.png`, model.hullCanvas);
     else if (a === 'close-file') closeFile();
+    else if (a === 'place' && model && onPlace) {
+      const d = model.dims;
+      const name = (st.file?.name ?? st.facts?.label ?? ((st.ais?.name || '').trim() || st.text.name || 'My ship')).replace(/^(MS|MV|M\/S|RMS)\s+/i, '');
+      const spec = {
+        name,
+        kind: st.params.kind,
+        length: model.imported ? d.xMax - d.xMin : st.params.length,
+        beam: model.imported ? d.halfBeam * 2 : st.params.beam,
+        draft: model.imported ? Math.max(0.5, -d.keelY) : st.params.draft,
+      };
+      // Its look goes with it: saved on this device under its new MMSI, which the chart draws it by.
+      const keepLook = async (mmsi) => {
+        const blob = await exportGlb(model.group);
+        await saveModel({ id: `placed-${mmsi}`, name, mmsi: [String(mmsi)], blob, size: blob.size, length: +spec.length.toFixed(2), beam: +spec.beam.toFixed(2), draft: +spec.draft.toFixed(2), credit: credits(), placed: true, thumb: scene ? thumbnail(scene.renderer.domElement) : '' });
+      };
+      onPlace(spec, keepLook);
+    }
     else if (a === 'tex-remove') {
       if (model?.imported) { const { [st.texTarget]: _, ...rest } = st.fileTextures; st.fileTextures = rest; }
       else { const { [st.texTarget]: _, ...rest } = st.textures; st.textures = rest; }
