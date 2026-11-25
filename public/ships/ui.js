@@ -1,6 +1,9 @@
 // Ship inspector: the screen behind "Ships" in the top bar. Search a vessel on Wikidata, see its
 // facts and Commons photos, rebuild the hull in 3D, sample its colours from a photo, paint its name
 // on the hull, look at it in a studio, at sea or from below the waterline, and export it as OBJ.
+// Ships with a model of their own (the vessels folder, or one saved on this device) are shown with
+// it; models can be uploaded, fitted, textured with pictures from the web or the device, saved and
+// downloaded (Texture and Models tabs).
 //
 // Loaded on demand by app.js (import('./ships/ui.js')), so the map app does not pay for three.js
 // until someone opens it. Everything runs in the browser; Wikidata and Commons are called directly.
@@ -15,6 +18,11 @@ import { DEFAULT_LIVERY, KIND_PRESETS, defaultParams, depthFor, liveryFromFacts,
 import { HULL_FONTS } from './hullText.js';
 import { fmtLen } from './callouts.js';
 import { exportOBJ, downloadText, downloadCanvas, downloadBlob } from './objExport.js';
+import { loadModel, loadEntry, fitModel, disposeObject, nameMaterials, materialsNamed, applyTexture, clearTexture, exportGlb, thumbnail } from './vesselmodel.js';
+import { formatOf, UP_AXES, FORWARD_AXES, matchName } from '../vesselcatalog.js';
+import { vesselModels, findIn, FOLDER_URL, modelBlob, saveModel, deleteModel } from '../vessellibrary.js';
+import { TEXTURE_SOURCES, TEXTURE_SUGGESTIONS, searchTextures, polyhavenImageUrl, pictureUrl, CORS_HINT } from './texturesources.js';
+import * as THREE from '../vendor/three.js';
 
 const SUGGESTIONS = ['Titanic', 'Queen Mary 2', 'Ever Given', 'Cutty Sark', 'USS Nimitz', 'Statsraad Lehmkuhl', 'Christian Radich', 'Color Magic'];
 const MANUAL = { length: 'manual', beam: 'manual', draft: 'manual', airDraft: 'manual' };
@@ -23,9 +31,30 @@ const TABS = [
   ['ship', 'Ship'],
   ['build', 'Build'],
   ['livery', 'Livery'],
+  ['texture', 'Texture'],
   ['sea', 'Sea'],
-  ['export', 'Export'],
+  ['models', 'Models'],
 ];
+/** Parts of a built ship a picture can go on; a model from a file offers its own materials instead. */
+const PARTS = [
+  ['hull', 'Hull topsides'],
+  ['deck', 'Deck'],
+  ['superstructure', 'Superstructure'],
+  ['funnel', 'Funnels'],
+];
+const SOURCE_NAME = { folder: 'Vessels folder', device: 'Saved on this device', upload: 'Uploaded file' };
+const slug = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'ship';
+const fmtSize = (b) => (b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1e3))} kB`);
+
+/** Load a picture so its pixels can be used (CORS), trying each address in turn. */
+async function loadPictureFrom(urls) {
+  let last = null;
+  for (const u of urls.filter(Boolean)) {
+    try { return await loadImage(u); } catch (e) { last = e; }
+  }
+  throw last ?? new Error('No picture');
+}
+
 const VIEWS = [
   ['quarter', '3/4'],
   ['profile', 'Side'],
@@ -111,6 +140,25 @@ export function createShipInspector(root, { onClose } = {}) {
     sheetOpen: true,
     stats: null,
     topY: 0,
+    // a model from a file in view instead of the built one: { source, entry, object, fit, name }
+    file: null,
+    fileLoading: null,
+    fileError: null,
+    models: { folder: [], device: [] },
+    // pictures on the ship: built ship by part (PARTS), a file's model by material name ('*': all)
+    textures: {},
+    fileTextures: {},
+    texTarget: 'hull',
+    texSource: 'commons',
+    texQuery: '',
+    texHits: [],
+    texSearching: false,
+    texError: null,
+    texBusy: false,
+    texOpts: { mode: 'stretch', tile: 8, opacity: 1, blend: 'normal', flip: false, projection: 'box' },
+    saveForm: null,
+    saving: false,
+    notice: null,
   };
 
   root.classList.add('ships');
@@ -169,28 +217,75 @@ export function createShipInspector(root, { onClose } = {}) {
 
   // ---------- model ----------
 
-  const calloutValues = () => ({
-    loa: st.params.length,
-    beam: st.params.beam,
-    draft: st.params.draft,
-    air: model ? model.dims.topY : st.params.airDraft,
-    sources: st.sources,
-  });
+  const calloutValues = () =>
+    model?.imported
+      ? {
+          loa: model.dims.xMax - model.dims.xMin,
+          beam: model.dims.halfBeam * 2,
+          draft: Math.max(0, -model.dims.keelY),
+          air: model.dims.topY,
+          sources: { length: 'model', beam: 'model', draft: 'model', airDraft: 'model' },
+        }
+      : {
+          loa: st.params.length,
+          beam: st.params.beam,
+          draft: st.params.draft,
+          air: model ? model.dims.topY : st.params.airDraft,
+          sources: st.sources,
+        };
 
   function rebuild() {
     clearTimeout(rebuildTimer);
     rebuildTimer = setTimeout(() => {
       if (!scene) return;
-      model = buildShip(st.params, st.livery, st.text);
-      const reframe = lastKey !== st.shipKey;
-      lastKey = st.shipKey;
+      const f = st.file;
+      if (f) {
+        // The same loaded model, fitted again (its axes, size or waterline changed): it moves out of
+        // the old wrapper into the new one, and the old wrapper goes without disposing it.
+        f.object.removeFromParent();
+        try {
+          model = fitModel(f.object, f.fit, { shared: true });
+        } catch (e) {
+          st.fileError = e instanceof Error ? e.message : String(e);
+          closeFile();
+          return;
+        }
+      } else model = buildShip(st.params, paintLivery(), st.text);
+      dressTextures();
+      const key = f ? `file:${f.entry.id}` : st.shipKey;
+      const reframe = lastKey !== key;
+      lastKey = key;
       scene.setShip(model, reframe);
       st.topY = model.dims.topY;
       scene.setCallouts(calloutValues(), st.units, st.callouts);
       renderHead();
     }, 50);
   }
-  const repaint = () => model?.applyLivery(st.livery, st.text);
+  /** The livery with the hull picture (Texture tab), for ship.js. */
+  const paintLivery = () => {
+    const t = st.textures.hull;
+    return t ? { ...st.livery, hullImage: { img: t.img, mode: t.mode, tile: t.tile, opacity: t.opacity, blend: t.blend, flip: t.flip } } : st.livery;
+  };
+  /** Put the chosen pictures on the model in view (and take off those removed). */
+  function dressTextures() {
+    if (!model) return;
+    if (model.imported) {
+      const all = materialsNamed(model.group, '*');
+      clearTexture(model.group, all);
+      for (const [name, t] of Object.entries(st.fileTextures)) {
+        applyTexture(model.group, materialsNamed(model.group, name), t.img, { tile: t.tile, projection: t.projection });
+      }
+      return;
+    }
+    const parts = PARTS.filter(([k]) => k !== 'hull').map(([k]) => model.materials[k]);
+    clearTexture(model.group, parts);
+    model.applyLivery(paintLivery(), st.text);
+    for (const [k] of PARTS) {
+      const t = st.textures[k];
+      if (k !== 'hull' && t) applyTexture(model.group, [model.materials[k]], t.img, { tile: t.tile, projection: 'box' });
+    }
+  }
+  const repaint = () => dressTextures();
   const refreshCallouts = () => scene && model && scene.setCallouts(calloutValues(), st.units, st.callouts);
 
   // ---------- data ----------
@@ -255,13 +350,16 @@ export function createShipInspector(root, { onClose } = {}) {
     abort?.abort();
     const { params, sources } = hullFromAis(v);
     const name = (v.name || '').trim() || `MMSI ${v.mmsi}`;
+    dropFile();
     Object.assign(st, {
+      textures: {}, texTarget: 'hull', notice: null,
       tab: 'ship', ais: v, facts: null, params, sources, livery: { ...DEFAULT_LIVERY[params.kind] }, shipKey: `ais:${v.mmsi}`,
       hits: [], images: [], palette: [], activeImage: null, uploadedUrl: null, error: null, sheetOpen: true,
     });
     st.text = { ...st.text, name: name.toUpperCase(), port: '', banner: '', imo: v.imoNumber ? String(v.imoNumber) : '' };
     rebuild();
     renderTab();
+    lookForModel(v);
     if (!v.imoNumber) return;
     const ac = new AbortController();
     abort = ac;
@@ -277,7 +375,11 @@ export function createShipInspector(root, { onClose } = {}) {
     abort?.abort();
     const ac = new AbortController();
     abort = ac;
-    if (!ais) st.ais = null;
+    if (!ais) {
+      st.ais = null;
+      dropFile();
+      Object.assign(st, { textures: {}, texTarget: 'hull', notice: null });
+    }
     Object.assign(st, { loadingFacts: true, error: null, images: [], palette: [], activeImage: null, uploadedUrl: null });
     renderTab();
     try {
@@ -294,6 +396,7 @@ export function createShipInspector(root, { onClose } = {}) {
         imo: f.imo ?? (ais?.imoNumber ? String(ais.imoNumber) : ''),
       };
       rebuild();
+      if (!ais) lookForModel({ mmsi: f.mmsi, imo: f.imo, callSign: f.callSign, label: f.label });
       st.loadingImages = true;
       renderTab();
       try {
@@ -318,14 +421,294 @@ export function createShipInspector(root, { onClose } = {}) {
     }
   }
 
+  // ---------- models from files: the vessels folder, this device, uploads ----------
+
+  async function refreshModels() {
+    st.models = await vesselModels();
+    if (st.tab === 'models') renderTab();
+    return st.models;
+  }
+
+  /** How a model is fitted at first: as its entry says, to the ship's length and draught where known. */
+  function fitFor(entry) {
+    const known = st.ais && st.sources.length === 'ais';
+    return {
+      up: entry.up ?? '+y',
+      forward: entry.forward ?? '+x',
+      scale: entry.scale ?? 'length',
+      length: known ? st.params.length : entry.length ?? st.params.length,
+      draft: st.sources.draft === 'ais' ? st.params.draft : entry.draft ?? st.params.draft,
+      waterline: entry.waterline ?? 'keel',
+    };
+  }
+
+  /** Forget the model from a file (a new ship was chosen); it leaves the scene with the next rebuild. */
+  function dropFile() {
+    st.fileLoading = null;
+    if (!st.file) return;
+    const old = st.file.object;
+    st.file = null;
+    st.fileTextures = {};
+    setTimeout(() => disposeObject(old), 200);
+  }
+
+  function showFile(file) {
+    if (st.file && st.file.object !== file.object) {
+      const old = st.file.object;
+      setTimeout(() => disposeObject(old), 200);
+    }
+    st.file = file;
+    st.fileTextures = {};
+    st.texTarget = '*';
+    st.fileError = null;
+    rebuild();
+    renderTab();
+  }
+
+  /** Show a model from the vessels folder or this device (a catalog entry). */
+  async function openFile(entry, why = null) {
+    const token = {};
+    st.fileLoading = token;
+    st.fileError = null;
+    renderTab();
+    try {
+      const object = await loadEntry(entry, { folderUrl: FOLDER_URL, blobOf: modelBlob });
+      if (st.fileLoading !== token) { disposeObject(object); return; }
+      nameMaterials(object);
+      st.notice = why;
+      showFile({ source: entry.source, entry, object, fit: fitFor(entry), name: entry.name });
+    } catch (e) {
+      if (st.fileLoading === token) st.fileError = `Could not load ${entry.name}: ${e instanceof Error ? e.message : e}`;
+    }
+    if (st.fileLoading === token) st.fileLoading = null;
+    renderTab();
+  }
+
+  /** The axis a model is longest along, across the up axis: most likely its length. */
+  function guessForward(object, up) {
+    // measured in the model's own axes: out of the fitting wrapper for a moment
+    const parent = object.parent;
+    parent?.remove(object);
+    object.updateMatrixWorld(true);
+    const size = new THREE.Box3().setFromObject(object, true).getSize(new THREE.Vector3());
+    parent?.add(object);
+    const axes = ['x', 'y', 'z'].filter((a) => a !== up[1]);
+    return `+${size[axes[0]] >= size[axes[1]] ? axes[0] : axes[1]}`;
+  }
+
+  async function openUpload(files) {
+    const main = [...files].find((f) => formatOf(f.name));
+    if (!main) {
+      st.fileError = 'Choose a .glb, .gltf, .obj or .stl file (with its .mtl, .bin and pictures, if it has them).';
+      renderTab();
+      return;
+    }
+    const token = {};
+    st.fileLoading = token;
+    st.fileError = null;
+    renderTab();
+    try {
+      const object = await loadModel({ files });
+      if (st.fileLoading !== token) { disposeObject(object); return; }
+      nameMaterials(object);
+      const format = formatOf(main.name);
+      // glTF is y-up by its rules; STL comes from CAD and 3D printing, which are mostly z-up.
+      const up = format === 'stl' ? '+z' : '+y';
+      const name = main.name.replace(/\.[^.]+$/, '');
+      const entry = { id: `upload:${main.name}:${main.size}`, name, format, source: 'upload' };
+      st.notice = null;
+      showFile({
+        source: 'upload', entry, object, name,
+        fit: { up, forward: guessForward(object, up), scale: 'length', length: st.params.length, draft: st.params.draft, waterline: 'keel' },
+      });
+    } catch (e) {
+      if (st.fileLoading === token) st.fileError = `Could not read ${main.name}: ${e instanceof Error ? e.message : e}`;
+    }
+    if (st.fileLoading === token) st.fileLoading = null;
+    renderTab();
+  }
+
+  /** Back to the ship built from its type and size. */
+  function closeFile() {
+    if (!st.file) return;
+    const f = st.file;
+    st.file = null;
+    st.fileTextures = {};
+    st.texTarget = 'hull';
+    st.notice = null;
+    rebuild();
+    // the old model leaves the scene in rebuild; free it after that
+    setTimeout(() => disposeObject(f.object), 200);
+    renderTab();
+  }
+
+  /** A ship just chosen: if the vessels folder or this device has its model, show that. */
+  async function lookForModel(ship) {
+    const models = await refreshModels();
+    const e = findIn(models, ship);
+    if (!e) return;
+    await openFile(e, `${e.name} has a model of its own (${SOURCE_NAME[e.source].toLowerCase()}), shown instead of the one built from its type.`);
+  }
+
+  /** What the save form starts with: the ship in view's name and numbers. */
+  function saveDefaults() {
+    const f = st.file?.source === 'device' ? st.file.entry : null;
+    const v = st.ais;
+    return {
+      name: f?.name ?? st.facts?.label ?? ((v?.name || '').trim() || st.file?.name || st.text.name || 'Ship'),
+      mmsi: f?.mmsi?.join(' ') ?? (v?.mmsi ? String(v.mmsi) : st.facts?.mmsi ?? ''),
+      imo: f?.imo ?? (v?.imoNumber ? String(v.imoNumber) : st.facts?.imo ?? st.text.imo ?? ''),
+      callSign: f?.callSign ?? v?.callSign ?? st.facts?.callSign ?? '',
+    };
+  }
+
+  /** Who made the pictures on the model, for the saved model and the vessels folder's sidecar. */
+  function credits() {
+    const all = [...Object.values(st.textures), ...Object.values(st.fileTextures)].filter((t) => t.credit);
+    return [...new Set(all.map((t) => t.credit))].join('; ');
+  }
+
+  async function saveToDevice(form) {
+    if (!model || st.saving) return;
+    st.saving = true;
+    renderTab();
+    try {
+      const blob = await exportGlb(model.group);
+      const d = model.dims;
+      const rec = {
+        id: st.file?.source === 'device' ? st.file.entry.id : undefined,
+        name: form.name.trim() || 'Ship',
+        mmsi: form.mmsi.split(/[\s,;]+/).filter(Boolean),
+        imo: form.imo,
+        callSign: form.callSign,
+        length: +(d.xMax - d.xMin).toFixed(2),
+        beam: +(d.halfBeam * 2).toFixed(2),
+        draft: +Math.max(0, -d.keelY).toFixed(2),
+        credit: credits(),
+        blob,
+        thumb: scene ? thumbnail(scene.renderer.domElement) : '',
+      };
+      await saveModel(rec);
+      st.saveForm = null;
+      st.notice = `Saved “${rec.name}” on this device (${fmtSize(blob.size)}). ${rec.mmsi.length || rec.imo || rec.callSign ? 'The chart draws it for that ship from now on.' : 'Give it an MMSI or IMO number for the chart to use it.'}`;
+      await refreshModels();
+    } catch (e) {
+      st.notice = null;
+      st.fileError = `Could not save the model: ${e instanceof Error ? e.message : e}`;
+    }
+    st.saving = false;
+    renderTab();
+  }
+
+  const baseFileName = () => slug(st.file?.name ?? st.facts?.label ?? ((st.ais?.name || '').trim() || st.text.name));
+
+  async function downloadGlb(forFolder) {
+    if (!model) return;
+    const blob = await exportGlb(model.group);
+    const name = baseFileName();
+    downloadBlob(`${name}.glb`, blob);
+    if (!forFolder) return;
+    const k = saveDefaults();
+    const d = model.dims;
+    const sidecar = {
+      name: k.name,
+      ...(k.mmsi ? { mmsi: k.mmsi.split(/[\s,;]+/).filter(Boolean) } : {}),
+      ...(k.imo ? { imo: k.imo } : {}),
+      ...(k.callSign ? { callSign: k.callSign } : {}),
+      file: `${name}.glb`,
+      up: '+y',
+      forward: '+x',
+      waterline: 'origin',
+      scale: 'length',
+      length: +(d.xMax - d.xMin).toFixed(2),
+      beam: +(d.halfBeam * 2).toFixed(2),
+      draft: +Math.max(0, -d.keelY).toFixed(2),
+      ...(credits() ? { credit: credits() } : {}),
+    };
+    setTimeout(() => downloadText(`${name}.json`, JSON.stringify(sidecar, null, 2) + '\n', 'application/json'), 400);
+  }
+
+  // ---------- pictures on the ship ----------
+
+  async function runTexSearch(q) {
+    st.texQuery = q;
+    if (!q.trim()) return;
+    st.texSearching = true;
+    st.texError = null;
+    renderTab();
+    try {
+      st.texHits = await searchTextures(st.texSource, q);
+      if (!st.texHits.length) st.texError = `Nothing for “${q}” on ${TEXTURE_SOURCES.find(([k]) => k === st.texSource)?.[1]}.`;
+    } catch (e) {
+      st.texHits = [];
+      st.texError = `The search failed (${e instanceof Error ? e.message : e}).`;
+    }
+    st.texSearching = false;
+    renderTab();
+  }
+
+  /** Put a picture on the chosen part: `pic` { urls: [..], title, credit, page }. */
+  async function usePicture(pic) {
+    st.texBusy = true;
+    st.texError = null;
+    renderTab();
+    try {
+      const img = await loadPictureFrom(pic.urls);
+      const o = st.texOpts;
+      const t = { img, src: img.src, title: pic.title, credit: pic.credit, page: pic.page, tile: o.tile, mode: o.mode, opacity: o.opacity, blend: o.blend, flip: o.flip, projection: o.projection };
+      if (model?.imported) st.fileTextures = { ...st.fileTextures, [st.texTarget]: t };
+      else st.textures = { ...st.textures, [st.texTarget]: t };
+      dressTextures();
+    } catch {
+      st.texError = pic.local ? 'This file is not a picture the browser can read.' : CORS_HINT;
+    }
+    st.texBusy = false;
+    renderTab();
+  }
+
+  const creditOf = (h) => [h.title, h.author && `by ${h.author}`, h.license, h.source].filter(Boolean).join(' · ');
+
+  async function useHit(h) {
+    if (h.source === 'Poly Haven' && !h.full) {
+      st.texBusy = true;
+      renderTab();
+      try {
+        h.full = await polyhavenImageUrl(h.id);
+      } catch (e) {
+        st.texBusy = false;
+        st.texError = `Poly Haven: ${e instanceof Error ? e.message : e}`;
+        renderTab();
+        return;
+      }
+    }
+    usePicture({ urls: [h.full, ...(h.alt ?? []), h.thumb], title: h.title, credit: creditOf(h), page: h.page });
+  }
+
+  /** Change how the current target's picture lies (tile size, opacity...), without loading it again. */
+  function retexture(k, v) {
+    st.texOpts = { ...st.texOpts, [k]: v };
+    const set = model?.imported ? st.fileTextures : st.textures;
+    const t = set[st.texTarget];
+    if (t) {
+      set[st.texTarget] = { ...t, [k]: v };
+      dressTextures();
+    }
+  }
+
   // ---------- rendering ----------
 
   function renderHead() {
     $('.ships-title').textContent = st.facts?.label ?? ((st.ais?.name || '').trim() || (st.ais ? `MMSI ${st.ais.mmsi}` : 'Custom vessel'));
     const p = st.params;
-    $('.ships-sub').textContent =
-      `${KIND_PRESETS[p.kind].label} · ${fmtLen(p.length, st.units)} × ${fmtLen(p.beam, st.units)} · draft ${fmtLen(p.draft, st.units)}` +
-      (st.topY ? ` · air ${fmtLen(st.topY, st.units)}` : '');
+    if (st.file && model?.imported) {
+      const d = model.dims;
+      $('.ships-sub').textContent =
+        `${SOURCE_NAME[st.file.source]}: ${st.file.name} · ${fmtLen(d.xMax - d.xMin, st.units)} × ${fmtLen(d.halfBeam * 2, st.units)} · air ${fmtLen(d.topY, st.units)}`;
+    } else {
+      $('.ships-sub').textContent =
+        `${KIND_PRESETS[p.kind].label} · ${fmtLen(p.length, st.units)} × ${fmtLen(p.beam, st.units)} · draft ${fmtLen(p.draft, st.units)}` +
+        (st.topY ? ` · air ${fmtLen(st.topY, st.units)}` : '');
+    }
     root.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === st.mode)));
     root.querySelectorAll('.ships-tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === st.tab)));
     $('[data-toggle="callouts"]').setAttribute('aria-pressed', String(st.callouts));
@@ -384,6 +767,8 @@ export function createShipInspector(root, { onClose } = {}) {
         ].filter(([, x]) => x != null && x !== '')
       : [];
     return `
+      ${st.file && st.notice ? `<p class="notice">${esc(st.notice)} <button type="button" class="ghost" data-act="close-file">Show the built model</button></p>` : ''}
+      ${st.fileLoading ? '<p class="muted small">Loading its model…</p>' : ''}
       ${
         v
           ? `<h3 class="label">From AIS</h3>
@@ -445,11 +830,18 @@ export function createShipInspector(root, { onClose } = {}) {
       }`;
   }
 
+  const fileNotice = (what) =>
+    st.file
+      ? `<p class="notice">In view: ${esc(st.file.name)} (${esc(SOURCE_NAME[st.file.source].toLowerCase())}). ${what}
+           <button type="button" class="ghost" data-act="close-file">Show the built model</button></p>`
+      : '';
+
   function renderBuildTab() {
     const p = st.params;
     const L = (v) => fmtLen(v, st.units);
     const opt = (list, cur) => list.map(([v, l]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${l}</option>`).join('');
     return `
+      ${fileNotice('Its size and how it lies are set under Models; these settings build the ship from its type.')}
       <div class="group pad ships-selects">
         <label>Vessel type<select data-select="kind">${opt(Object.entries(KIND_PRESETS).map(([k, v]) => [k, v.label]), p.kind)}</select></label>
         <label>Bow<select data-select="bow">${opt([['bulbous', 'Bulbous'], ['raked', 'Raked'], ['vertical', 'Plumb'], ['clipper', 'Clipper']], p.bow)}</select></label>
@@ -495,6 +887,7 @@ export function createShipInspector(root, { onClose } = {}) {
     const sw = (k, label) =>
       `<label class="switch-row"><span>${label}</span><input type="checkbox" role="switch" data-text="${k}" ${t[k] ? 'checked' : ''}></label>`;
     return `
+      ${fileNotice('A model from a file keeps its own colours: put pictures on it under Texture. The livery here is for the built model.')}
       <h3 class="label">Colours from a photo</h3>
       <div class="group pad">
         ${
@@ -572,30 +965,216 @@ export function createShipInspector(root, { onClose } = {}) {
       <p class="muted small pad-note">Under water, tap Keel to look at the hull from below. Drag to look around; pinch or scroll to zoom.</p>`;
   }
 
-  function renderExportTab() {
+  function renderTextureTab() {
+    const imported = Boolean(model?.imported && st.file);
+    const targets = imported ? [['*', 'Whole model'], ...nameMaterials(model.group).map((n) => [n, n])] : PARTS;
+    if (!targets.some(([k]) => k === st.texTarget)) st.texTarget = targets[0][0];
+    const set = imported ? st.fileTextures : st.textures;
+    const cur = set[st.texTarget];
+    const o = cur ?? st.texOpts;
+    const hullPart = !imported && st.texTarget === 'hull';
+    const opt = (list, v) => list.map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
+    const sources = [...TEXTURE_SOURCES, ...(st.images.length ? [['ship', "This ship's photos"]] : []), ['url', 'Web address'], ['file', 'My picture']];
+    const hits = st.texSource === 'ship' ? st.images.map((i) => ({ ...i, alt: [], source: 'Wikimedia Commons' })) : st.texHits;
+    const applied = Object.entries(set);
     return `
-      <h3 class="label">3D model</h3>
-      <div class="group pad">
-        <p class="muted small">Wavefront OBJ of the rebuilt ship at rest: hull, decks, deckhouses, funnels, masts and cargo. Metres, Y up, bow towards +X. The MTL file holds the colours and names the painted hull pictures.</p>
-        <div class="row">
-          <button type="button" class="primary" data-act="obj-all">.obj + .mtl + pictures</button>
-          <button type="button" class="tinted" data-act="obj">.obj only</button>
-        </div>
-        ${st.stats ? `<p class="muted small" data-out="stats">${st.stats.objects.toLocaleString()} parts · ${st.stats.vertices.toLocaleString()} vertices · ${st.stats.faces.toLocaleString()} triangles</p>` : ''}
+      <p class="muted small pad-note">Put a picture on the ship: a photo along the hull, or a texture such as painted steel, rust or teak, repeated over a part. ${imported ? 'This model is from a file: choose one of its materials, or all of it.' : 'Pictures on the built model are kept when it is changed in Build.'}</p>
+      <div class="group pad ships-selects">
+        <label>Put it on<select data-tex="target">${opt(targets.map(([k, l]) => [k, l + (set[k] ? ' ✓' : '')]), st.texTarget)}</select></label>
+        ${
+          hullPart
+            ? `<label>How<select data-tex="mode">${opt([['stretch', 'One picture along the whole side'], ['tile', 'Repeated, like paint or plating']], o.mode)}</select></label>`
+            : imported
+              ? `<label>How<select data-tex="projection">${opt([['box', 'Repeated, in metres'], ['uv', "On the model's own texture coordinates"]], o.projection)}</select></label>`
+              : ''
+        }
+        ${
+          (hullPart && o.mode === 'tile') || (!hullPart && o.projection !== 'uv')
+            ? `<label class="ships-range"><span class="ships-range-top"><span>One repeat is</span><b data-out="tile">${fmtLen(o.tile, st.units)}</b></span>
+                 <input type="range" data-tex="tile" min="0.5" max="60" step="0.5" value="${o.tile}"></label>`
+            : ''
+        }
+        ${
+          hullPart
+            ? `<label class="ships-range"><span class="ships-range-top"><span>Strength</span><b data-out="opacity">${Math.round(o.opacity * 100)} %</b></span>
+                 <input type="range" data-tex="opacity" min="0.05" max="1" step="0.05" value="${o.opacity}"></label>
+               <label>Blend<select data-tex="blend">${opt([['normal', 'Over the paint'], ['multiply', 'Into the paint (keeps its colour)']], o.blend)}</select></label>
+               <label class="switch-row" style="padding:4px 0"><span>The picture's bow is on its left</span><input type="checkbox" role="switch" data-tex="flip" ${o.flip ? 'checked' : ''}></label>`
+            : ''
+        }
       </div>
-      <h3 class="label">Pictures</h3>
+      ${
+        cur
+          ? `<div class="group pad ships-applied">
+               <figure class="ships-photo"><img src="${esc(cur.src)}" alt=""><figcaption class="muted small">${cur.page ? `<a href="${esc(cur.page)}" target="_blank" rel="noopener">${esc(cur.credit || cur.title)}</a>` : esc(cur.credit || cur.title || 'Your picture')}</figcaption></figure>
+               <div class="row"><button type="button" class="ghost" data-act="tex-remove">Take it off</button></div>
+             </div>`
+          : ''
+      }
+      <h3 class="label">Pictures from</h3>
+      <div class="chips ships-chips" role="radiogroup">${sources
+        .map(([k, l]) => `<button type="button" class="chip" role="radio" data-texsrc="${k}" aria-checked="${st.texSource === k}">${esc(l)}</button>`)
+        .join('')}</div>
+      ${
+        st.texSource === 'url'
+          ? `<form class="row ships-texurl"><input name="u" placeholder="https://… a picture's address" aria-label="Picture address" autocomplete="off" inputmode="url">
+               <button type="submit" class="primary" ${st.texBusy ? 'disabled' : ''}>Use</button></form>
+             <p class="muted small pad-note">Works when the picture's site lets other web pages use it (most image services and Wikimedia do). If not, save it and use My picture.</p>`
+          : st.texSource === 'file'
+            ? `<div class="row"><button type="button" class="primary" data-act="tex-upload" ${st.texBusy ? 'disabled' : ''}>Choose a picture…</button></div>
+               <p class="muted small pad-note">The picture stays on this device.</p>`
+            : st.texSource === 'ship'
+              ? ''
+              : `<form class="row ships-texsearch">
+                   <input name="tq" value="${esc(st.texQuery)}" placeholder="Search ${esc(TEXTURE_SOURCES.find(([k]) => k === st.texSource)?.[1] ?? '')}" aria-label="Search pictures" autocomplete="off" enterkeyhint="search">
+                   <button type="submit" class="primary" ${st.texSearching ? 'disabled' : ''}>${st.texSearching ? 'Searching…' : 'Search'}</button>
+                 </form>
+                 <div class="chips ships-chips">${TEXTURE_SUGGESTIONS.map((x) => `<button type="button" class="chip" data-texsuggest="${esc(x)}">${esc(x)}</button>`).join('')}</div>`
+      }
+      <input type="file" accept="image/*" hidden data-texfile>
+      ${st.texBusy ? '<p class="muted small">Loading the picture…</p>' : ''}
+      ${st.texError ? `<p class="error">${esc(st.texError)}</p>` : ''}
+      ${
+        ['url', 'file'].includes(st.texSource) || !hits.length
+          ? ''
+          : `<div class="ships-gallery">${hits
+              .slice(0, 30)
+              .map(
+                (h, i) =>
+                  `<button type="button" data-texhit="${i}" title="${esc(creditOf(h))}"><img src="${esc(h.thumb)}" alt="${esc(h.title)}" loading="lazy"></button>`,
+              )
+              .join('')}</div>`
+      }
+      ${
+        applied.length
+          ? `<h3 class="label">On the ship</h3>
+             <ul class="group ships-list">${applied
+               .map(
+                 ([k, t]) => `<li><span class="ships-thumb"><img src="${esc(t.src)}" alt=""></span>
+                   <span class="ships-hit"><b>${esc(targets.find(([x]) => x === k)?.[1] ?? k)}</b><small class="muted">${esc(t.credit || t.title || 'Your picture')}</small></span>
+                   <button type="button" class="ghost" data-texoff="${esc(k)}">Remove</button></li>`,
+               )
+               .join('')}</ul>
+             <p class="muted small pad-note">Pictures from the web keep their own licences (shown with each). Save the model under Models to keep them with it.</p>`
+          : ''
+      }`;
+  }
+
+  function renderModelsTab() {
+    const f = st.file;
+    const fit = f?.fit;
+    const opt = (list, v) => list.map((k) => `<option value="${k}" ${k === v ? 'selected' : ''}>${k.toUpperCase()}</option>`).join('');
+    const sf = st.saveForm;
+    const row = (e, actions) => `<li>
+        <span class="ships-thumb">${e.thumb ? `<img src="${esc(e.thumb)}" alt="">` : ''}</span>
+        <span class="ships-hit"><b>${esc(e.name)}</b><small class="muted">${esc(
+          [e.mmsi.length ? `MMSI ${e.mmsi.join(', ')}` : '', e.imo ? `IMO ${e.imo}` : '', e.callSign, e.size ? fmtSize(e.size) : e.file].filter(Boolean).join(' · '),
+        )}</small></span>
+        <span class="ships-actions">${actions}</span></li>`;
+    return `
+      ${st.notice ? `<p class="notice">${esc(st.notice)}</p>` : ''}
+      ${st.fileError ? `<p class="error">${esc(st.fileError)}</p>` : ''}
+      <h3 class="label">In view</h3>
       <div class="group pad">
+        ${
+          f
+            ? `<p class="small"><b>${esc(f.name)}</b> <span class="muted">· ${esc(SOURCE_NAME[f.source])}${f.entry.credit ? ` · ${esc(f.entry.credit)}` : ''}</span></p>
+               <div class="ships-selects ships-fit">
+                 <label>Up is the model's<select data-fit="up">${opt(UP_AXES, fit.up)}</select></label>
+                 <label>The bow is towards<select data-fit="forward">${opt(FORWARD_AXES.filter((a) => a[1] !== fit.up[1]), fit.forward)}</select></label>
+                 <label>Size<select data-fit="scale">${[['length', 'Stretched to a length'], ['1', "The model's own, in metres"], ['0.01', 'Its own, in centimetres'], ['0.001', 'Its own, in millimetres'], ['0.3048', 'Its own, in feet']]
+                   .map(([k, l]) => `<option value="${k}" ${String(fit.scale) === k ? 'selected' : ''}>${l}</option>`)
+                   .join('')}</select></label>
+                 ${fit.scale === 'length' ? `<label>Length overall (m)<input data-fit="length" type="number" min="1" max="500" step="0.1" value="${fit.length ?? ''}"></label>` : ''}
+                 <label>Waterline<select data-fit="waterline">${[['keel', 'A draught above the keel'], ['origin', "At the model's own zero"]]
+                   .map(([k, l]) => `<option value="${k}" ${fit.waterline === k ? 'selected' : ''}>${l}</option>`)
+                   .join('')}</select></label>
+                 ${fit.waterline === 'keel' ? `<label>Draught (m)<input data-fit="draft" type="number" min="0.1" max="40" step="0.1" value="${fit.draft ?? ''}"></label>` : ''}
+               </div>
+               <p class="muted small">Turn it until the bow points to the right in the Side view and the deck is up; the dimension lines show its size.</p>
+               <div class="row"><button type="button" class="ghost" data-act="close-file">Show the built model</button></div>`
+            : `<p class="small">The model built from the ship's type and size (Build).</p>`
+        }
+        ${st.fileLoading ? '<p class="muted small">Loading the model…</p>' : ''}
+      </div>
+
+      <h3 class="label">Upload a model</h3>
+      <div class="group pad">
+        <p class="muted small">A .glb or .gltf, an .obj with its .mtl and pictures, or an .stl. Choose all its files together. It is fitted to the ship in view (length and draught), which you can change above.</p>
+        <div class="row"><button type="button" class="primary" data-act="model-upload" ${st.fileLoading ? 'disabled' : ''}>Choose model files…</button></div>
+        <input type="file" multiple accept=".glb,.gltf,.obj,.mtl,.stl,.bin,image/*" hidden data-modelfile>
+      </div>
+
+      <h3 class="label">Save and download</h3>
+      <div class="group pad">
+        ${
+          sf
+            ? `<form class="ships-text ships-save">
+                 <label>Name<input name="name" value="${esc(sf.name)}" maxlength="60" autocomplete="off" required></label>
+                 <label>MMSI (several with spaces)<input name="mmsi" value="${esc(sf.mmsi)}" inputmode="numeric" autocomplete="off"></label>
+                 <label>IMO number<input name="imo" value="${esc(sf.imo)}" inputmode="numeric" maxlength="7" autocomplete="off"></label>
+                 <label>Call sign<input name="callSign" value="${esc(sf.callSign)}" maxlength="10" autocomplete="off"></label>
+                 <p class="muted small">The chart and the inspector use this model for the ship with this MMSI, IMO number, call sign or name, unless the vessels folder has one.</p>
+                 <div class="row"><button type="submit" class="primary" ${st.saving ? 'disabled' : ''}>${st.saving ? 'Saving…' : st.file?.source === 'device' ? 'Save changes' : 'Save'}</button>
+                   <button type="button" class="ghost" data-act="save-cancel">Cancel</button></div>
+               </form>`
+            : `<div class="row">
+                 <button type="button" class="primary" data-act="save-open" ${model ? '' : 'disabled'}>Save on this device…</button>
+                 <button type="button" class="tinted" data-act="glb">.glb</button>
+                 <button type="button" class="tinted" data-act="glb-folder">.glb + .json for the vessels folder</button>
+               </div>
+               <p class="muted small">A .glb holds the whole model in one file, with its colours and pictures: metres, Y up, bow towards +X, waterline at 0.</p>`
+        }
+        ${
+          model && !model.imported
+            ? `<div class="row">
+                 <button type="button" class="tinted" data-act="obj-all">.obj + .mtl + pictures</button>
+                 <button type="button" class="tinted" data-act="obj">.obj only</button>
+               </div>
+               ${st.stats ? `<p class="muted small" data-out="stats">${st.stats.objects.toLocaleString()} parts · ${st.stats.vertices.toLocaleString()} vertices · ${st.stats.faces.toLocaleString()} triangles</p>` : ''}`
+            : ''
+        }
         <div class="row">
-          <button type="button" class="tinted" data-act="shot">Save this view</button>
-          <button type="button" class="tinted" data-act="hull-png">Save the hull paint</button>
+          <button type="button" class="ghost" data-act="shot">Save this view</button>
+          ${model && !model.imported ? '<button type="button" class="ghost" data-act="hull-png">Save the hull paint</button>' : ''}
         </div>
       </div>
-      <p class="muted small pad-note">Ship data from Wikidata (CC0); photos from Wikimedia Commons under their own licences, shown with each photo.</p>`;
+
+      <h3 class="label">On this device</h3>
+      ${
+        st.models.device.length
+          ? `<ul class="group ships-list">${st.models.device
+              .map((e) =>
+                row(e, `<button type="button" class="tinted" data-showmodel="device:${esc(e.id)}">Show</button>
+                  <button type="button" class="ghost" data-getmodel="device:${esc(e.id)}" aria-label="Download ${esc(e.name)}">⇩</button>
+                  <button type="button" class="ghost" data-delmodel="${esc(e.id)}" aria-label="Delete ${esc(e.name)}">✕</button>`),
+              )
+              .join('')}</ul>`
+          : '<p class="muted small pad-note">None yet. Save the model in view, built or uploaded, with Save on this device.</p>'
+      }
+
+      <h3 class="label">Vessels folder</h3>
+      ${
+        st.models.folder.length
+          ? `<ul class="group ships-list">${st.models.folder
+              .map((e) =>
+                row(e, `<button type="button" class="tinted" data-showmodel="folder:${esc(e.id)}">Show</button>
+                  <a class="ships-dl" href="${esc(new URL(e.file, FOLDER_URL).href)}" download aria-label="Download ${esc(e.name)}">⇩</a>`),
+              )
+              .join('')}</ul>`
+          : ''
+      }
+      <p class="muted small pad-note">Rudder looks in its own vessels folder first (public/vessels/ in the code, listed in vessels/index.json), then on this device, and builds a ship from its type only when neither has a model for it. To add one to the folder for everyone: put the .glb and its .json there (.glb + .json above makes both) and run <code>npm run vessels</code>.</p>
+      <p class="muted small pad-note">Ship data from Wikidata (CC0); photos and textures from Wikimedia Commons, Openverse and Poly Haven under their own licences, shown with each.</p>`;
   }
 
   function renderTab() {
     renderHead();
-    const r = { ship: renderShipTab, build: renderBuildTab, livery: renderLiveryTab, sea: renderSeaTab, export: renderExportTab }[st.tab];
+    if (st.tab === 'models' && !st.modelsAsked) {
+      st.modelsAsked = true;
+      refreshModels();
+    }
+    const r = { ship: renderShipTab, build: renderBuildTab, livery: renderLiveryTab, texture: renderTextureTab, sea: renderSeaTab, models: renderModelsTab }[st.tab];
     const scroll = body.scrollTop;
     body.innerHTML = r();
     body.scrollTop = scroll;
@@ -648,6 +1227,38 @@ export function createShipInspector(root, { onClose } = {}) {
       st.livery = { ...st.livery, [st.slot]: d.swatch };
       repaint();
       renderTab();
+    } else if (d.texsrc) {
+      st.texSource = d.texsrc;
+      st.texHits = [];
+      st.texError = null;
+      renderTab();
+      if (st.texQuery && TEXTURE_SOURCES.some(([k]) => k === d.texsrc)) runTexSearch(st.texQuery);
+    } else if (d.texsuggest) runTexSearch(d.texsuggest);
+    else if (d.texhit) {
+      const list = st.texSource === 'ship' ? st.images.map((i) => ({ ...i, alt: [], source: 'Wikimedia Commons' })) : st.texHits;
+      const h = list[Number(d.texhit)];
+      if (h) useHit(h);
+    } else if (d.texoff) {
+      if (model?.imported) { const { [d.texoff]: _, ...rest } = st.fileTextures; st.fileTextures = rest; }
+      else { const { [d.texoff]: _, ...rest } = st.textures; st.textures = rest; }
+      dressTextures();
+      renderTab();
+    } else if (d.showmodel) {
+      const [src, id] = [d.showmodel.slice(0, d.showmodel.indexOf(':')), d.showmodel.slice(d.showmodel.indexOf(':') + 1)];
+      const e = st.models[src]?.find((x) => x.id === id);
+      if (e) openFile(e);
+    } else if (d.getmodel) {
+      const id = d.getmodel.slice(d.getmodel.indexOf(':') + 1);
+      const e = st.models.device.find((x) => x.id === id);
+      modelBlob(id).then((b) => b && downloadBlob(`${slug(e?.name ?? id)}.glb`, b));
+    } else if (d.delmodel) {
+      const e = st.models.device.find((x) => x.id === d.delmodel);
+      if (e && confirm(`Delete “${e.name}” from this device?`)) {
+        deleteModel(e.id).then(() => {
+          if (st.file?.source === 'device' && st.file.entry.id === e.id) closeFile();
+          refreshModels();
+        });
+      }
     } else if (d.act) act(d.act);
   });
 
@@ -669,7 +1280,7 @@ export function createShipInspector(root, { onClose } = {}) {
       st.livery = liveryFromFacts(st.params.kind, st.facts ?? undefined);
       repaint();
       renderTab();
-    } else if ((a === 'obj' || a === 'obj-all') && model) {
+    } else if ((a === 'obj' || a === 'obj-all') && model && !model.imported) {
       const bundle = exportOBJ(model.group, st.facts?.label ?? st.text.name, { hull_livery: model.hullCanvas, transom_livery: model.transomCanvas });
       downloadText(`${base}.obj`, bundle.obj, 'model/obj');
       if (a === 'obj-all') {
@@ -683,14 +1294,47 @@ export function createShipInspector(root, { onClose } = {}) {
       fetch(scene.screenshot())
         .then((r) => r.blob())
         .then((b) => downloadBlob(`${base}_view.png`, b));
-    } else if (a === 'hull-png' && model) downloadCanvas(`${base}_hull_paint.png`, model.hullCanvas);
+    } else if (a === 'hull-png' && model?.hullCanvas) downloadCanvas(`${base}_hull_paint.png`, model.hullCanvas);
+    else if (a === 'close-file') closeFile();
+    else if (a === 'tex-remove') {
+      if (model?.imported) { const { [st.texTarget]: _, ...rest } = st.fileTextures; st.fileTextures = rest; }
+      else { const { [st.texTarget]: _, ...rest } = st.textures; st.textures = rest; }
+      dressTextures();
+      renderTab();
+    } else if (a === 'tex-upload') $('[data-texfile]')?.click();
+    else if (a === 'model-upload') $('[data-modelfile]')?.click();
+    else if (a === 'save-open') {
+      st.saveForm = saveDefaults();
+      st.notice = null;
+      renderTab();
+    } else if (a === 'save-cancel') {
+      st.saveForm = null;
+      renderTab();
+    } else if (a === 'glb' || a === 'glb-folder') {
+      downloadGlb(a === 'glb-folder').catch((e) => {
+        st.fileError = `Could not make the .glb: ${e instanceof Error ? e.message : e}`;
+        renderTab();
+      });
+    }
   }
 
   root.addEventListener('submit', (e) => {
-    const form = e.target.closest('.ships-search');
+    const form = e.target.closest('form');
     if (!form) return;
     e.preventDefault();
-    runSearch(new FormData(form).get('q') ?? '');
+    const data = new FormData(form);
+    if (form.classList.contains('ships-search')) runSearch(data.get('q') ?? '');
+    else if (form.classList.contains('ships-texsearch')) runTexSearch(String(data.get('tq') ?? ''));
+    else if (form.classList.contains('ships-texurl')) {
+      const u = pictureUrl(data.get('u'));
+      if (!u) {
+        st.texError = 'That is not a web address (it should start with https://).';
+        renderTab();
+      } else usePicture({ urls: [u], title: decodeURIComponent(u.split(/[?#]/)[0].split('/').pop() || u), credit: new URL(u).hostname, page: u });
+    } else if (form.classList.contains('ships-save')) {
+      const v = (k) => String(data.get(k) ?? '').trim();
+      saveToDevice({ name: v('name'), mmsi: v('mmsi'), imo: v('imo').replace(/\D/g, ''), callSign: v('callSign').toUpperCase() });
+    }
   });
 
   root.addEventListener('input', (e) => {
@@ -744,10 +1388,53 @@ export function createShipInspector(root, { onClose } = {}) {
         scene?.setSunElevation(v);
         out('sun', `${v.toFixed(0)}°`);
       }
+    } else if (d.tex && el.type === 'range') {
+      const v = Number(el.value);
+      out(d.tex, d.tex === 'tile' ? fmtLen(v, st.units) : `${Math.round(v * 100)} %`);
+      retexture(d.tex, v);
     } else if (el.name === 'q') st.query = el.value;
+    else if (el.name === 'tq') st.texQuery = el.value;
+    else if (el.closest('.ships-save') && st.saveForm) st.saveForm = { ...st.saveForm, [el.name]: el.value };
   });
 
   root.addEventListener('change', (e) => {
+    const t = e.target;
+    const td = t.dataset;
+    if (td.tex && t.type !== 'range') {
+      if (td.tex === 'target') {
+        st.texTarget = t.value;
+        const cur = (model?.imported ? st.fileTextures : st.textures)[t.value];
+        if (cur) st.texOpts = { ...st.texOpts, mode: cur.mode, tile: cur.tile, opacity: cur.opacity, blend: cur.blend, flip: cur.flip, projection: cur.projection };
+      } else retexture(td.tex, t.type === 'checkbox' ? t.checked : t.value);
+      renderTab();
+      return;
+    }
+    if (td.fit !== undefined && st.file) {
+      const k = td.fit;
+      let v = t.value;
+      if (k === 'scale') v = v === 'length' ? 'length' : Number(v);
+      else if (k === 'length' || k === 'draft') {
+        v = Number(v);
+        if (!(v > 0)) return;
+      }
+      const fit = { ...st.file.fit, [k]: v };
+      // the bow cannot point along the up axis: take the other horizontal one
+      if (k === 'up' && fit.forward[1] === v[1]) fit.forward = guessForward(st.file.object, v);
+      st.file = { ...st.file, fit };
+      rebuild();
+      renderTab();
+      return;
+    }
+    if (td.texfile !== undefined && t.files?.[0]) {
+      const file = t.files[0];
+      const url = URL.createObjectURL(file);
+      usePicture({ urls: [url], title: file.name, credit: '', page: '', local: true });
+      return;
+    }
+    if (td.modelfile !== undefined && t.files?.length) {
+      openUpload(t.files);
+      return;
+    }
     const el = e.target;
     if (el.dataset.select) {
       const k = el.dataset.select;

@@ -9,7 +9,8 @@ It is plain static files with no backend, so it runs on GitHub Pages.
 ```bash
 npm start      # http://localhost:8080 (local static server)
 npm test       # parsers, URL builders, navigation maths, AIS, ship models
-npm run vendor # rebuilds public/vendor/three.js from the pinned devDependencies (after npm ci)
+npm run vendor # rebuilds public/vendor/three.js and three-io.js from the pinned devDependencies (after npm ci)
+npm run vessels # lists the models in public/vessels/ in its index.json
 npm run build  # copies public/ to dist/ and stamps the build
 ```
 
@@ -314,7 +315,29 @@ the same button, the × in its sheet, Escape, or the layers button.
   name, IMO number, draft marks and load-line mark painted on the hull.
 - **Look** in a studio, at sea (sea state, speed with a wake, sun height; the hull heaves, pitches
   and rolls on the waves) or under water, with dimension lines in metres or feet.
-- **Export** Wavefront `.obj` + `.mtl` + the painted hull pictures (metres, Y up, bow towards +X).
+- **Texture**: put a picture on the ship, either a photo along the hull or a texture (painted steel,
+  rust, teak, plating) repeated over the hull, deck, superstructure or funnels, or over any material
+  of a model from a file. Pictures come from Wikimedia Commons, Openverse (openly licensed pictures
+  from Flickr, museums and others), Poly Haven (CC0 surface textures), the ship's own Commons photos,
+  any picture's web address (when its site allows other pages to use it; CORS), or a picture on the
+  device. Each shows who made it and its licence. (`ships/texturesources.js`, `ships/vesselmodel.js`;
+  the hull photo is painted in `ships/hullText.js`.)
+- **Models**: upload a model (`.glb`, `.gltf`, `.obj` + `.mtl` + pictures, `.stl`), turn it upright
+  with the bow forward, scale it to the ship's length (or its own units) and set its waterline;
+  **Save on this device** keeps it (built or uploaded, with its textures) as one `.glb` in the
+  browser's database (IndexedDB, `public/vessellibrary.js`), under the ship's name, MMSI, IMO number
+  and call sign. Download the model in view as `.glb`, as `.glb` + `.json` for the vessels folder, or
+  (built ships) as Wavefront `.obj` + `.mtl` + the painted hull pictures (metres, Y up, bow towards +X).
+
+**The vessels folder.** Before building a ship from its type, Rudder looks for a model of it: first in
+its own vessels folder (`public/vessels/`, listed in `vessels/index.json`), then among the models
+saved on the device. A model is matched to a ship by MMSI, then IMO number, then call sign, then name
+(`public/vesselcatalog.js`, tested). When one is found, the inspector shows it (and says so; **Show
+the built model** compares), and the chart draws it as that ship's 3D model, stretched to its AIS
+length and set at its AIS draught. To add a model for everyone, put it and a `.json` sidecar in
+`public/vessels/` and run `npm run vessels`; see [public/vessels/README.md](public/vessels/README.md).
+The loaders and the glTF exporter (`public/vendor/three-io.js`, about 100 kB) are loaded only when a
+model file is needed.
 
 It is loaded the first time it is opened, so the chart never waits for three.js (about 0.7 MB,
 vendored in `public/vendor/three.js` by `npm run vendor`). The hull builder takes the same inputs

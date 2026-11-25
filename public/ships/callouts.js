@@ -15,7 +15,7 @@ function label(text, src, cls) {
   el.appendChild(v);
   if (src) {
     const b = document.createElement('em');
-    b.textContent = { wikidata: 'Wikidata', ais: 'AIS', estimated: 'est.' }[src] ?? 'manual';
+    b.textContent = { wikidata: 'Wikidata', ais: 'AIS', estimated: 'est.', model: 'model' }[src] ?? 'manual';
     b.className = src;
     el.appendChild(b);
   }
