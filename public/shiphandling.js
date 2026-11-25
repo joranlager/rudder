@@ -11,7 +11,7 @@
 //    spot or moving it sideways; they lose their grip above about 5 knots
 //  - yaw and sway follow with their own time constants, so turns start and stop gradually
 
-import { vesselSize, hullFromAis } from './ais.js';
+import { vesselSize, hullFromAis, drawHeading } from './ais.js';
 
 const KNOT = 1852 / 3600;
 const R = 6371008.8;
@@ -77,7 +77,8 @@ export function handlingFor(v) {
 /** The ship as the simulation holds it: place, heading (degrees) and motion in the ship's frame. */
 export function initialState(v) {
   const sog = Number(v.speedOverGround);
-  const hdg = [v.trueHeading, v.courseOverGround].find((x) => Number.isFinite(x) && x >= 0 && x < 360) ?? 0;
+  // its own heading, else the one the chart draws it on (alongside: along the quay), else its course
+  const hdg = drawHeading(v) ?? [v.courseOverGround].find((x) => Number.isFinite(x) && x >= 0 && x < 360) ?? 0;
   return { lat: v.latitude, lon: v.longitude, heading: hdg, u: Number.isFinite(sog) && sog < 102 ? sog * KNOT : 0, v: 0, r: 0 };
 }
 

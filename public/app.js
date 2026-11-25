@@ -450,7 +450,8 @@ function showVessel(v) {
     ['Status', navStatusText(v.navigationalStatus)],
     ['Speed', v.speedOverGround != null ? `${v.speedOverGround.toFixed(1)} kn` : null],
     ['Course', v.courseOverGround != null && v.courseOverGround < 360 ? `${Math.round(v.courseOverGround)}°` : null],
-    ['Heading', v.trueHeading != null && v.trueHeading < 360 ? `${v.trueHeading}°` : null],
+    ['Heading', v.trueHeading != null && v.trueHeading < 360 ? `${v.trueHeading}°`
+      : v.headingGuess ? `Not reported; drawn ${Math.round(v.headingGuess.deg)}°, ${v.headingGuess.how}` : null],
     ['Size', length > 0 ? `${length} × ${beam} m` : null],
     ['Draught', t ? `${t.toFixed(1)} m` : null],
     ['Destination', v.destination?.trim() || null],
