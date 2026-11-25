@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { infraLayers, buildBridges, bridgeClearance, deckProfile, toLocal, toLonLat, PREFIX, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, baseClass } from '../public/infra.js';
+import { infraLayers, buildBridges, bridgeClearance, deckProfile, toLocal, toLonLat, PREFIX, SOURCE, BRIDGE_SOURCE, BRIDGE_MIN_ZOOM, baseClass, splitWays } from '../public/infra.js';
 import { infraBefore } from '../public/infralayer.js';
 import { BASEMAPS, buildStyle, mergeSettings, defaultSettings, SATELLITE_TILES } from '../public/layers.js';
 
@@ -134,4 +134,16 @@ test('roads being built are drawn, and raised on bridges, as the roads they beco
   assert.equal(decks[0].properties.road, 'motorway');
   const road = infraLayers().find((l) => l.id === `${PREFIX}road`);
   assert.ok(JSON.stringify(road.filter).includes('motorway_construction'));
+});
+
+test('one feature with two bridges far apart is built as two bridges; pieces that touch as one', () => {
+  const a = bridge(9, 400)[0].geometry.coordinates;
+  const far = bridge(9, 40, { lon: 5.75 })[0].geometry.coordinates;
+  const ways = splitWays([{ cls: 'primary', layer: 1, lines: [far, a.slice(0, 6), a.slice(5)] }]);
+  assert.equal(ways.length, 2);
+  assert.deepEqual(ways.map((w) => w.lines.length).sort(), [1, 2]);
+  // the long bridge's heights are not stretched over the gap to the far one
+  const fc = buildBridges([{ id: 9, type: 'Feature', properties: { class: 'primary', brunnel: 'bridge', layer: 1 }, geometry: { type: 'MultiLineString', coordinates: [far, a] } }]);
+  const top = Math.max(...fc.features.filter((f) => f.properties.part === 'deck').map((f) => f.properties.top));
+  assert.ok(top <= bridgeClearance(400) + 0.01, `deck ${top}`);
 });

@@ -114,6 +114,26 @@ export function infraLayers() {
 
 // ---------- building bridges ----------
 
+/**
+ * A way's pieces that touch (ends within 30 m) make one bridge; pieces apart are separate bridges.
+ * (A tile can hold one feature with two bridges far apart, and a bridge cut by tiles comes in pieces.)
+ */
+export function splitWays(ways) {
+  const out = [];
+  for (const w of ways) {
+    const groups = [];
+    for (const line of w.lines) {
+      const near = (g) => g.some((l) => [l[0], l[l.length - 1]].some((e) => [line[0], line[line.length - 1]].some((p) => Math.hypot(...toLocal(e, p)) < 30)));
+      const hits = groups.filter(near);
+      const merged = [line, ...hits.flat()];
+      for (const h of hits) groups.splice(groups.indexOf(h), 1);
+      groups.push(merged);
+    }
+    for (const g of groups) out.push({ ...w, lines: g });
+  }
+  return out;
+}
+
 /** Metres east and north of (lon0, lat0), and back: flat enough for a bridge. */
 export function toLocal([lon, lat], [lon0, lat0]) {
   return [rad(lon - lon0) * R * Math.cos(rad(lat0)), rad(lat - lat0) * R];
@@ -163,7 +183,7 @@ export function buildBridges(features, extra = [], { maxParts = 20000, heightFor
   }
   const out = [];
   const towers = []; // [lon, lat] of towers built: carriageways side by side share one bridge's towers
-  for (const w of ways.values()) {
+  for (const w of splitWays(ways.values())) {
     if (out.length >= maxParts) break;
     const o = w.lines[0][0];
     const lines = w.lines.map((l) => l.map((p) => toLocal(p, o)));

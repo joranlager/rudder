@@ -107,11 +107,16 @@ export function createInfra(map, { belowIds = [], onError = () => {} } = {}) {
       const draw = (list) => {
         // The road layer's bridge roads, raised: where NVDB knows the bridge, at the road's real heights,
         // with its towers, cables or piers; NVDB's own deck only where the road layer has no road on it.
+        // The NVDB bridge most of the piece's points lie on (twin carriageways can lie well apart,
+        // either side of NVDB's narrow outline, so with some slack); none when under half do.
         const ctxOf = (lines) => {
-          const l = lines[0];
-          const mid = l[Math.floor(l.length / 2)];
-          // (twin carriageways can lie well apart, either side of NVDB's narrow outline)
-          return list?.find((x) => onBridge(mid, [x.br], 16)) ?? null;
+          const pts = lines.flat();
+          let best = null, most = 0;
+          for (const x of list ?? []) {
+            const k = pts.filter((p) => onBridge(p, [x.br], 16)).length;
+            if (k > most) { most = k; best = x; }
+          }
+          return most * 2 >= pts.length ? best : null;
         };
         const used = new Set();
         const heightFor = (lines) => {
