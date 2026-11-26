@@ -27,11 +27,11 @@ function drawn(img, max) {
 }
 
 /** The ship cut out of a picture (photomodel.js silhouette), with a preview: the cut-out tinted. */
-export function cutOut(img, threshold) {
+export function cutOut(img, threshold, view = null) {
   const c = drawn(img, MAX_SIDE);
   const ctx = c.getContext('2d', { willReadFrequently: true });
   const data = ctx.getImageData(0, 0, c.width, c.height);
-  const sil = silhouette(data, threshold);
+  const sil = silhouette(data, threshold, { solidColumns: ['port', 'starboard', 'top', 'bottom'].includes(view) });
   if (!sil) return { sil: null, preview: c.toDataURL('image/jpeg', 0.7) };
   const out = ctx.createImageData(c.width, c.height);
   for (let i = 0; i < sil.mask.length; i++) {
@@ -70,12 +70,29 @@ function cropped(img, sil) {
 export function buildFromPhotos(views, dims, { res = 180, smooth = 4 } = {}) {
   const sils = {}, flips = {};
   for (const [k, v] of Object.entries(views)) if (v?.sil) { sils[k] = v.sil; flips[k] = Boolean(v.flip); }
-  const est = sizeFrom(dims.length, sils);
-  const size = { L: dims.length, B: dims.beam > 0 ? dims.beam : est.B, H: dims.height > 0 ? dims.height : est.H };
-  const g = carve(sils, size, { res, flips });
+  const sizeOf = (ss) => {
+    const est = sizeFrom(dims.length, ss);
+    return { L: dims.length, B: dims.beam > 0 ? dims.beam : est.B, H: dims.height > 0 ? dims.height : est.H };
+  };
+  let size = sizeOf(sils);
+  let g = carve(sils, size, { res, flips });
+  // a photo found not to agree with the others does not size the vessel either: once more without it
+  if (g.ignored.length) {
+    const kept = Object.fromEntries(Object.entries(sils).filter(([k]) => g.used.includes(k)));
+    const again = sizeOf(kept);
+    if (Math.abs(again.H - size.H) > 0.01 || Math.abs(again.B - size.B) > 0.01) {
+      const first = g;
+      size = again;
+      g = carve(kept, size, { res, flips });
+      g.ignored = [...first.ignored, ...g.ignored];
+      g.mirrored = [...first.mirrored, ...g.mirrored];
+    }
+  }
+  for (const k of g.mirrored) flips[k] = !flips[k];
   const m = mesh(g, smooth);
   if (!m.indices.length) throw new Error('The pictures leave nothing in common: check that each is the view it says, and the mirroring');
-  const parts = texturedParts(m, size, Object.keys(sils), flips);
+  // painted only from the photos the shape was made from: one taken at an angle would smear
+  const parts = texturedParts(m, size, g.used, flips, sils);
   const group = new THREE.Group();
   group.name = 'vessel_from_photos';
   for (const [k, p] of Object.entries(parts)) {
@@ -94,5 +111,5 @@ export function buildFromPhotos(views, dims, { res = 180, smooth = 4 } = {}) {
   }
   // the ship's frame starts at the stern: centre it on the length, as the inspector's models are
   group.children.forEach((c) => c.geometry.translate(-size.L / 2, 0, 0));
-  return { object: group, size };
+  return { object: group, size, used: g.used, ignored: g.ignored, mirrored: g.mirrored };
 }

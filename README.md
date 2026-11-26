@@ -461,7 +461,17 @@ the same button, the × in its sheet, Escape, or the layers button.
   photos should be taken square on (side views bow to the left on the port side, to the right on the
   starboard side; from above bow right, port up; from below bow right, starboard up), each can be
   marked as mirrored. Hollows (an open deck, a hold) cannot be seen in outlines and come out filled;
-  thin parts (masts, rails) are lost. Rendered from six sides, the inspector's own 142 m ferry comes
+  thin parts (masts, rails) are lost. Real photos are less tidy, so: side and plan outlines are
+  filled solid from keel to top (a white superstructure against a pale sky leaves no gaps); parts
+  touching the picture's edge (clouds, a quay) are dropped; each photo is scaled by its width only
+  (the length), so a mast lost in one photo does not rescale it; bow and stern photos, seldom taken
+  square on, shape only the beam and are stretched over the height the side photos give; the height,
+  when not given, is the tallest side photo's; a photo that would cut away much of what the others
+  agree on is tried mirrored, else left out, and the notice says so; only the vessel's largest
+  connected body is kept (no pieces floating apart); a side photo paints the other side when it is
+  missing, and bow and stern photos paint only what they face square on. The draught, when not
+  given, is the type's typical one for the length. Sandøy (43 m double-ended ferry) from five photos
+  taken by a drone comes out whole and recognisable. Rendered from six sides, the inspector's own 142 m ferry comes
   back within 0.1 m in beam and height.
 
 **The vessels folder.** Before building a ship from its type, Rudder looks for a model of it: first in

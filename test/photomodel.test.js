@@ -102,3 +102,12 @@ test('a pointed bow seen from above and the side gives a pointed hull, textured 
     assert.ok(p.uvs.every((u) => u >= 0 && u <= 1));
   }
 });
+
+test('side and plan views are filled solid between keel and top: a white superstructure on a pale sky', () => {
+  // a hull with a pale band that reaches the outline (no hole: open to the side)
+  const img = picture(200, 100, (x, y) => x >= 20 && x <= 179 && y >= 30 && y <= 79 && !(y >= 45 && y <= 55 && x < 120));
+  const open = silhouette(img);
+  assert.equal(inside(open, 0.2, 0.4), false, 'without: a gap');
+  const solid = silhouette(img, 20, { solidColumns: true });
+  assert.equal(inside(solid, 0.2, 0.4), true, 'filled');
+});

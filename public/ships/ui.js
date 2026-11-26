@@ -1096,7 +1096,7 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
         <label>Length overall (m)<input type="number" min="2" max="500" step="0.1" data-photodim="length" value="${esc(st.photoDims.length)}" placeholder="${f(st.params.length)}"></label>
         <label>Beam (m)<input type="number" min="0.5" max="90" step="0.1" data-photodim="beam" value="${esc(st.photoDims.beam)}" placeholder="${est ? `${f(est.B)} from the photos` : ''}"></label>
         <label>Height, keel to top (m)<input type="number" min="0.5" max="150" step="0.1" data-photodim="height" value="${esc(st.photoDims.height)}" placeholder="${est ? `${f(est.H)} from the photos` : ''}"></label>
-        <label>Draught (m)<input type="number" min="0.1" max="30" step="0.1" data-photodim="draft" value="${esc(st.photoDims.draft)}" placeholder="${f(st.params.draft)}"></label>
+        <label>Draught (m)<input type="number" min="0.1" max="30" step="0.1" data-photodim="draft" value="${esc(st.photoDims.draft)}" placeholder="${f(defaultParams(st.params.kind, L).draft)} typical"></label>
       </div>
       ${n && !(sides && plan) ? '<p class="muted small">A side photo and one from above (or below) are needed for a shape; the bow and stern photos shape its ends.</p>' : ''}
       ${st.photoError ? `<p class="error">${esc(st.photoError)}</p>` : ''}
@@ -1106,10 +1106,21 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
     </div>`;
   }
 
+  /** What beam, height and draught the photos and the length give, in the empty fields' hints. */
+  function photoHints() {
+    const sils = Object.fromEntries(Object.entries(st.photos).filter(([, v]) => v.sil).map(([k, v]) => [k, v.sil]));
+    const L = Number(st.photoDims.length) || st.params.length;
+    const est = Object.keys(sils).length ? sizeFrom(L, sils) : null;
+    const set = (k, text) => { const el = root.querySelector(`[data-photodim="${k}"]`); if (el) el.placeholder = text; };
+    set('beam', est ? `${est.B.toFixed(1)} from the photos` : '');
+    set('height', est ? `${(Number(st.photoDims.beam) > 0 && !sils.port && !sils.starboard ? est.H * (Number(st.photoDims.beam) / est.B) : est.H).toFixed(1)} from the photos` : '');
+    set('draft', `${defaultParams(st.params.kind, L).draft.toFixed(1)} typical`);
+  }
+
   async function setPhoto(view, file) {
     try {
       const img = await readPicture(file);
-      const { sil, preview } = cutOut(img, st.photoThreshold);
+      const { sil, preview } = cutOut(img, st.photoThreshold, view);
       st.photos = { ...st.photos, [view]: { img, name: file.name, sil, preview, flip: st.photos[view]?.flip ?? false } };
       st.photoError = null;
     } catch (e) {
@@ -1120,7 +1131,7 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
 
   function recut() {
     for (const [k, v] of Object.entries(st.photos)) {
-      const { sil, preview } = cutOut(v.img, st.photoThreshold);
+      const { sil, preview } = cutOut(v.img, st.photoThreshold, k);
       st.photos[k] = { ...v, sil, preview };
     }
     renderTab();
@@ -1134,10 +1145,17 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
       try {
         const num = (k) => (Number(st.photoDims[k]) > 0 ? Number(st.photoDims[k]) : null);
         const length = num('length') ?? st.params.length;
-        const draft = num('draft') ?? st.params.draft;
-        const { object, size } = buildFromPhotos(st.photos, { length, beam: num('beam'), height: num('height') });
+        // without a draught: the typical one of a vessel of this type and length
+        const draft = num('draft') ?? defaultParams(st.params.kind, length).draft;
+        const { object, size, ignored, mirrored } = buildFromPhotos(st.photos, { length, beam: num('beam'), height: num('height') });
         const name = (st.facts?.label ?? ((st.ais?.name || '').trim() || st.text.name || 'Vessel from photos'));
-        st.notice = `Built from ${Object.values(st.photos).filter((v) => v.sil).length} photos: ${size.L.toFixed(1)} × ${size.B.toFixed(1)} m, ${size.H.toFixed(1)} m keel to top. Save it to keep it, or place it on the map from the Ship tab.`;
+        const label = (k) => (PHOTO_VIEWS.find(([v]) => v === k)?.[1] ?? k).toLowerCase();
+        const left = ignored.length
+          ? ` Not used for the shape: ${ignored.map((x) => `the ${label(x.view)} photo (it would cut away ${Math.round(x.removed * 100)} % of what the others agree on: taken at an angle, mirrored, or another view?)`).join('; ')}.`
+          : '';
+        for (const k of mirrored) if (st.photos[k]) st.photos[k] = { ...st.photos[k], flip: !st.photos[k].flip };
+        const flippedNote = mirrored.length ? ` The ${mirrored.map(label).join(' and ')} photo was the other way round (or of the other side) and was mirrored.` : '';
+        st.notice = `Built from ${Object.values(st.photos).filter((v) => v.sil).length - ignored.length} photos: ${size.L.toFixed(1)} × ${size.B.toFixed(1)} m, ${size.H.toFixed(1)} m keel to top${num('height') ? '' : ' (height from the photos)'}.${flippedNote}${left} Save it to keep it, or place it on the map from the Ship tab.`;
         showFile({
           source: 'upload', entry: { id: `photos:${Date.now()}`, name, source: 'upload' }, object, name,
           fit: { up: '+y', forward: '+x', scale: 'length', length: size.L, draft: Math.min(draft, size.H * 0.9), waterline: 'keel' },
@@ -1509,7 +1527,10 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
       const v = Number(el.value);
       out(d.tex, d.tex === 'tile' ? fmtLen(v, st.units) : `${Math.round(v * 100)} %`);
       retexture(d.tex, v);
-    } else if (d.photodim) st.photoDims = { ...st.photoDims, [d.photodim]: el.value };
+    } else if (d.photodim) {
+      st.photoDims = { ...st.photoDims, [d.photodim]: el.value };
+      photoHints(); // the estimates of the others follow, without redrawing the fields being typed in
+    }
     else if (d.photothreshold !== undefined) out('photoThreshold', el.value);
     else if (el.name === 'q') st.query = el.value;
     else if (el.name === 'tq') st.texQuery = el.value;
