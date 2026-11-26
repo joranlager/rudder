@@ -440,3 +440,62 @@ export function vertexNormals({ positions: p, indices: t }) {
   }
   return n;
 }
+
+// ---------- one photo: the rest inferred ----------
+
+/**
+ * How wide the vessel is, as a share of its beam, at `a` along it (0 stern, 1 bow), seen from above:
+ * a ferry is double-ended (both ends rounded the same); other vessels have a pointed bow and a broad
+ * transom stern. Each end rounds in like a quarter ellipse.
+ */
+export function planTaper(a, kind = 'cargo') {
+  const end = (t, len, tip) => (t >= len ? 1 : tip + (1 - tip) * Math.sqrt(Math.max(0, 1 - (1 - t / len) ** 2)));
+  const x = Math.min(1, Math.max(0, a));
+  if (kind === 'ferry') return Math.min(end(x, 0.16, 0.3), end(1 - x, 0.16, 0.3));
+  if (kind === 'sailing' || kind === 'yacht') return Math.min(end(x, 0.3, 0.35), end(1 - x, 0.4, 0.02));
+  return Math.min(end(x, 0.08, 0.8), end(1 - x, 0.24, 0.04));
+}
+
+/**
+ * The shape from one side photo (`view` 'port' or 'starboard'): its outline as the profile, the plan
+ * inferred (planTaper for `kind`), the superstructure set in from the sides above the deck (the
+ * deck: where a quarter of the length's profile tops lie), and the hull rounding in at the bilge.
+ * Returns a grid like carve's.
+ */
+export function inferFromSide(sil, view, size, { res = 160, flip = false, kind = 'cargo' } = {}) {
+  const { L, B, H } = size;
+  const nx = res, cell = L / res, ny = Math.max(4, Math.round(H / cell)), nz = Math.max(4, Math.round(B / cell));
+  // the profile's top at each column, in metres above the keel
+  const tops = new Float32Array(nx);
+  for (let i = 0; i < nx; i++) {
+    const x = (i + 0.5) * (L / nx);
+    let top = 0;
+    for (let j = ny - 1; j >= 0; j--) {
+      const y = (j + 0.5) * (H / ny);
+      const [u, v] = project(view, [x, y, 0], size, flip, sil);
+      if (inside(sil, u, v)) { top = y; break; }
+    }
+    tops[i] = top;
+  }
+  const mid = [...tops.slice(Math.floor(nx * 0.1), Math.ceil(nx * 0.9))].filter((t) => t > 0).sort((p, q) => p - q);
+  const deck = mid.length ? mid[Math.floor(mid.length * 0.25)] : H * 0.4;
+  const bilge = Math.max(0.5, deck * 0.18);
+  const occ = new Uint8Array(nx * ny * nz);
+  for (let i = 0; i < nx; i++) {
+    const x = (i + 0.5) * (L / nx), a = x / L;
+    const plan = planTaper(a, kind);
+    for (let j = 0; j < ny; j++) {
+      const y = (j + 0.5) * (H / ny);
+      const [u, v] = project(view, [x, y, 0], size, flip, sil);
+      if (!inside(sil, u, v)) continue;
+      const level = y < bilge ? 0.55 + 0.45 * Math.sqrt(y / bilge) : y > deck + 0.4 ? 0.86 : 1;
+      const half = (B / 2) * plan * level;
+      for (let k = 0; k < nz; k++) {
+        const z = -B / 2 + (k + 0.5) * (B / nz);
+        if (Math.abs(z) <= half) occ[i + nx * (j + ny * k)] = 1;
+      }
+    }
+  }
+  keepLargest(occ, nx, ny, nz);
+  return { nx, ny, nz, cell, sx: L / nx, sy: H / ny, sz: B / nz, occ, size, used: [view], ignored: [], mirrored: [], deck };
+}

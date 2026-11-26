@@ -2,7 +2,7 @@
 // carved, textured mesh made into an object the inspector shows like a model from a file.
 
 import * as THREE from '../vendor/three.js';
-import { silhouette, sizeFrom, carve, mesh, texturedParts } from './photomodel.js';
+import { silhouette, sizeFrom, carve, mesh, texturedParts, inferFromSide, project, inside } from './photomodel.js';
 
 const MAX_SIDE = 640; // pictures are cut out at this size; textures keep up to 2048
 
@@ -67,9 +67,62 @@ function cropped(img, sil) {
  * height? } (beam and height from the pictures unless given). Returns { object, size }: the object
  * in the ship's frame (bow +x, y up from the keel, starboard +z), in metres.
  */
-export function buildFromPhotos(views, dims, { res = 180, smooth = 4 } = {}) {
+/**
+ * The view from above when there is no photo of it: each point along the length in the colour at the
+ * top of the side photo's outline there (the roof or deck seen from above), the edges a little darker.
+ * Returns { canvas, sil } with a box of the vessel's proportions.
+ */
+function inferredTop(view, v, size) {
+  const { img, sil } = v;
+  const c = document.createElement('canvas');
+  c.width = sil.width;
+  c.height = sil.height;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const px = ctx.getImageData(0, 0, c.width, c.height).data;
+  const W = 1024, Hh = Math.max(16, Math.round((W * size.B) / size.L));
+  const out = document.createElement('canvas');
+  out.width = W;
+  out.height = Hh;
+  const o = out.getContext('2d');
+  const span = Math.max(2, Math.round((sil.box.y1 - sil.box.y0) * 0.04));
+  for (let i = 0; i < W; i++) {
+    const x = ((i + 0.5) / W) * size.L;
+    const [u] = project(view, [x, size.H / 2, 0], size, Boolean(v.flip), sil);
+    const col = Math.min(sil.box.x1, Math.max(sil.box.x0, Math.round(sil.box.x0 + u * (sil.box.x1 - sil.box.x0))));
+    let top = -1;
+    for (let y = sil.box.y0; y <= sil.box.y1; y++) if (sil.mask[y * sil.width + col]) { top = y; break; }
+    let r = 128, g = 128, b = 128, n = 0;
+    if (top >= 0) {
+      r = g = b = 0;
+      for (let y = top + 1; y <= Math.min(sil.box.y1, top + span); y++) { const k = (y * sil.width + col) * 4; r += px[k]; g += px[k + 1]; b += px[k + 2]; n++; }
+      if (n) { r /= n; g /= n; b /= n; }
+    }
+    const grad = o.createLinearGradient(0, 0, 0, Hh);
+    const dark = `rgb(${r * 0.8},${g * 0.8},${b * 0.8})`, lit = `rgb(${r},${g},${b})`;
+    grad.addColorStop(0, dark); grad.addColorStop(0.07, lit); grad.addColorStop(0.93, lit); grad.addColorStop(1, dark);
+    o.fillStyle = grad;
+    o.fillRect(i, 0, 1, Hh);
+  }
+  const topSil = { width: W, height: Hh, mask: new Uint8Array(W * Hh).fill(1), box: { x0: 0, y0: 0, x1: W - 1, y1: Hh - 1 } };
+  return { canvas: out, sil: topSil };
+}
+
+export function buildFromPhotos(views, dims, { res = 180, smooth = 4, kind = 'cargo' } = {}) {
   const sils = {}, flips = {};
   for (const [k, v] of Object.entries(views)) if (v?.sil) { sils[k] = v.sil; flips[k] = Boolean(v.flip); }
+  // One side photo and nothing from above or below: the rest is inferred from the vessel's type.
+  const side = ['port', 'starboard'].find((k) => sils[k]);
+  if (side && !sils.top && !sils.bottom) {
+    const est = sizeFrom(dims.length, { [side]: sils[side] });
+    const size = { L: dims.length, B: dims.beam > 0 ? dims.beam : dims.typicalBeam ?? est.B, H: dims.height > 0 ? dims.height : est.H };
+    const g = inferFromSide(sils[side], side, size, { res, flip: flips[side], kind });
+    const m = mesh(g, smooth);
+    if (!m.indices.length) throw new Error('Nothing could be made of the photo: check its cut-out');
+    const top = inferredTop(side, views[side], size);
+    const parts = texturedParts(m, size, [side, 'top'], flips, { [side]: sils[side], top: top.sil });
+    return finish(parts, size, (k) => (k === 'top' ? top.canvas : cropped(views[k].img, views[k].sil)), { used: [side], ignored: [], mirrored: [], inferred: true });
+  }
   const sizeOf = (ss) => {
     const est = sizeFrom(dims.length, ss);
     return { L: dims.length, B: dims.beam > 0 ? dims.beam : est.B, H: dims.height > 0 ? dims.height : est.H };
@@ -93,6 +146,11 @@ export function buildFromPhotos(views, dims, { res = 180, smooth = 4 } = {}) {
   if (!m.indices.length) throw new Error('The pictures leave nothing in common: check that each is the view it says, and the mirroring');
   // painted only from the photos the shape was made from: one taken at an angle would smear
   const parts = texturedParts(m, size, g.used, flips, sils);
+  return finish(parts, size, (k) => cropped(views[k].img, views[k].sil), { used: g.used, ignored: g.ignored, mirrored: g.mirrored });
+}
+
+/** The textured parts as a three.js group, centred on the length. */
+function finish(parts, size, pictureOf, info) {
   const group = new THREE.Group();
   group.name = 'vessel_from_photos';
   for (const [k, p] of Object.entries(parts)) {
@@ -100,7 +158,7 @@ export function buildFromPhotos(views, dims, { res = 180, smooth = 4 } = {}) {
     geom.setAttribute('position', new THREE.BufferAttribute(p.positions, 3));
     geom.setAttribute('normal', new THREE.BufferAttribute(p.normals, 3));
     geom.setAttribute('uv', new THREE.BufferAttribute(p.uvs, 2));
-    const tex = new THREE.CanvasTexture(cropped(views[k].img, views[k].sil));
+    const tex = new THREE.CanvasTexture(pictureOf(k));
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.05 });
@@ -111,5 +169,5 @@ export function buildFromPhotos(views, dims, { res = 180, smooth = 4 } = {}) {
   }
   // the ship's frame starts at the stern: centre it on the length, as the inspector's models are
   group.children.forEach((c) => c.geometry.translate(-size.L / 2, 0, 0));
-  return { object: group, size, used: g.used, ignored: g.ignored, mirrored: g.mirrored };
+  return { object: group, size, ...info };
 }

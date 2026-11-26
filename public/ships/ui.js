@@ -1078,6 +1078,7 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
     const n = Object.keys(sils).length;
     const sides = sils.port || sils.starboard, plan = sils.top || sils.bottom;
     const f = (x) => (x ? x.toFixed(1) : '');
+    const num = (k) => (Number(st.photoDims[k]) > 0 ? Number(st.photoDims[k]) : null);
     return `<div class="group pad">
       <p class="muted small">Up to six photos of one vessel, each taken square on from its side, on a plain background (sky, water, a wall) or cut out with transparency. The shape is what lies inside the vessel's outline in every photo, painted from the photo facing each part. Tap a box for its photo.</p>
       <div class="ships-photos">${PHOTO_VIEWS.map(([k, label, hint]) => {
@@ -1098,9 +1099,10 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
         <label>Height, keel to top (m)<input type="number" min="0.5" max="150" step="0.1" data-photodim="height" value="${esc(st.photoDims.height)}" placeholder="${est ? `${f(est.H)} from the photos` : ''}"></label>
         <label>Draught (m)<input type="number" min="0.1" max="30" step="0.1" data-photodim="draft" value="${esc(st.photoDims.draft)}" placeholder="${f(defaultParams(st.params.kind, L).draft)} typical"></label>
       </div>
-      ${n && !(sides && plan) ? '<p class="muted small">A side photo and one from above (or below) are needed for a shape; the bow and stern photos shape its ends.</p>' : ''}
+      ${n && !sides ? '<p class="muted small">A side photo is needed: with only it, the rest of the shape is inferred from the vessel\'s type; a photo from above (or below) and of the bow and stern make it truer.</p>' : ''}
+      ${sides && !plan ? `<p class="muted small">One side photo: the shape from above is inferred for a <b>${esc(KIND_PRESETS[st.params.kind].label)}</b> (set the type in Build), ${num('beam') ? '' : `its beam typical for its length, ${f(defaultParams(st.params.kind, L).beam)} m (or give it),`} its top painted from the photo.</p>` : ''}
       ${st.photoError ? `<p class="error">${esc(st.photoError)}</p>` : ''}
-      <div class="row"><button type="button" class="primary" data-act="photo-build" ${sides && plan && !st.photoBusy ? '' : 'disabled'}>${st.photoBusy ? 'Building…' : 'Build the vessel'}</button>
+      <div class="row"><button type="button" class="primary" data-act="photo-build" ${sides && !st.photoBusy ? '' : 'disabled'}>${st.photoBusy ? 'Building…' : 'Build the vessel'}</button>
         ${n ? '<button type="button" class="ghost" data-act="photo-clear">Clear the photos</button>' : ''}</div>
       <p class="muted small">Hollows (an open deck, a cargo hold) cannot be seen in outlines and come out filled. Then save, download or place it on the map as any model.</p>
     </div>`;
@@ -1147,7 +1149,8 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
         const length = num('length') ?? st.params.length;
         // without a draught: the typical one of a vessel of this type and length
         const draft = num('draft') ?? defaultParams(st.params.kind, length).draft;
-        const { object, size, ignored, mirrored } = buildFromPhotos(st.photos, { length, beam: num('beam'), height: num('height') });
+        const { object, size, ignored, mirrored, inferred } = buildFromPhotos(st.photos,
+          { length, beam: num('beam'), height: num('height'), typicalBeam: defaultParams(st.params.kind, length).beam }, { kind: st.params.kind });
         const name = (st.facts?.label ?? ((st.ais?.name || '').trim() || st.text.name || 'Vessel from photos'));
         const label = (k) => (PHOTO_VIEWS.find(([v]) => v === k)?.[1] ?? k).toLowerCase();
         const left = ignored.length
@@ -1155,7 +1158,7 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
           : '';
         for (const k of mirrored) if (st.photos[k]) st.photos[k] = { ...st.photos[k], flip: !st.photos[k].flip };
         const flippedNote = mirrored.length ? ` The ${mirrored.map(label).join(' and ')} photo was the other way round (or of the other side) and was mirrored.` : '';
-        st.notice = `Built from ${Object.values(st.photos).filter((v) => v.sil).length - ignored.length} photos: ${size.L.toFixed(1)} × ${size.B.toFixed(1)} m, ${size.H.toFixed(1)} m keel to top${num('height') ? '' : ' (height from the photos)'}.${flippedNote}${left} Save it to keep it, or place it on the map from the Ship tab.`;
+        st.notice = `Built from ${Object.values(st.photos).filter((v) => v.sil).length - ignored.length} photos: ${size.L.toFixed(1)} × ${size.B.toFixed(1)} m, ${size.H.toFixed(1)} m keel to top${num('height') ? '' : ' (height from the photos)'}.${inferred ? ` From one side photo: the shape from above is inferred for a ${KIND_PRESETS[st.params.kind].label.toLowerCase()}.` : ''}${flippedNote}${left} Save it to keep it, or place it on the map from the Ship tab.`;
         showFile({
           source: 'upload', entry: { id: `photos:${Date.now()}`, name, source: 'upload' }, object, name,
           fit: { up: '+y', forward: '+x', scale: 'length', length: size.L, draft: Math.min(draft, size.H * 0.9), waterline: 'keel' },
