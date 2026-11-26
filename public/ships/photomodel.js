@@ -71,13 +71,18 @@ export function project(view, [x, y, z], { L, H, B }, flip = false, sil = null) 
  * `threshold` (0-255, colour distance) is the ship. The largest connected part is kept and its holes
  * are filled (a window the colour of the sky stays ship). null when nothing stands out.
  */
-export function silhouette(img, threshold = 20, { solidColumns = false } = {}) {
+export function silhouette(img, threshold = 20, { solidColumns = false, depth = null } = {}) {
   const { width: W, height: Hh, data } = img;
   const n = W * Hh;
   const mask = new Uint8Array(n);
   let transparent = 0;
   for (let i = 0; i < n; i++) if (data[i * 4 + 3] < 128) transparent++;
-  if (transparent > n * 0.05) {
+  if (depth && depth.length === n) {
+    // a depth map (Depth Anything, near = high): the vessel is what stands nearer than the split
+    // Otsu's method finds between it and the sky, sea or wall behind
+    const t = otsu(depth);
+    for (let i = 0; i < n; i++) mask[i] = depth[i] > t ? 1 : 0;
+  } else if (transparent > n * 0.05) {
     for (let i = 0; i < n; i++) mask[i] = data[i * 4 + 3] >= 128 ? 1 : 0;
   } else {
     // the background: the median of the border's colours
@@ -153,6 +158,80 @@ export function silhouette(img, threshold = 20, { solidColumns = false } = {}) {
   return { mask, width: W, height: Hh, box: { x0, y0, x1, y1 } };
 }
 
+/** The threshold splitting values in 0..1 into two groups best (Otsu's method, 256 bins). */
+export function otsu(values) {
+  const hist = new Float64Array(256);
+  for (const v of values) hist[Math.min(255, Math.max(0, Math.round(v * 255)))]++;
+  const total = values.length;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, wB = 0, best = 0, bestT = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (!wB) continue;
+    const wF = total - wB;
+    if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB, mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) ** 2;
+    if (between > best) { best = between; bestT = t; }
+  }
+  return (bestT + 0.5) / 255;
+}
+
+/** The pixel index of (u, v) (fractions of the ship's box) in a cut-out. */
+export function pixelAt(sil, u, v) {
+  const { x0, y0, x1, y1 } = sil.box;
+  const x = Math.min(x1, Math.max(x0, Math.round(x0 + u * (x1 - x0))));
+  const y = Math.min(y1, Math.max(y0, Math.round(y0 + v * (y1 - y0))));
+  return y * sil.width + x;
+}
+
+/**
+ * Heights from the photo from above and its depth map: metres above the keel for each of its pixels,
+ * fitted to the side photo's profile. Its highest point (the depth map's nearest) is the profile's
+ * highest; the vessel's rim, where the profile is low (the open ends), is the profile there; what
+ * lies deeper (an open car deck, a hold) comes out lower still. Without a sound fit, null.
+ */
+export function topHeights(top, side, sideView, size, flips = {}) {
+  if (!top?.depth || !side) return null;
+  const { L, H } = size;
+  const n = 120;
+  // the side profile's top at n points along the length
+  const prof = [];
+  for (let i = 0; i < n; i++) {
+    const x = ((i + 0.5) / n) * L;
+    let t = 0;
+    for (let j = 200; j >= 0; j--) {
+      const y = (j / 200) * H;
+      const [u, v] = project(sideView, [x, y, 0], size, flips[sideView], side);
+      if (inside(side, u, v)) { t = y; break; }
+    }
+    prof.push(t);
+  }
+  const lowCut = [...prof].sort((a, b) => a - b)[Math.floor(n * 0.3)];
+  // pairs (depth, height): the rim where the profile is low, and the highest point
+  const xs = [], ys = [];
+  for (let i = 0; i < n; i++) {
+    if (prof[i] > lowCut || prof[i] <= 0) continue;
+    const x = ((i + 0.5) / n) * L;
+    for (const side01 of [0.04, 0.96]) {
+      const [u] = project('top', [x, 0, 0], size, flips.top, top);
+      const idx = pixelAt(top, u, side01);
+      if (top.mask[idx]) { xs.push(top.depth[idx]); ys.push(prof[i]); }
+    }
+  }
+  let dMax = -Infinity;
+  for (let i = 0; i < top.mask.length; i++) if (top.mask[i] && top.depth[i] > dMax) dMax = top.depth[i];
+  if (xs.length < 4 || !Number.isFinite(dMax)) return null;
+  const rimD = xs.reduce((a, b) => a + b, 0) / xs.length, rimH = ys.reduce((a, b) => a + b, 0) / ys.length;
+  if (dMax - rimD < 0.02) return null; // flat: nothing to learn
+  const a = (H - rimH) / (dMax - rimD), b = H - a * dMax;
+  const out = new Float32Array(top.mask.length);
+  for (let i = 0; i < out.length; i++) out[i] = top.mask[i] ? Math.max(rimH * 0.25, Math.min(H, a * top.depth[i] + b)) : 0;
+  return out;
+}
+
 /** Is (u, v) (fractions of the ship's box) inside the outline? */
 export function inside(sil, u, v) {
   if (u < 0 || u > 1 || v < 0 || v > 1) return false;
@@ -208,8 +287,9 @@ export function carve(sils, size, { res = 160, flips = {}, tolerance = 0.3 } = {
         let bits = 0;
         views.forEach((vname, b) => {
           const [u, v] = project(vname, [x, y, z], size, flips[vname], sils[vname]);
-          if (inside(sils[vname], u, v)) bits |= 1 << b;
-          if (inside(sils[vname], 1 - u, v)) bits |= 1 << (b + 8);
+          const hm = sils[vname].hmax; // heights from above (topHeights): nothing above them
+          if (inside(sils[vname], u, v) && (!hm || y <= hm[pixelAt(sils[vname], u, v)])) bits |= 1 << b;
+          if (inside(sils[vname], 1 - u, v) && (!hm || y <= hm[pixelAt(sils[vname], 1 - u, v)])) bits |= 1 << (b + 8);
         });
         seen[i + nx * (j + ny * k)] = bits;
       }
@@ -480,6 +560,15 @@ export function inferFromSide(sil, view, size, { res = 160, flip = false, kind =
   const mid = [...tops.slice(Math.floor(nx * 0.1), Math.ceil(nx * 0.9))].filter((t) => t > 0).sort((p, q) => p - q);
   const deck = mid.length ? mid[Math.floor(mid.length * 0.25)] : H * 0.4;
   const bilge = Math.max(0.5, deck * 0.18);
+  // the depth across the vessel (Depth Anything): how far its parts lie behind its nearest, the hull side
+  let rel = null;
+  if (sil.depth) {
+    const ds = [];
+    for (let i = 0; i < sil.mask.length; i += 3) if (sil.mask[i]) ds.push(sil.depth[i]);
+    ds.sort((p, q) => p - q);
+    const lo = ds[Math.floor(ds.length * 0.05)], hi = ds[Math.floor(ds.length * 0.95)];
+    if (hi - lo > 0.04) rel = { lo, hi };
+  }
   const occ = new Uint8Array(nx * ny * nz);
   for (let i = 0; i < nx; i++) {
     const x = (i + 0.5) * (L / nx), a = x / L;
@@ -488,7 +577,10 @@ export function inferFromSide(sil, view, size, { res = 160, flip = false, kind =
       const y = (j + 0.5) * (H / ny);
       const [u, v] = project(view, [x, y, 0], size, flip, sil);
       if (!inside(sil, u, v)) continue;
-      const level = y < bilge ? 0.55 + 0.45 * Math.sqrt(y / bilge) : y > deck + 0.4 ? 0.86 : 1;
+      // above the deck the superstructure is set in from the sides: by how far back its depth says, else a little
+      let up = 0.86;
+      if (rel) { const d = sil.depth[pixelAt(sil, u, v)]; up = 1 - 0.5 * Math.min(1, Math.max(0, (rel.hi - d) / (rel.hi - rel.lo))); }
+      const level = y < bilge ? 0.55 + 0.45 * Math.sqrt(y / bilge) : y > deck + 0.4 ? up : 1;
       const half = (B / 2) * plan * level;
       for (let k = 0; k < nz; k++) {
         const z = -B / 2 + (k + 0.5) * (B / nz);

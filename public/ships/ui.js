@@ -24,7 +24,8 @@ import { vesselModels, findIn, FOLDER_URL, modelBlob, saveModel, deleteModel } f
 import { TEXTURE_SOURCES, TEXTURE_SUGGESTIONS, searchTextures, polyhavenImageUrl, pictureUrl, CORS_HINT } from './texturesources.js';
 import * as THREE from '../vendor/three.js';
 import { VIEWS as PHOTO_VIEWS, sizeFrom } from './photomodel.js';
-import { readPicture, cutOut, buildFromPhotos } from './photomesh.js';
+import { readPicture, cutOut, buildFromPhotos, depthOf } from './photomesh.js';
+import { DEPTH_SIZE_MB } from './photoai.js';
 
 const SUGGESTIONS = ['Titanic', 'Queen Mary 2', 'Ever Given', 'Cutty Sark', 'USS Nimitz', 'Statsraad Lehmkuhl', 'Christian Radich', 'Color Magic'];
 const MANUAL = { length: 'manual', beam: 'manual', draft: 'manual', airDraft: 'manual' };
@@ -163,6 +164,8 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
     // a vessel from photos (photomodel.js): { [view]: { img, name, sil, preview, flip } }
     photos: {},
     photoThreshold: 20,
+    photoAi: (() => { try { return localStorage.getItem('rudder.photoai') !== 'off'; } catch { return true; } })(),
+    photoAiStatus: null,
     photoDims: { length: '', beam: '', height: '', draft: '' },
     photoBusy: false,
     photoError: null,
@@ -1091,7 +1094,10 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
           <input type="file" accept="image/*" hidden data-photofile="${k}">
         </div>`;
       }).join('')}</div>
-      <label class="ships-range"><span class="ships-range-top"><span>Background threshold</span><b data-out="photoThreshold">${st.photoThreshold}</b></span>
+      <label class="switch-row" style="padding:6px 0"><span><strong>Depth AI on this device</strong><small class="muted">Depth Anything V2: cuts the vessel out cleanly and finds heights and depth (an open car deck, a superstructure set back). About ${DEPTH_SIZE_MB} MB the first time; runs in this browser, nothing is sent away.</small></span>
+        <input type="checkbox" role="switch" data-photoai ${st.photoAi ? 'checked' : ''}></label>
+      ${st.photoAiStatus ? `<p class="muted small">${esc(st.photoAiStatus)}</p>` : ''}
+      <label class="ships-range" ${st.photoAi ? 'hidden' : ''}><span class="ships-range-top"><span>Background threshold</span><b data-out="photoThreshold">${st.photoThreshold}</b></span>
         <input type="range" min="8" max="120" step="2" value="${st.photoThreshold}" data-photothreshold></label>
       <div class="ships-selects ships-fit">
         <label>Length overall (m)<input type="number" min="2" max="500" step="0.1" data-photodim="length" value="${esc(st.photoDims.length)}" placeholder="${f(st.params.length)}"></label>
@@ -1123,17 +1129,40 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
     try {
       const img = await readPicture(file);
       const { sil, preview } = cutOut(img, st.photoThreshold, view);
-      st.photos = { ...st.photos, [view]: { img, name: file.name, sil, preview, flip: st.photos[view]?.flip ?? false } };
+      st.photos = { ...st.photos, [view]: { img, name: file.name, sil, preview, flip: st.photos[view]?.flip ?? false, depth: null } };
       st.photoError = null;
+      renderTab();
+      if (st.photoAi) await addDepth(view);
     } catch (e) {
       st.photoError = e instanceof Error ? e.message : String(e);
     }
     renderTab();
   }
 
+  /** The depth map of a photo (photoai.js), and its cut-out made from it. */
+  async function addDepth(view) {
+    const v = st.photos[view];
+    if (!v || v.depth) return;
+    st.photoAiStatus = 'Reading depth…';
+    renderTab();
+    try {
+      const depth = await depthOf(v.img, (f) => {
+        const text = `Downloading the depth model (once): ${Math.round(f * 100)} %`;
+        if (text !== st.photoAiStatus) { st.photoAiStatus = text; renderTab(); }
+      });
+      if (st.photos[view] !== v) return;
+      const { sil, preview } = cutOut(v.img, st.photoThreshold, view, depth);
+      st.photos = { ...st.photos, [view]: { ...v, depth, sil: sil ?? v.sil, preview: sil ? preview : v.preview } };
+      st.photoAiStatus = null;
+    } catch (e) {
+      st.photoAiStatus = `The depth AI could not run here (${e instanceof Error ? e.message : e}); the photos are cut out by colour.`;
+    }
+    renderTab();
+  }
+
   function recut() {
     for (const [k, v] of Object.entries(st.photos)) {
-      const { sil, preview } = cutOut(v.img, st.photoThreshold, k);
+      const { sil, preview } = cutOut(v.img, st.photoThreshold, k, st.photoAi ? v.depth : null);
       st.photos[k] = { ...v, sil, preview };
     }
     renderTab();
@@ -1571,6 +1600,13 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
     if (td.photofile && t.files?.[0]) { setPhoto(td.photofile, t.files[0]); return; }
     if (td.photoflip) { st.photos[td.photoflip] = { ...st.photos[td.photoflip], flip: t.checked }; return; }
     if (td.photothreshold !== undefined) { st.photoThreshold = Number(t.value); recut(); return; }
+    if (td.photoai !== undefined) {
+      st.photoAi = t.checked;
+      try { localStorage.setItem('rudder.photoai', st.photoAi ? 'on' : 'off'); } catch { /* private mode */ }
+      if (st.photoAi) Object.keys(st.photos).reduce((p, k) => p.then(() => addDepth(k)), Promise.resolve()).then(recut);
+      else recut();
+      return;
+    }
     if (td.texfile !== undefined && t.files?.[0]) {
       const file = t.files[0];
       const url = URL.createObjectURL(file);

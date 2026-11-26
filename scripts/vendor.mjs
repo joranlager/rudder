@@ -3,9 +3,13 @@
 import { build } from 'esbuild';
 import { readFile, writeFile } from 'node:fs/promises';
 
+// `node scripts/vendor.mjs ai` builds only Transformers.js: it is not committed (GitHub's secret scanning
+// takes a minified model name and identifier in it for an API key), but built in the deploy workflow.
+const onlyAi = process.argv[2] === 'ai';
 const banner = { js: `// Bundled by scripts/vendor.mjs from npm packages pinned in package.json. Do not edit.` };
 const common = { bundle: true, format: 'esm', minify: true, legalComments: 'inline', target: 'es2020', banner };
 
+if (!onlyAi) {
 await build({ ...common, entryPoints: ['scripts/vendor/three.js'], outfile: 'public/vendor/three.js' });
 console.log('public/vendor/three.js');
 
@@ -21,3 +25,9 @@ const fixed = io.replace(/(from\s*|import\s*)(['"])three\2/g, '$1$2./three.js$2'
 if (/['"]three['"]/.test(fixed)) throw new Error('three-io.js still imports "three"');
 await writeFile('public/vendor/three-io.js', fixed);
 console.log('public/vendor/three-io.js');
+
+}
+
+// Transformers.js, for the inspector's AI models (loaded only when they are used).
+await build({ ...common, entryPoints: ['scripts/vendor/transformers.js'], outfile: 'public/vendor/transformers.js', platform: 'browser', conditions: ['browser', 'import', 'default'], mainFields: ['browser', 'module', 'main'], external: ['sharp', 'onnxruntime-node', 'fs', 'path', 'url'] });
+console.log('public/vendor/transformers.js');

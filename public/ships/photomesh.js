@@ -2,7 +2,8 @@
 // carved, textured mesh made into an object the inspector shows like a model from a file.
 
 import * as THREE from '../vendor/three.js';
-import { silhouette, sizeFrom, carve, mesh, texturedParts, inferFromSide, project, inside } from './photomodel.js';
+import { silhouette, sizeFrom, carve, mesh, texturedParts, inferFromSide, project, inside, topHeights } from './photomodel.js';
+import { depthMap } from './photoai.js';
 
 const MAX_SIDE = 640; // pictures are cut out at this size; textures keep up to 2048
 
@@ -26,12 +27,21 @@ function drawn(img, max) {
   return c;
 }
 
-/** The ship cut out of a picture (photomodel.js silhouette), with a preview: the cut-out tinted. */
-export function cutOut(img, threshold, view = null) {
+/** A picture's depth map (photoai.js), at the size the cut-outs are made at. */
+export async function depthOf(img, onProgress) {
+  return depthMap(drawn(img, MAX_SIDE), onProgress);
+}
+
+/**
+ * The ship cut out of a picture (photomodel.js silhouette), with a preview: the cut-out tinted.
+ * With a depth map (depthOf), from it; the map is kept with the cut-out for the shape.
+ */
+export function cutOut(img, threshold, view = null, depth = null) {
   const c = drawn(img, MAX_SIDE);
   const ctx = c.getContext('2d', { willReadFrequently: true });
   const data = ctx.getImageData(0, 0, c.width, c.height);
-  const sil = silhouette(data, threshold, { solidColumns: ['port', 'starboard', 'top', 'bottom'].includes(view) });
+  const sil = silhouette(data, threshold, { solidColumns: ['port', 'starboard', 'top', 'bottom'].includes(view), depth });
+  if (sil && depth) sil.depth = depth;
   if (!sil) return { sil: null, preview: c.toDataURL('image/jpeg', 0.7) };
   const out = ctx.createImageData(c.width, c.height);
   for (let i = 0; i < sil.mask.length; i++) {
@@ -128,6 +138,9 @@ export function buildFromPhotos(views, dims, { res = 180, smooth = 4, kind = 'ca
     return { L: dims.length, B: dims.beam > 0 ? dims.beam : est.B, H: dims.height > 0 ? dims.height : est.H };
   };
   let size = sizeOf(sils);
+  // heights from above, from its depth map, fitted to a side photo's profile (topHeights)
+  const sideView = ['port', 'starboard'].find((k) => sils[k]);
+  if (sils.top) sils.top = { ...sils.top, hmax: topHeights(sils.top, sils[sideView], sideView, size, flips) ?? undefined };
   let g = carve(sils, size, { res, flips });
   // a photo found not to agree with the others does not size the vessel either: once more without it
   if (g.ignored.length) {

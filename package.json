@@ -13,9 +13,11 @@
     "test": "node --test test/*.test.js",
     "vendor": "node scripts/vendor.mjs",
     "vessels": "node scripts/vessels.mjs",
-    "webcams": "node scripts/webcams.mjs"
+    "webcams": "node scripts/webcams.mjs",
+    "vendor:ai": "node scripts/vendor.mjs ai"
   },
   "devDependencies": {
+    "@huggingface/transformers": "4.3.2",
     "esbuild": "0.25.10",
     "three": "0.180.0"
   }

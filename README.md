@@ -10,6 +10,7 @@ It is plain static files with no backend, so it runs on GitHub Pages.
 npm start      # http://localhost:8080 (local static server)
 npm test       # parsers, URL builders, navigation maths, AIS, ship models
 npm run vendor # rebuilds public/vendor/three.js and three-io.js from the pinned devDependencies (after npm ci)
+npm run vendor:ai # bundles public/vendor/transformers.js (not committed; the deploy workflow builds it)
 npm run vessels # lists the models in public/vessels/ in its index.json
 npm run webcams # works out where each webcam looks (public/webcams.json); behind a proxy: NODE_USE_ENV_PROXY=1
 npm run build  # copies public/ to dist/ and stamps the build

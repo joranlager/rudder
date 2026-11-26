@@ -28,6 +28,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install
+        run: npm ci
+
+      # Transformers.js (the inspector's depth AI) is bundled here, not committed: see scripts/vendor.mjs.
+      - name: Bundle Transformers.js
+        run: npm run vendor:ai
+
       - name: Test
         run: npm test
 
