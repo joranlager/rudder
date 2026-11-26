@@ -23,6 +23,8 @@ import { formatOf, UP_AXES, FORWARD_AXES, matchName } from '../vesselcatalog.js'
 import { vesselModels, findIn, FOLDER_URL, modelBlob, saveModel, deleteModel } from '../vessellibrary.js';
 import { TEXTURE_SOURCES, TEXTURE_SUGGESTIONS, searchTextures, polyhavenImageUrl, pictureUrl, CORS_HINT } from './texturesources.js';
 import * as THREE from '../vendor/three.js';
+import { VIEWS as PHOTO_VIEWS, sizeFrom } from './photomodel.js';
+import { readPicture, cutOut, buildFromPhotos } from './photomesh.js';
 
 const SUGGESTIONS = ['Titanic', 'Queen Mary 2', 'Ever Given', 'Cutty Sark', 'USS Nimitz', 'Statsraad Lehmkuhl', 'Christian Radich', 'Color Magic'];
 const MANUAL = { length: 'manual', beam: 'manual', draft: 'manual', airDraft: 'manual' };
@@ -158,6 +160,12 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
     texOpts: { mode: 'stretch', tile: 8, opacity: 1, blend: 'normal', flip: false, projection: 'box' },
     saveForm: null,
     saving: false,
+    // a vessel from photos (photomodel.js): { [view]: { img, name, sil, preview, flip } }
+    photos: {},
+    photoThreshold: 20,
+    photoDims: { length: '', beam: '', height: '', draft: '' },
+    photoBusy: false,
+    photoError: null,
     notice: null,
   };
 
@@ -1062,6 +1070,104 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
       }`;
   }
 
+  function renderPhotos() {
+    const ph = st.photos;
+    const sils = Object.fromEntries(Object.entries(ph).filter(([, v]) => v.sil).map(([k, v]) => [k, v.sil]));
+    const L = Number(st.photoDims.length) || st.params.length;
+    const est = Object.keys(sils).length ? sizeFrom(L, sils) : null;
+    const n = Object.keys(sils).length;
+    const sides = sils.port || sils.starboard, plan = sils.top || sils.bottom;
+    const f = (x) => (x ? x.toFixed(1) : '');
+    return `<div class="group pad">
+      <p class="muted small">Up to six photos of one vessel, each taken square on from its side, on a plain background (sky, water, a wall) or cut out with transparency. The shape is what lies inside the vessel's outline in every photo, painted from the photo facing each part. Tap a box for its photo.</p>
+      <div class="ships-photos">${PHOTO_VIEWS.map(([k, label, hint]) => {
+        const v = ph[k];
+        return `<div class="ships-photo-slot" data-has="${Boolean(v)}">
+          <button type="button" data-photoslot="${k}" title="${esc(hint)}">${v ? `<img src="${esc(v.preview)}" alt="">` : `<span>+</span>`}</button>
+          <b>${esc(label)}</b><small class="muted">${esc(v ? (v.sil ? v.name : 'No vessel found in it: try the threshold') : hint)}</small>
+          ${v ? `<span class="row"><label class="small"><input type="checkbox" data-photoflip="${k}" ${v.flip ? 'checked' : ''}> mirrored</label>
+            <button type="button" class="ghost" data-photodel="${k}" aria-label="Remove the ${esc(label)} photo">✕</button></span>` : ''}
+          <input type="file" accept="image/*" hidden data-photofile="${k}">
+        </div>`;
+      }).join('')}</div>
+      <label class="ships-range"><span class="ships-range-top"><span>Background threshold</span><b data-out="photoThreshold">${st.photoThreshold}</b></span>
+        <input type="range" min="8" max="120" step="2" value="${st.photoThreshold}" data-photothreshold></label>
+      <div class="ships-selects ships-fit">
+        <label>Length overall (m)<input type="number" min="2" max="500" step="0.1" data-photodim="length" value="${esc(st.photoDims.length)}" placeholder="${f(st.params.length)}"></label>
+        <label>Beam (m)<input type="number" min="0.5" max="90" step="0.1" data-photodim="beam" value="${esc(st.photoDims.beam)}" placeholder="${est ? `${f(est.B)} from the photos` : ''}"></label>
+        <label>Height, keel to top (m)<input type="number" min="0.5" max="150" step="0.1" data-photodim="height" value="${esc(st.photoDims.height)}" placeholder="${est ? `${f(est.H)} from the photos` : ''}"></label>
+        <label>Draught (m)<input type="number" min="0.1" max="30" step="0.1" data-photodim="draft" value="${esc(st.photoDims.draft)}" placeholder="${f(defaultParams(st.params.kind, L).draft)} typical"></label>
+      </div>
+      ${n && !(sides && plan) ? '<p class="muted small">A side photo and one from above (or below) are needed for a shape; the bow and stern photos shape its ends.</p>' : ''}
+      ${st.photoError ? `<p class="error">${esc(st.photoError)}</p>` : ''}
+      <div class="row"><button type="button" class="primary" data-act="photo-build" ${sides && plan && !st.photoBusy ? '' : 'disabled'}>${st.photoBusy ? 'Building…' : 'Build the vessel'}</button>
+        ${n ? '<button type="button" class="ghost" data-act="photo-clear">Clear the photos</button>' : ''}</div>
+      <p class="muted small">Hollows (an open deck, a cargo hold) cannot be seen in outlines and come out filled. Then save, download or place it on the map as any model.</p>
+    </div>`;
+  }
+
+  /** What beam, height and draught the photos and the length give, in the empty fields' hints. */
+  function photoHints() {
+    const sils = Object.fromEntries(Object.entries(st.photos).filter(([, v]) => v.sil).map(([k, v]) => [k, v.sil]));
+    const L = Number(st.photoDims.length) || st.params.length;
+    const est = Object.keys(sils).length ? sizeFrom(L, sils) : null;
+    const set = (k, text) => { const el = root.querySelector(`[data-photodim="${k}"]`); if (el) el.placeholder = text; };
+    set('beam', est ? `${est.B.toFixed(1)} from the photos` : '');
+    set('height', est ? `${(Number(st.photoDims.beam) > 0 && !sils.port && !sils.starboard ? est.H * (Number(st.photoDims.beam) / est.B) : est.H).toFixed(1)} from the photos` : '');
+    set('draft', `${defaultParams(st.params.kind, L).draft.toFixed(1)} typical`);
+  }
+
+  async function setPhoto(view, file) {
+    try {
+      const img = await readPicture(file);
+      const { sil, preview } = cutOut(img, st.photoThreshold, view);
+      st.photos = { ...st.photos, [view]: { img, name: file.name, sil, preview, flip: st.photos[view]?.flip ?? false } };
+      st.photoError = null;
+    } catch (e) {
+      st.photoError = e instanceof Error ? e.message : String(e);
+    }
+    renderTab();
+  }
+
+  function recut() {
+    for (const [k, v] of Object.entries(st.photos)) {
+      const { sil, preview } = cutOut(v.img, st.photoThreshold, k);
+      st.photos[k] = { ...v, sil, preview };
+    }
+    renderTab();
+  }
+
+  function buildPhotos() {
+    st.photoBusy = true;
+    st.photoError = null;
+    renderTab();
+    setTimeout(() => {
+      try {
+        const num = (k) => (Number(st.photoDims[k]) > 0 ? Number(st.photoDims[k]) : null);
+        const length = num('length') ?? st.params.length;
+        // without a draught: the typical one of a vessel of this type and length
+        const draft = num('draft') ?? defaultParams(st.params.kind, length).draft;
+        const { object, size, ignored, mirrored } = buildFromPhotos(st.photos, { length, beam: num('beam'), height: num('height') });
+        const name = (st.facts?.label ?? ((st.ais?.name || '').trim() || st.text.name || 'Vessel from photos'));
+        const label = (k) => (PHOTO_VIEWS.find(([v]) => v === k)?.[1] ?? k).toLowerCase();
+        const left = ignored.length
+          ? ` Not used for the shape: ${ignored.map((x) => `the ${label(x.view)} photo (it would cut away ${Math.round(x.removed * 100)} % of what the others agree on: taken at an angle, mirrored, or another view?)`).join('; ')}.`
+          : '';
+        for (const k of mirrored) if (st.photos[k]) st.photos[k] = { ...st.photos[k], flip: !st.photos[k].flip };
+        const flippedNote = mirrored.length ? ` The ${mirrored.map(label).join(' and ')} photo was the other way round (or of the other side) and was mirrored.` : '';
+        st.notice = `Built from ${Object.values(st.photos).filter((v) => v.sil).length - ignored.length} photos: ${size.L.toFixed(1)} × ${size.B.toFixed(1)} m, ${size.H.toFixed(1)} m keel to top${num('height') ? '' : ' (height from the photos)'}.${flippedNote}${left} Save it to keep it, or place it on the map from the Ship tab.`;
+        showFile({
+          source: 'upload', entry: { id: `photos:${Date.now()}`, name, source: 'upload' }, object, name,
+          fit: { up: '+y', forward: '+x', scale: 'length', length: size.L, draft: Math.min(draft, size.H * 0.9), waterline: 'keel' },
+        });
+      } catch (e) {
+        st.photoError = e instanceof Error ? e.message : String(e);
+      }
+      st.photoBusy = false;
+      renderTab();
+    }, 30);
+  }
+
   function renderModelsTab() {
     const f = st.file;
     const fit = f?.fit;
@@ -1106,6 +1212,9 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
         <div class="row"><button type="button" class="primary" data-act="model-upload" ${st.fileLoading ? 'disabled' : ''}>Choose model files…</button></div>
         <input type="file" multiple accept=".glb,.gltf,.obj,.mtl,.stl,.bin,image/*" hidden data-modelfile>
       </div>
+
+      <h3 class="label">Model from photos</h3>
+      ${renderPhotos()}
 
       <h3 class="label">Save and download</h3>
       <div class="group pad">
@@ -1261,6 +1370,11 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
           refreshModels();
         });
       }
+    } else if (d.photoslot) root.querySelector(`[data-photofile="${d.photoslot}"]`)?.click();
+    else if (d.photodel) {
+      const { [d.photodel]: _, ...rest } = st.photos;
+      st.photos = rest;
+      renderTab();
     } else if (d.act) act(d.act);
   });
 
@@ -1298,6 +1412,8 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
         .then((b) => downloadBlob(`${base}_view.png`, b));
     } else if (a === 'hull-png' && model?.hullCanvas) downloadCanvas(`${base}_hull_paint.png`, model.hullCanvas);
     else if (a === 'close-file') closeFile();
+    else if (a === 'photo-build') buildPhotos();
+    else if (a === 'photo-clear') { st.photos = {}; st.photoError = null; renderTab(); }
     else if (a === 'place' && model && onPlace) {
       const d = model.dims;
       const name = (st.file?.name ?? st.facts?.label ?? ((st.ais?.name || '').trim() || st.text.name || 'My ship')).replace(/^(MS|MV|M\/S|RMS)\s+/i, '');
@@ -1411,7 +1527,12 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
       const v = Number(el.value);
       out(d.tex, d.tex === 'tile' ? fmtLen(v, st.units) : `${Math.round(v * 100)} %`);
       retexture(d.tex, v);
-    } else if (el.name === 'q') st.query = el.value;
+    } else if (d.photodim) {
+      st.photoDims = { ...st.photoDims, [d.photodim]: el.value };
+      photoHints(); // the estimates of the others follow, without redrawing the fields being typed in
+    }
+    else if (d.photothreshold !== undefined) out('photoThreshold', el.value);
+    else if (el.name === 'q') st.query = el.value;
     else if (el.name === 'tq') st.texQuery = el.value;
     else if (el.closest('.ships-save') && st.saveForm) st.saveForm = { ...st.saveForm, [el.name]: el.value };
   });
@@ -1444,6 +1565,9 @@ export function createShipInspector(root, { onClose, onPlace } = {}) {
       renderTab();
       return;
     }
+    if (td.photofile && t.files?.[0]) { setPhoto(td.photofile, t.files[0]); return; }
+    if (td.photoflip) { st.photos[td.photoflip] = { ...st.photos[td.photoflip], flip: t.checked }; return; }
+    if (td.photothreshold !== undefined) { st.photoThreshold = Number(t.value); recut(); return; }
     if (td.texfile !== undefined && t.files?.[0]) {
       const file = t.files[0];
       const url = URL.createObjectURL(file);

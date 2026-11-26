@@ -253,3 +253,15 @@
 .ships-applied .ships-photo img { max-height: 120px; }
 .ships-save input { flex: none; }
 .ship-callout em.model { color: #fda4af; }
+
+/* model from photos */
+.ships-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.ships-photo-slot { display: grid; gap: 2px; align-content: start; min-width: 0; }
+.ships-photo-slot > button { padding: 0; min-height: 0; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: var(--fill); border: 1.5px dashed var(--line); display: grid; place-items: center; font-size: 26px; color: var(--label-2); }
+.ships-photo-slot[data-has="true"] > button { border-style: solid; }
+.ships-photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ships-photo-slot b { font-size: 12.5px; font-weight: 600; }
+.ships-photo-slot small { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ships-photo-slot .row { margin: 0 !important; justify-content: space-between; gap: 4px; flex-wrap: nowrap; }
+.ships-photo-slot .row button { min-height: 26px; padding: 0 8px; font-size: 13px; }
+.ships-photo-slot label.small { display: inline-flex; gap: 4px; align-items: center; color: var(--label-2); }
