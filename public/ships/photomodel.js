@@ -1,7 +1,7 @@
 // A vessel from photos: up to six views (towards the bow, the stern, from above, the port side, the
 // starboard side, and from below), each cut out from its background, carve a 3D shape (the visual hull:
 // what lies inside the ship's outline in every view), which is meshed (surface nets, smoothed) and
-// textured from the view that faces each part of it most squarely. No three.js here (photomesh.js
+// textured from the view that faces each part of it most squarely. No three.js here (vesselbuilder.js
 // makes the three.js object), so the cutting out, carving and meshing are unit tested.
 //
 // Conventions for the photos (each can be mirrored in the UI if taken the other way):

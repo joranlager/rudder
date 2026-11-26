@@ -1,4 +1,4 @@
-// Vessel models from files: load (.glb, .gltf, .obj + .mtl + pictures, .stl), fit to the ship's frame,
+// Vessel models from files: load (.glb, .gltf, .obj + .mtl + pictures, .stl, .ply, .fbx, .dae, .3mf), fit to the ship's frame,
 // texture, and save as .glb. The fitted model looks to the inspector (scene.js) and the chart
 // (shipmodels.js) like one built by ship.js: { group, dims, dispose(), ... }.
 //
@@ -26,7 +26,7 @@ const stlMaterial = () => {
  * Resolves to an Object3D in the model's own units and axes.
  */
 export async function loadModel(src) {
-  const { GLTFLoader, OBJLoader, MTLLoader, STLLoader } = await loadIO();
+  const { GLTFLoader, OBJLoader, MTLLoader, STLLoader, PLYLoader, FBXLoader, ColladaLoader, ThreeMFLoader } = await loadIO();
   const manager = new THREE.LoadingManager();
   let url = src.url;
   let format = src.format;
@@ -35,7 +35,7 @@ export async function loadModel(src) {
   if (src.files) {
     const files = [...src.files];
     const main = files.find((f) => formatOf(f.name));
-    if (!main) throw new Error('Choose a .glb, .gltf, .obj or .stl file (with its .mtl, .bin and pictures, if it has them).');
+    if (!main) throw new Error('Choose a model file: .glb, .gltf, .obj, .stl, .ply, .fbx, .dae or .3mf (with its .mtl, .bin and pictures, if it has them).');
     format = formatOf(main.name);
     const byName = new Map();
     for (const f of files) {
@@ -90,6 +90,19 @@ export async function loadModel(src) {
       mesh.name = 'hull';
       return mesh;
     }
+    if (format === 'ply') {
+      const geom = await new PLYLoader(manager).loadAsync(url);
+      if (!geom.getAttribute('normal')) geom.computeVertexNormals();
+      const m = stlMaterial();
+      m.name = 'ply';
+      if (geom.getAttribute('color')) { m.vertexColors = true; m.color.set(0xffffff); }
+      const mesh = new THREE.Mesh(geom, m);
+      mesh.name = 'hull';
+      return mesh;
+    }
+    if (format === 'fbx') return await new FBXLoader(manager).loadAsync(url);
+    if (format === 'dae') return (await new ColladaLoader(manager).loadAsync(url)).scene;
+    if (format === '3mf') return await new ThreeMFLoader(manager).loadAsync(url);
     throw new Error(`Rudder cannot read ${format || 'this'} files`);
   } finally {
     // Pictures are read into the materials by now; the model file's own address is not needed again.

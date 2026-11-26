@@ -1,8 +1,8 @@
 # Rudder
 
 A marine simulator on Norway's official, public sea charts and marine data. This first part is
-the map: real charts, depths and live marine conditions, plus a 3D ship inspector that builds the
-vessels (see [Ships](#ships)).
+the map: real charts, depths and live marine conditions, plus a ship builder that makes the
+vessels in 3D, from their photos with AI on the device (see [Ships](#ships-the-ship-builder)).
 
 It is plain static files with no backend, so it runs on GitHub Pages.
 
@@ -269,14 +269,14 @@ camera is not taken into account.
 
 ## Your own ship on the chart
 
-In the ship inspector (**Ships**), **Place on the map** (Ship tab) puts the ship in view, built,
-from Wikidata or from a model file, on the chart: the inspector closes and the chart asks you to
+In the ship builder (**Ships**), **Place on the chart** puts the vessel in view, with whatever
+model she has there, on the chart: the builder closes and the chart asks you to
 tap open water (Escape or Cancel to stop). The spot is sounded at the hull's bow, stern, middle
 and sides with Kartverket's height service; land, or less water than her draught, is refused and
 said so. She is put there bow up the screen, still, and you take her helm (Taking the helm).
 
 She is drawn like an AIS ship, whether the AIS layer is on or not, and as she looked in the
-inspector (her model is saved on the device under her MMSI, from a range no real ship has, so the
+builder (her model is saved on the device under her MMSI, from a range no real ship has, so the
 chart finds it: Vessels folder). **Hand back** the helm and she carries on straight at the speed
 and course she had: Rudder moves her on by dead reckoning every few seconds and sounds the water
 under her every 15 s; land or too little water stops her. Her card has **Remove from the map**.
@@ -312,10 +312,9 @@ BarentsWatch (Norwegian waters). Each ship is an arrow in its type's colour, tur
 (a dot when the heading is unknown); from zoom 13 it is drawn at its true size and heading, placed
 by where its GPS antenna sits. Reports older than 15 minutes are faded and those older than two
 hours dropped. Hover for the name; tap a ship for its card (type, status, speed, course, size,
-draught, destination, MMSI, IMO, call sign) and **Open 3D model**, which builds it in the ship
-inspector from its AIS report: length, beam and draught from AIS (marked *AIS*), the rest
-estimated from its type, and, when its IMO number is on Wikidata, its type, height and photos from
-there.
+draught, destination, MMSI, IMO, call sign) and **Open 3D model**, which opens her in the ship
+builder with her AIS report: her own model if there is one, else built from her length, beam and
+draught from AIS, the rest estimated from her type.
 
 **Access.** BarentsWatch's AIS API needs a token from your own free BarentsWatch client (on
 [Min side](https://www.barentswatch.no/minside/), under **Utviklertilganger**, open **AIS - API** and
@@ -418,77 +417,81 @@ cannot be dragged or zoomed: the ship moves it. The bar at the bottom shows spee
 (or Esc) puts the chart back as it was. It needs the ship's size and heading from AIS. Code:
 `public/pov.js`, using MapLibre's `calculateCameraOptionsFromTo` with the tilt limit raised to 85°.
 
-## Ships
+## Ships: the ship builder
 
-**Ships** in the top bar covers the chart with a 3D ship inspector (`public/ships/`). Close it with
-the same button, the × in its sheet, Escape, or the layers button.
+**Ships** in the top bar covers the chart with the ship builder (`public/ships/`); a ship's card on
+the chart opens her there (**Open 3D model**). Close it with the same button, its ×, or Escape. It
+is laid out like a vessel's page on a ship register: her name, type, IMO and MMSI at the top; her
+model in 3D (turn it, or look from 3/4, the side, the bow, the stern or above, with dimension
+lines); her status from AIS (navigational status, speed and course, destination, last report); and
+her particulars (name, IMO, MMSI, call sign, flag from the MMSI, AIS type, kind, length, beam,
+draught, height above the water), which can be changed.
 
-- **Find a ship** on Wikidata (SPARQL, limited to ships, boats and ship classes): type, class,
-  dimensions, tonnage, speed, builder, operator, flag, home port, IMO/MMSI and service dates, with
-  photos from Wikimedia Commons (the item's image, its category and a text search).
-- **Build** the hull from length, beam, draft, depth and fullness, with a bulbous, raked, plumb or
-  clipper bow and a transom or cruiser stern. Deckhouses, funnels, masts, cargo and sails follow the
-  vessel type (container ship, tanker, bulk, cargo, cruise ship, ferry, liner, warship, aircraft
-  carrier, sailing ship, yacht, tug). Values missing on Wikidata are estimated and marked *est.*
-- **Livery** sampled from a photo (k-means, sky and water left out); name, port of registry, side
-  name, IMO number, draft marks and load-line mark painted on the hull.
-- **Look** in a studio, at sea (sea state, speed with a wake, sun height; the hull heaves, pitches
-  and rolls on the waves) or under water, with dimension lines in metres or feet.
-- **Texture**: put a picture on the ship, either a photo along the hull or a texture (painted steel,
-  rust, teak, plating) repeated over the hull, deck, superstructure or funnels, or over any material
-  of a model from a file. Pictures come from Wikimedia Commons, Openverse (openly licensed pictures
-  from Flickr, museums and others), Poly Haven (CC0 surface textures), the ship's own Commons photos,
-  any picture's web address (when its site allows other pages to use it; CORS), or a picture on the
-  device. Each shows who made it and its licence. (`ships/texturesources.js`, `ships/vesselmodel.js`;
-  the hull photo is painted in `ships/hullText.js`.)
-- **Models**: upload a model (`.glb`, `.gltf`, `.obj` + `.mtl` + pictures, `.stl`), turn it upright
-  with the bow forward, scale it to the ship's length (or its own units) and set its waterline;
-  **Save on this device** keeps it (built or uploaded, with its textures) as one `.glb` in the
-  browser's database (IndexedDB, `public/vessellibrary.js`), under the ship's name, MMSI, IMO number
-  and call sign. Download the model in view as `.glb`, as `.glb` + `.json` for the vessels folder, or
-  (built ships) as Wavefront `.obj` + `.mtl` + the painted hull pictures (metres, Y up, bow towards +X).
+Her model is, first found: **her own** from the vessels folder or saved on this device (matched by
+MMSI, then IMO number, call sign and name); one **built from her photos**; one **from a model
+file**; or one **built from her type and size** (`ships/ship.js`). The tag on the view says which.
 
-- **Model from photos** (Models tab): up to six photos of one vessel, towards the bow, towards the
-  stern, from above, the port side, the starboard side and (optionally) from below, make a textured
-  model of it (`public/ships/photomodel.js`, tested; `public/ships/photomesh.js`). Each photo is cut
-  out from its background (the colour round its border, within an adjustable threshold, or the
-  picture's transparency; parts of the vessel parted by a pale line are kept, specks are not, holes
-  are filled), with a preview. The length is given (the ship in view's by default); beam and height
-  come from the photos' proportions and can be set. The shape is the visual hull: of a grid of cells
-  180 along the length, those inside the vessel's outline in every photo, meshed (surface nets) and
-  smoothed. Each part is painted from the photo that faces it most squarely, at the photo's own
-  resolution, so it saves and downloads as a .glb like any model and can be placed on the map. The
-  photos should be taken square on (side views bow to the left on the port side, to the right on the
-  starboard side; from above bow right, port up; from below bow right, starboard up), each can be
-  marked as mirrored. Hollows (an open deck, a hold) cannot be seen in outlines and come out filled;
-  thin parts (masts, rails) are lost. Real photos are less tidy, so: side and plan outlines are
-  filled solid from keel to top (a white superstructure against a pale sky leaves no gaps); parts
-  touching the picture's edge (clouds, a quay) are dropped; each photo is scaled by its width only
-  (the length), so a mast lost in one photo does not rescale it; bow and stern photos, seldom taken
-  square on, shape only the beam and are stretched over the height the side photos give; the height,
-  when not given, is the tallest side photo's; a photo that would cut away much of what the others
-  agree on is tried mirrored, else left out, and the notice says so; only the vessel's largest
-  connected body is kept (no pieces floating apart); a side photo paints the other side when it is
-  missing, and bow and stern photos paint only what they face square on. The draught, when not
-  given, is the type's typical one for the length. Sandøy (43 m double-ended ferry) from five photos
-  taken by a drone comes out whole and recognisable. Rendered from six sides, the inspector's own 142 m ferry comes
-  back within 0.1 m in beam and height.
+**Build from photos.** Drop photos of her (or choose them). Each is, on this device:
+
+- **cut out of its background** by an AI model, ormbg (Apache 2.0, an ISNet trained to remove
+  backgrounds; 88 MB on the GPU, 44 MB on the processor), with the colour round the picture's border
+  as the fallback;
+- **described** by a small vision-language model, Qwen3.5 0.8B (Apache 2.0, about 850 MB), asked for
+  one JSON answer: which view the photo is (side, bow, stern, a quarter, from above), which way her
+  bow points, her type, the name on her hull, the colours of her hull, superstructure and funnel, how
+  many decks, funnels and masts, and the shape of her bow and stern (`ships/vision.js`, tested: the
+  answer is read forgivingly, and named colours become colours). Small models are poor at left and
+  right, so for a photo of her side the bow is asked again on its own, in two wordings, of the photo
+  and of her cut-out, each also mirrored; only answers that turn round with the picture are counted,
+  and with none she is marked *Which side? Check*.
+
+The answers for all the photos are merged (votes; side photos count twice; the name most often
+read), and fill in her name and kind when no AIS report gave them. Each photo can be set by hand to
+the view it is. With a photo of her side, her shape above the water is **carved** from the photos'
+outlines (`ships/photomodel.js`: the visual hull on a grid of 180 cells along her length, meshed
+and smoothed); the views no photo shows (from above, the bow, the stern) are drawn from her kind:
+her waterplane narrowing to the stem, the hull her full beam up to the deck (read from the side
+outline: the rows that run her whole length) and the superstructure narrower on it
+(`ships/synthviews.js`, tested). Each part is painted from the photo facing it, else in her colours,
+sampled from the side photos; a hull is added under the water to her draught, in antifouling. With
+no side photo, she is built from her type in the colours and with the decks, funnels, bow and stern
+the photos show (also with **Shape from her type**). Several photos give more: both sides, the bow,
+the stern and from above each shape and paint their part, and all of them vote on what she is
+(`ships/vesselbuilder.js`).
+
+The models are loaded from Hugging Face the first time they are needed and kept in the browser's
+cache; they run in a worker (`ships/aiworker.js`, `ships/ai.js`) with transformers.js 4.3.2 and ONNX
+Runtime, on the GPU (WebGPU) when there is one and it can, else on the processor (slower). The
+photos never leave the device. Either model can be switched off under **AI on this device**.
+
+**Model and texture files.** Drop a model (`.glb`, `.gltf` with its `.bin`, `.obj` with its `.mtl`,
+`.stl`, `.ply`, `.fbx`, `.dae`, `.3mf`, with its pictures) to use it as hers: turn it upright with her
+bow forward (Up and Bow axes), choose where her waterline is, and she is sized to her length. Drop a
+picture (`.png`, `.jpg`, `.webp`, …) to put it on the model in view, on all of it or one material.
+
+**Keep her model.** Whatever is in view is kept as one `.glb` in her frame (metres, Y up, bow +X,
+waterline at 0, photos as JPEG inside), with a `.json` sidecar naming her (MMSI, IMO, call sign,
+size):
+
+- **Download .glb and .json**, named by her IMO number (else MMSI, else name), for the repository's
+  `public/vessels/` folder (then `npm run vessels`);
+- **Commit to GitHub**: the model, its sidecar and an updated `vessels/index.json` in one commit, on
+  the branch this deploy came from (or the one set), with a token of your own saved in **Settings →
+  GitHub** (a fine-grained token for the repository with *Contents: read and write*; kept on the
+  device, sent only to api.github.com; `public/github.js`, tested). Pages builds every branch, so she
+  is drawn with it everywhere after that deploy;
+- **Save on this device** (IndexedDB, `public/vessellibrary.js`): drawn with it on the chart here;
+- **Place on the chart** (Your own ship on the chart).
 
 **The vessels folder.** Before building a ship from its type, Rudder looks for a model of it: first in
 its own vessels folder (`public/vessels/`, listed in `vessels/index.json`), then among the models
-saved on the device. A model is matched to a ship by MMSI, then IMO number, then call sign, then name
-(`public/vesselcatalog.js`, tested). When one is found, the inspector shows it (and says so; **Show
-the built model** compares), and the chart draws it as that ship's 3D model, stretched to its AIS
-length and set at its AIS draught. To add a model for everyone, put it and a `.json` sidecar in
-`public/vessels/` and run `npm run vessels`; see [public/vessels/README.md](public/vessels/README.md).
-The loaders and the glTF exporter (`public/vendor/three-io.js`, about 100 kB) are loaded only when a
-model file is needed.
-
-It is loaded the first time it is opened, so the chart never waits for three.js (about 0.7 MB,
-vendored in `public/vendor/three.js` by `npm run vendor`). The hull builder takes the same inputs
-an AIS static report carries (length and beam from the antenna offsets, draught, ship type), so
-ships in sight on the chart can later be modelled from AIS; Wikidata and Commons then fill in what
-AIS does not carry, matched by IMO/MMSI.
+saved on the device, matched by MMSI, then IMO number, then call sign, then name
+(`public/vesselcatalog.js`, tested). The chart draws a ship found there with her own model,
+stretched to her AIS length and set at her AIS draught. See
+[public/vessels/README.md](public/vessels/README.md). The loaders and the glTF exporter
+(`public/vendor/three-io.js`, about 210 kB) are loaded only when a model file is needed, and the
+builder itself the first time it is opened, so the chart never waits for three.js (about 0.7 MB,
+vendored in `public/vendor/three.js` by `npm run vendor`).
 
 ## Not used, and why
 

@@ -10,7 +10,9 @@ import { foldName } from './ais.js';
 
 export const VESSELS_DIR = 'vessels/';
 export const INDEX_FILE = 'index.json';
-export const MODEL_FORMATS = ['glb', 'gltf', 'obj', 'stl'];
+export const MODEL_FORMATS = ['glb', 'gltf', 'obj', 'stl', 'ply', 'fbx', 'dae', '3mf'];
+/** Pictures that can go on a model as its texture. */
+export const PICTURE_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp'];
 export const UP_AXES = ['+y', '+z', '-y', '-z', '+x', '-x'];
 export const FORWARD_AXES = ['+x', '-x', '+z', '-z', '+y', '-y'];
 

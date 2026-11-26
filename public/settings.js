@@ -9,6 +9,7 @@
 import { loadCredentials, saveCredentials, clearCredentials, accessKind, storageState } from './credentials.js';
 import { pastedToken } from './ais.js';
 import { SHORTCUT_NAME, shortcutUrl, tokenFromResult } from './handoff.js';
+import { loadGithub, saveGithub, clearGithub, repoFromLocation, branchFromBuild, validRepo } from './github.js';
 import { BOOKMARK_NAME, BW_LOGIN_PAGE, bookmarkletUrl, deviceInfo, tokenCommand, startBookmarkLogin } from './bwlogin.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -27,6 +28,7 @@ export function createSettings(el, { ais, openPanel = () => {} }) {
   let store = { persisted: null, standalone: false, ios: false };
   let login = null; // a bookmark login in progress (bwlogin.js)
   let cmdOs = device.os === 'mac' ? 'mac' : 'windows';
+  let ghMsg = { text: '', tone: '' };
 
   async function refreshStorage(ask = false) {
     store = await storageState({ ask });
@@ -133,10 +135,30 @@ export function createSettings(el, { ais, openPanel = () => {} }) {
         ${kind ? '<button type="button" class="set-btn danger" data-act="forget">Remove my BarentsWatch access from this device</button>' : ''}
         <p class="fine">Stored only on this device, in this browser's storage for Rudder, and sent only to BarentsWatch. There is no Rudder server. Anyone who can use this device unlocked can use it too.</p>
       </section>
+      ${githubSection()}
       <section class="set-section">
         <h3>Storage on this device</h3>
         <p class="set-state" data-tone="${s.tone}">${s.text}</p>
         ${!store.standalone && store.persisted === false ? '<button type="button" class="set-btn" data-act="persist">Ask the browser to keep Rudder\'s data</button>' : ''}
+      </section>`;
+  }
+
+  /** GitHub, for the ship builder's "Commit to GitHub" (github.js): repository, branch and token. */
+  function githubSection() {
+    const g = loadGithub();
+    const repo = g.repo || repoFromLocation();
+    const branch = g.branch || branchFromBuild(document.getElementById('build')?.textContent);
+    return `<section class="set-section">
+        <h3>GitHub (vessel models)</h3>
+        <p class="fine">The ship builder can commit a vessel's model to Rudder's repository, so she is drawn with it on the chart after the next deploy. Use a fine-grained token for that repository with <b>Contents: read and write</b>.</p>
+        ${ghMsg.text ? `<p class="set-state" data-tone="${ghMsg.tone}">${esc(ghMsg.text)}</p>` : g.token ? '<p class="set-state" data-tone="ok">A GitHub token is saved on this device.</p>' : ''}
+        <form class="set-form" data-form="github" autocomplete="off">
+          <label>Repository<input name="repo" value="${esc(repo)}" placeholder="owner/rudder" spellcheck="false" autocapitalize="off" autocorrect="off"></label>
+          <label>Branch<input name="branch" value="${esc(branch)}" placeholder="the repository's default branch" spellcheck="false" autocapitalize="off" autocorrect="off"></label>
+          <label>Token<input name="token" type="password" value="${esc(g.token)}" placeholder="github_pat_…" autocomplete="new-password" spellcheck="false" autocapitalize="off" autocorrect="off"></label>
+          <div class="set-buttons"><button type="submit" class="set-btn">Save on this device</button>${g.token ? '<button type="button" class="set-btn danger" data-act="github-forget">Remove</button>' : ''}</div>
+        </form>
+        <p class="fine">Kept only on this device and sent only to api.github.com.</p>
       </section>`;
   }
 
@@ -147,6 +169,13 @@ export function createSettings(el, { ais, openPanel = () => {} }) {
     if (!form) return;
     e.preventDefault();
     const f = new FormData(form);
+    if (form.dataset.form === 'github') {
+      const repo = String(f.get('repo') ?? '').trim();
+      if (repo && !validRepo(repo)) { ghMsg = { text: 'Write the repository as owner/name.', tone: 'err' }; return render(); }
+      try { saveGithub({ repo, branch: f.get('branch'), token: f.get('token') }); } catch { ghMsg = { text: 'This browser will not store anything (private browsing?).', tone: 'err' }; return render(); }
+      ghMsg = { text: 'GitHub settings saved on this device.', tone: 'ok' };
+      return render();
+    }
     const cur = loadCredentials();
     if (form.dataset.form === 'client') {
       const next = { clientId: f.get('clientId'), clientSecret: f.get('clientSecret'), pasted: cur.pasted };
@@ -258,6 +287,11 @@ export function createSettings(el, { ais, openPanel = () => {} }) {
       ais.credentialsChanged();
       say('Removed from this device.');
     } else if (act === 'persist') await refreshStorage(true);
+    else if (act === 'github-forget') {
+      clearGithub();
+      ghMsg = { text: 'GitHub token removed from this device.', tone: '' };
+      render();
+    }
   });
 
   render();

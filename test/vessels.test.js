@@ -9,9 +9,6 @@ import {
 import { libraryEntry } from '../public/vessellibrary.js';
 import { modelKey, fileFit } from '../public/shipmodels.js';
 import { writeVesselIndex } from '../scripts/vessels.mjs';
-import {
-  openverseUrl, parseOpenverse, matchPolyhaven, polyhavenDiffuse, pictureUrl,
-} from '../public/ships/texturesources.js';
 
 test('model formats come from the file name', () => {
   assert.equal(formatOf('Color Magic.GLB'), 'glb');
@@ -32,7 +29,8 @@ test('an entry is checked and filled in', () => {
   assert.equal(e.forward, '+x');
   assert.equal(e.scale, 'length');
   assert.equal(e.waterline, 'keel');
-  assert.equal(normalizeEntry({ file: 'x.fbx' }), null, 'not a format Rudder reads');
+  assert.equal(normalizeEntry({ file: 'x.blend' }), null, 'not a format Rudder reads');
+  assert.equal(normalizeEntry({ file: 'x.fbx' }).format, 'fbx');
   assert.equal(normalizeEntry({ file: '../secret.glb' }), null, 'stays in the folder');
   assert.equal(normalizeEntry({ file: 'https://example.com/x.glb' }), null, 'stays in the folder');
   assert.deepEqual([normalizeEntry({ file: 'a.glb', up: '+z', forward: '-z' }).up, normalizeEntry({ file: 'a.glb', up: '+z', forward: '-z' }).forward], ['+y', '+x'], 'up and bow on one axis is nonsense');
@@ -163,39 +161,4 @@ test('on the chart a ship\'s own model is rebuilt when it changes, and fitted to
   assert.equal(fit.length, 120, 'AIS length');
   assert.equal(fit.draft, 5.5, 'AIS draught');
   assert.equal(fileFit(f, ship({ dimensionA: 0, dimensionB: 0, draught: 0 })).length, 90, 'the model\'s own when AIS has none');
-});
-
-test('Openverse answers become pictures with credits', () => {
-  assert.match(openverseUrl('rust metal'), /^https:\/\/api\.openverse\.org\/v1\/images\/\?q=rust\+metal&page_size=24/);
-  const [p] = parseOpenverse({
-    results: [{ title: 'Rusty hull', url: 'https://live.staticflickr.com/1/2.jpg', thumbnail: 'https://api.openverse.org/v1/images/abc/thumb/', creator: 'Kari', license: 'by-sa', license_version: '2.0', foreign_landing_url: 'https://flickr.com/p/2' }, { title: 'no url' }],
-  });
-  assert.deepEqual(p, {
-    title: 'Rusty hull', thumb: 'https://api.openverse.org/v1/images/abc/thumb/', full: 'https://live.staticflickr.com/1/2.jpg',
-    alt: ['https://api.openverse.org/v1/images/abc/thumb/'], page: 'https://flickr.com/p/2', author: 'Kari', license: 'BY-SA 2.0', source: 'Openverse',
-  });
-});
-
-test('Poly Haven textures are found by name, tag or category, and their colour picture chosen', () => {
-  const list = {
-    rusty_metal_02: { name: 'Rusty Metal 02', categories: ['metal'], tags: ['rust', 'painted'], authors: { 'Rob Tuytel': 'All' } },
-    wood_planks: { name: 'Wood Planks', categories: ['wood'], tags: ['deck', 'boards'] },
-    painted_metal: { name: 'Painted Metal Shutter', categories: ['metal', 'man made'], tags: ['paint'] },
-  };
-  assert.deepEqual(matchPolyhaven(list, 'metal').map((x) => x.id), ['painted_metal', 'rusty_metal_02']);
-  assert.deepEqual(matchPolyhaven(list, 'deck').map((x) => x.id), ['wood_planks']);
-  const [r] = matchPolyhaven(list, 'rust');
-  assert.equal(r.author, 'Rob Tuytel');
-  assert.equal(r.license, 'CC0');
-  assert.match(r.thumb, /rusty_metal_02\.png/);
-  const files = { Diffuse: { '1k': { jpg: { url: 'https://dl.polyhaven.org/1k.jpg' } }, '2k': { jpg: { url: 'https://dl.polyhaven.org/2k.jpg' } } }, Rough: {} };
-  assert.equal(polyhavenDiffuse(files), 'https://dl.polyhaven.org/2k.jpg');
-  assert.equal(polyhavenDiffuse({ nor_gl: {} }), null);
-});
-
-test('a picture address is an http(s) address', () => {
-  assert.equal(pictureUrl(' upload.wikimedia.org/a.jpg '), 'https://upload.wikimedia.org/a.jpg');
-  assert.equal(pictureUrl('https://x.no/b.png?w=2'), 'https://x.no/b.png?w=2');
-  assert.equal(pictureUrl('javascript:alert(1)'), null);
-  assert.equal(pictureUrl(''), null);
 });

@@ -6,3 +6,8 @@ export { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 export { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 export { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 export { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+// More of the usual model files people have, for the ship builder's uploads.
+export { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
+export { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+export { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
+export { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';

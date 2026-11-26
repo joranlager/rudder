@@ -1,4 +1,4 @@
-/* Ship inspector (Ships in the top bar). Loaded with the inspector, so the chart does not carry it.
+/* The ship builder (Ships in the top bar). Loaded with it, so the chart does not carry it.
    Its tokens follow Rudder's palette (style.css) and are scoped to .ships. */
 
 .ships {
@@ -62,206 +62,95 @@
 .ships .chip { font-size: 13px; padding: 0 10px; min-height: 30px; border-radius: 999px; background: var(--fill); color: var(--label-2); font-weight: 500; }
 .ships h3, .ships p { margin-top: 0; }
 
+
+/* ---------- the page: a vessel's register entry ---------- */
+
 .ships {
-  position: fixed; inset: 0; z-index: 3; background: #0d1b2a; color: var(--label);
-  font-family: var(--font); overflow: hidden;
+  position: fixed; inset: 0; z-index: 3; background: var(--bg); color: var(--label);
+  font-family: var(--font); overflow: hidden; display: flex; flex-direction: column;
+  padding-top: calc(env(safe-area-inset-top) + 60px);
 }
 .ships[hidden] { display: none; }
+.ships .fine { font-size: 12.5px; line-height: 1.4; color: var(--label-2); margin: 8px 0 0; }
+.ships button.link { min-height: 0; padding: 0; font-weight: 600; color: var(--accent); background: none; text-decoration: underline; text-underline-offset: 2px; }
+.vb-hidden { display: none; }
 
+.vb-head {
+  display: flex; align-items: flex-start; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line); background: var(--panel); flex: none;
+}
+.vb-id { flex: 1; min-width: 0; }
+.vb-id h1 { margin: 0; font-size: 24px; line-height: 1.15; letter-spacing: -0.01em; text-transform: uppercase; overflow-wrap: anywhere; }
+.vb-id p { margin: 3px 0 0; color: var(--label-2); font-size: 14px; }
+
+.vb-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 420px; }
+.vb-stage { position: relative; min-height: 0; background: #0d1b2a; }
 .ships-view { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
 .ships-view canvas { display: block; }
 .ships-noview { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #cfd8e3; }
-
-/* ---------- toolbar under the top bar ---------- */
-
-.ships-tools {
-  position: absolute; z-index: 2; left: max(16px, env(safe-area-inset-left)); right: 16px;
-  top: calc(env(safe-area-inset-top) + 64px);
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none;
+.vb-views {
+  position: absolute; left: 12px; top: 12px; display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent); box-shadow: var(--shadow-small);
 }
-.ships-tools > * { pointer-events: auto; }
+.vb-views button { min-height: 32px; padding: 0 11px; border-radius: 999px; font-size: 13px; color: var(--label); }
+.vb-views button[aria-pressed="false"] { color: var(--label-2); }
+.vb-badge { position: absolute; left: 12px; bottom: 12px; }
+.vb-tag { display: inline-block; padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: #fff; background: #5a6b78; }
+.vb-tag[data-kind="own"] { background: #1f9d55; }
+.vb-tag[data-kind="photos"] { background: var(--accent); }
+.vb-tag[data-kind="file"] { background: #7a4fc4; }
 
-.ships-seg {
-  display: inline-flex; flex-wrap: wrap; gap: 1px; padding: 3px; border-radius: 999px;
-  background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
-  border: 0.5px solid var(--material-edge); box-shadow: var(--shadow-small);
+.vb-side { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 14px 14px calc(env(safe-area-inset-bottom) + 24px); border-left: 1px solid var(--line); }
+.vb-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-group); padding: 14px; margin: 0 0 14px; }
+.vb-card:empty { display: none; }
+.vb-card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--label-2); margin: 0 0 10px; }
+
+.vb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.vb-table th { text-align: left; font-weight: 500; color: var(--label-2); padding: 7px 10px 7px 0; width: 42%; vertical-align: middle; white-space: nowrap; }
+.vb-table td { padding: 3px 0; }
+.vb-table tr + tr { border-top: 1px solid var(--line); }
+.vb-table td.vb-ro { padding: 7px 0; }
+.vb-edit input, .vb-edit select { width: 100%; min-height: 34px !important; border-color: transparent !important; background-color: transparent !important; padding: 0 8px !important; font-weight: 600 !important; }
+.vb-edit input:hover, .vb-edit select:hover { border-color: var(--line) !important; }
+.vb-edit input:focus, .vb-edit select:focus { border-color: var(--accent) !important; background-color: var(--panel) !important; }
+.vb-model { font-size: 14px; margin: 10px 0 0; }
+.vb-msg { font-size: 14px; margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--fill); }
+.vb-msg[data-tone="ok"] { background: color-mix(in srgb, #1f9d55 14%, transparent); }
+.vb-msg[data-tone="err"] { background: color-mix(in srgb, #c0392b 14%, transparent); }
+
+.vb-drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+.vb-drop p { margin: 0; }
+.vb-drop.over { border-color: var(--accent); background: var(--tint-bg); }
+.vb-photos { list-style: none; padding: 0; margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.vb-photo { position: relative; display: grid; gap: 4px; }
+.vb-pic { aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; display: grid; place-items: center;
+  background: repeating-conic-gradient(var(--fill) 0% 25%, transparent 0% 50%) 0 0 / 14px 14px; border: 1px solid var(--line); }
+.vb-pic img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.vb-photo[data-status="cutting"] .vb-pic, .vb-photo[data-status="describing"] .vb-pic, .vb-photo[data-status="new"] .vb-pic { opacity: 0.55; }
+.vb-photo select { min-height: 30px !important; font-size: 12px !important; padding: 0 24px 0 8px !important; background-position: right 8px center !important; }
+.vb-ps { font-size: 11.5px; color: var(--label-2); }
+.vb-photo[data-status="error"] .vb-ps { color: var(--red); }
+.vb-x { position: absolute; top: 4px; right: 4px; min-height: 24px !important; width: 24px; padding: 0 !important; border-radius: 50% !important;
+  background: rgba(0, 0, 0, 0.55) !important; color: #fff !important; font-size: 16px !important; line-height: 1; }
+.vb-busy { margin: 12px 0 0; font-size: 13.5px; display: grid; gap: 6px; }
+.vb-busy[hidden] { display: none; }
+.vb-busy progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.vb-chips { margin: 12px 0 0; }
+.vb-chips .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; color: var(--label); }
+.vb-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.25); display: inline-block; }
+.vb-notes { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--label-2); }
+.vb-row { margin-top: 12px; }
+.vb-row label { display: grid; gap: 4px; font-size: 12.5px; color: var(--label-2); flex: 1; min-width: 110px; }
+.vb-check { display: flex !important; align-items: flex-start; gap: 8px; font-size: 13.5px; color: var(--label) !important; margin: 8px 0 0; cursor: pointer; }
+.vb-check input { margin-top: 2px; }
+.vb-ai { margin-top: 12px; font-size: 14px; }
+.vb-ai summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.vb-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vb-actions button { background: var(--tint-bg); }
+.vb-actions button.primary { grid-column: 1 / -1; background: var(--blue); }
+
+@media (max-width: 820px) {
+  .vb-main { grid-template-columns: 1fr; grid-template-rows: minmax(220px, 42vh) minmax(0, 1fr); }
+  .vb-side { border-left: 0; border-top: 1px solid var(--line); }
+  .vb-id h1 { font-size: 20px; }
 }
-.ships-seg button {
-  min-height: 34px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600;
-  color: var(--label); background: transparent; display: inline-flex; align-items: center; gap: 4px;
-}
-.ships-seg button[aria-checked="true"], .ships-seg button[aria-selected="true"] { background: var(--accent); color: #fff; box-shadow: var(--shadow-small); }
-.ships-seg button[aria-pressed="true"] { color: var(--blue); }
-.ships-seg button[aria-pressed="false"] { color: var(--label-2); }
-
-/* ---------- the sheet: right side on a wide screen, bottom on a phone ---------- */
-
-.ships-sheet {
-  position: absolute; z-index: 3; display: flex; flex-direction: column; overflow: hidden;
-  background: var(--material); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
-  border: 0.5px solid var(--material-edge); box-shadow: var(--shadow);
-  top: calc(env(safe-area-inset-top) + 64px); right: max(12px, env(safe-area-inset-right)); bottom: 12px; width: 400px;
-  border-radius: var(--radius-sheet);
-}
-.ships-head { display: flex; align-items: center; gap: 10px; padding: 14px 14px 8px 18px; flex: none; }
-.ships-grab {
-  flex: 1; min-width: 0; min-height: 0; padding: 0; text-align: left; background: none; color: var(--label);
-  display: grid; gap: 2px; border-radius: 0; cursor: default;
-}
-.ships-grab:active { opacity: 1; }
-.ships .ships-grab { color: var(--ink); }
-.ships-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ships-sub { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ships-tabs { margin: 0 14px 8px; display: flex; flex-wrap: nowrap; background: var(--fill); border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.ships-tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); }
-.ships-tabs button { flex: 1; justify-content: center; padding: 0 6px; font-size: 13.5px; min-height: 32px; }
-.ships-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 8px 14px 24px; flex: 1; }
-
-@media (min-width: 641px) {
-  .ships-view { right: 424px; }
-  .ships-tools { right: 424px; }
-}
-
-@media (max-width: 640px) {
-  .ships-tools { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); gap: 6px; top: calc(env(safe-area-inset-top) + 60px); }
-  .ships-seg button { min-height: 32px; padding: 0 9px; font-size: 13px; flex: none; }
-  /* camera row: one line that scrolls sideways instead of wrapping over the ship */
-  .ships-views { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .ships-views::-webkit-scrollbar { display: none; }
-  .ships-sheet {
-    top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 52dvh;
-    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding-bottom: env(safe-area-inset-bottom);
-    transition: height 0.35s var(--ease);
-  }
-  .ships-view { bottom: calc(52dvh - 20px); transition: bottom 0.35s var(--ease); }
-  .ships[data-sheet="closed"] .ships-sheet { height: calc(108px + env(safe-area-inset-bottom)); }
-  .ships[data-sheet="closed"] .ships-view { bottom: 90px; }
-  .ships[data-sheet="closed"] .ships-body { display: none; }
-  .ships-head { padding-top: 10px; }
-  .ships-head::before {
-    content: ""; position: absolute; top: 6px; left: 50%; margin-left: -18px; width: 36px; height: 5px; border-radius: 3px; background: var(--fill-strong);
-  }
-  .ships-grab { cursor: pointer; }
-  .ships-title { font-size: 19px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ships-sheet, .ships-view { transition: none; }
-}
-
-/* ---------- inside the sheet ---------- */
-
-.ships-body .row { margin-bottom: 12px; }
-.ships-body .group.pad .row { margin-top: 10px; }
-.ships-body .label { margin-top: 18px; }
-.ships-body .label:first-child { margin-top: 4px; }
-.ships-search { margin-bottom: 6px !important; }
-.ships-chips { margin: 0 0 14px; }
-.ships-chips .chip { min-height: 30px; font-size: 13px; }
-
-.ships-hits li + li { border-top: 0.5px solid var(--separator); margin-left: 76px; }
-.ships-hits li + li button { margin-left: -76px; width: calc(100% + 76px); }
-.ships-hits button {
-  width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 56px; border-radius: 0;
-  text-align: left; color: var(--label); font-weight: 400; background: none;
-}
-.ships-hits button[aria-pressed="true"] { background: var(--tint-bg); }
-.ships-thumb { width: 52px; height: 38px; border-radius: 6px; overflow: hidden; background: var(--fill); flex: none; }
-.ships-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ships-hit { display: grid; gap: 1px; min-width: 0; }
-.ships-hit b { font-weight: 600; font-size: 16px; }
-.ships-hit small { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.ships-qid { text-transform: none; font-size: 12px; margin-left: 4px; }
-.ships-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; margin: 8px 0 0; }
-.ships-facts dt { color: var(--label-2); }
-.ships-facts dd { margin: 0; overflow-wrap: anywhere; }
-.ships-links { display: flex; gap: 16px; }
-.ships-links a { color: var(--blue); text-decoration: none; }
-
-.ships-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 16px; }
-.ships-gallery button { padding: 0; min-height: 0; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 2px solid transparent; background: var(--fill); }
-.ships-gallery button[aria-pressed="true"] { border-color: var(--blue); }
-.ships-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-.ships-selects { display: grid; gap: 10px; }
-.ships-selects label, .ships-text label { display: grid; gap: 4px; font-size: 13px; color: var(--label-2); }
-.ships-text { display: grid; gap: 10px; }
-
-.ships-range { display: grid; gap: 4px; padding: 6px 0; }
-.ships-range-top { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
-.ships-range-top b { font-weight: 400; color: var(--label-2); font-variant-numeric: tabular-nums; }
-.ships-range input[type="range"] { width: 100%; accent-color: var(--blue); margin: 0; min-height: 28px; }
-.ships-src { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 600; vertical-align: 1px; }
-.ships-src.wikidata { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
-.ships-src.estimated { background: color-mix(in srgb, var(--orange) 18%, transparent); color: var(--orange); }
-.ships-src.manual { background: var(--tint-bg); color: var(--blue); }
-.ships-src.ais { background: color-mix(in srgb, #7b5cc4 18%, transparent); color: #7b5cc4; }
-
-.ships-photo { margin: 0 0 4px; border-radius: 10px; overflow: hidden; background: var(--fill); }
-.ships-photo img { width: 100%; max-height: 190px; object-fit: cover; display: block; }
-.ships-photo figcaption { padding: 6px 10px; margin: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ships-photo a { color: inherit; }
-.ships-palette { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.ships-palette button {
-  min-height: 34px; padding: 0; border-radius: 8px; border: 0.5px solid var(--separator); position: relative;
-  box-shadow: var(--shadow-small);
-}
-.ships-palette button.faded { opacity: 0.55; }
-.ships-palette span { position: absolute; right: 4px; bottom: 1px; font-size: 9px; color: #fff; mix-blend-mode: difference; font-weight: 600; }
-
-.ships-slots li { display: flex; align-items: center; gap: 8px; padding-right: 12px; }
-.ships-slots li + li { border-top: 0.5px solid var(--separator); }
-.ships-slots li[aria-selected="true"] { background: var(--tint-bg); }
-.ships-slots button { flex: 1; text-align: left; font-weight: 400; color: var(--label); background: none; border-radius: 0; padding: 0 16px; }
-.ships-slots li[aria-selected="true"] button { color: var(--blue); font-weight: 600; }
-.ships-slots input[type="color"] {
-  width: 44px; height: 30px; padding: 0; border: 0.5px solid var(--separator); border-radius: 8px; background: none; cursor: pointer;
-}
-
-/* ---------- 3D dimension labels ---------- */
-
-.ship-callout {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 8px;
-  background: rgba(6, 20, 32, 0.82); border: 1px solid rgba(94, 230, 255, 0.55); color: #dff9ff;
-  font: 600 12px/1.3 var(--font); white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-.ship-callout em { font-style: normal; font-weight: 500; font-size: 10px; padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); }
-.ship-callout em.wikidata { color: #6ee7b7; }
-.ship-callout em.estimated { color: #fcd34d; }
-.ship-callout em.manual { color: #7dd3fc; }
-.ship-callout em.ais { color: #c4b5fd; }
-
-/* ---------- models and textures ---------- */
-
-.ships-list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; min-height: 56px; }
-.ships-list li + li { border-top: 0.5px solid var(--separator); }
-.ships-list .ships-hit { flex: 1; }
-.ships-list .ships-hit b { font-size: 15px; }
-.ships-actions { display: flex; gap: 4px; flex: none; }
-.ships-actions button, .ships-list > li > button { min-height: 32px; padding: 0 10px; font-size: 14px; }
-.ships-dl {
-  display: inline-grid; place-items: center; min-height: 32px; min-width: 36px; border-radius: 10px;
-  background: var(--tint-bg); color: var(--blue); text-decoration: none; font-weight: 600;
-}
-.ships-fit { margin-bottom: 4px; }
-.ships-fit input[type="number"] {
-  appearance: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--panel); color: var(--ink); font: 400 15px var(--font);
-}
-.ships-chips .chip[aria-checked="true"] { background: var(--accent); color: #fff; }
-.ships .notice .ghost { display: block; margin-top: 8px; min-height: 32px; padding: 0 12px; }
-.ships-applied .ships-photo img { max-height: 120px; }
-.ships-save input { flex: none; }
-.ship-callout em.model { color: #fda4af; }
-
-/* model from photos */
-.ships-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
-.ships-photo-slot { display: grid; gap: 2px; align-content: start; min-width: 0; }
-.ships-photo-slot > button { padding: 0; min-height: 0; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: var(--fill); border: 1.5px dashed var(--line); display: grid; place-items: center; font-size: 26px; color: var(--label-2); }
-.ships-photo-slot[data-has="true"] > button { border-style: solid; }
-.ships-photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ships-photo-slot b { font-size: 12.5px; font-weight: 600; }
-.ships-photo-slot small { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ships-photo-slot .row { margin: 0 !important; justify-content: space-between; gap: 4px; flex-wrap: nowrap; }
-.ships-photo-slot .row button { min-height: 26px; padding: 0 8px; font-size: 13px; }
-.ships-photo-slot label.small { display: inline-flex; gap: 4px; align-items: center; color: var(--label-2); }
